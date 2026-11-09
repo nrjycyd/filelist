@@ -129,6 +129,22 @@ The component calls:
 | `vitepress-plugin-filelist/client` | `FileList`, `VPFileList`, `enhanceAppWithFileList`, types |
 | `vitepress-plugin-filelist/style.css` | Component styles |
 
+## Compatibility
+
+Peer dependency allows VitePress 1.x and 2.0 alpha: `^1.0.0 || ^2.0.0-alpha.0`.
+
+Tested locally against VitePress `2.0.0-alpha.21` on Node 22:
+
+| Package manager | Install | Build |
+| --- | --- | --- |
+| npm 10 | ✅ | ✅ |
+| pnpm 11.25 | ✅ | ✅ |
+| yarn 1.22 (classic) | ✅ | ✅ |
+| bun 1.4 | ✅ | ✅ |
+| deno 2.9 | ✅ `deno install` | ❌ fails while Vite/rolldown loads the config |
+
+Deno can install the npm dependency, but building a VitePress site with Deno currently fails inside rolldown (`stream did not contain valid UTF-8`). Use Node for builds.
+
 ## Notes
 
 - Batch ZIP downloads files through `raw_url` (OpenList `/p/` proxy), which keeps CORS on the OpenList origin.

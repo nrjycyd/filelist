@@ -44,7 +44,7 @@
     "pack:check": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "vitepress": ">=1.0.0",
+    "vitepress": "^1.0.0 || ^2.0.0-alpha.0",
     "vue": "^3.5.0"
   },
   "dependencies": {
