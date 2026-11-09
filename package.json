@@ -1,6 +1,6 @@
 {
   "name": "vitepress-plugin-filelist",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "module",
   "description": "OpenList file browser for VitePress: tree view, batch ZIP download, i18n, password and token support.",
   "author": "nrjycyd",

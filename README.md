@@ -145,6 +145,10 @@ Tested locally against VitePress `2.0.0-alpha.21` on Node 22:
 
 Deno can install the npm dependency, but building a VitePress site with Deno currently fails inside rolldown (`stream did not contain valid UTF-8`). Use Node for builds.
 
+## Release
+
+Published to npm from GitHub Actions via Trusted Publishing (OIDC) with provenance.
+
 ## Notes
 
 - Batch ZIP downloads files through `raw_url` (OpenList `/p/` proxy), which keeps CORS on the OpenList origin.
