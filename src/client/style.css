@@ -125,10 +125,6 @@
   background: var(--vp-c-bg-soft);
 }
 
-.fl-row-root .fl-name {
-  font-weight: 600;
-}
-
 .fl-row-selected {
   background: var(--vp-c-brand-soft);
 }
