@@ -78,8 +78,32 @@ export default {
 | `token` | `string` | `''` | Optional read-only token (guest when omitted) |
 | `password` | `string` | `''` | Folder password; can also be entered at runtime |
 | `title` | `string` | `''` | Toolbar title; falls back to OpenList `site_title` |
+| `locale` | `'zh-CN' \| 'en-US'` | `'zh-CN'` | Built-in label preset |
+| `labels` | `Partial<FileListLabels>` | `undefined` | Per-key label overrides |
 
 Both `<FileList>` and `<VPFileList>` are registered.
+
+## i18n
+
+```md
+<FileList locale="en-US" base="https://pan.example.com" />
+```
+
+Override individual labels on top of the preset:
+
+```md
+<FileList
+  :labels="{ batch: '下载全部', loaded: '共 {count} 个文件' }"
+  base="https://pan.example.com"
+/>
+```
+
+Available presets: `zh-CN`, `en-US`. Placeholders use `{count}`, `{percent}`, `{message}`, `{name}` and are replaced by `formatLabel()`. The full key list is exported as `FileListLabels`:
+
+```ts
+import type { FileListLabels } from 'vitepress-plugin-filelist/client'
+import { fileListLocales, formatLabel, resolveLabels } from 'vitepress-plugin-filelist/client'
+```
 
 ## OpenList requirements
 
@@ -117,7 +141,16 @@ The component calls:
 npm install
 npm run build       # dist/node, dist/client/ssr, dist/client/browser, style.css
 npm run typecheck
+npm test            # Vitest: utils + locale helpers
 npm run pack:check
+```
+
+The demo site in `demo/` installs the package through `file:..`:
+
+```bash
+cd demo
+npm install
+npm run build
 ```
 
 ## License

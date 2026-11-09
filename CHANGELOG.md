@@ -10,6 +10,10 @@
 - Batch ZIP download (3 concurrent requests, `fflate`) with progress
 - Folder password prompt and optional read-only token
 - Filter, sortable name / size / modified columns
+- i18n presets (`zh-CN`, `en-US`) and per-key `labels` overrides
 - `site_title` fallback from `GET /api/public/settings`
 - Demo mode with built-in data when `base` is empty
 - `vitepress-tuck` plugin entry and `enhanceAppWithFileList` for plain VitePress
+- Vitest coverage for path/format/sort helpers and locale resolution
+- GitHub Actions: CI (build + typecheck + tests + demo) and demo Pages deploy
+

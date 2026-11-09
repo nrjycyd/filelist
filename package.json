@@ -2,7 +2,7 @@
   "name": "vitepress-plugin-filelist",
   "version": "0.1.0",
   "type": "module",
-  "description": "OpenList file browser for VitePress: tree view, batch ZIP download, password and token support.",
+  "description": "OpenList file browser for VitePress: tree view, batch ZIP download, i18n, password and token support.",
   "author": "EduSprout",
   "license": "MIT",
   "homepage": "https://github.com/your-name/vitepress-plugin-filelist",
@@ -39,6 +39,8 @@
     "dev": "tsdown --watch",
     "build": "tsdown && node scripts/fix-dts.mjs",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "pack:check": "npm pack --dry-run"
   },
   "peerDependencies": {
@@ -55,6 +57,7 @@
     "typescript": "^5.6.0",
     "unplugin-vue": "^8.0.1",
     "vitepress": "^2.0.0-alpha.21",
+    "vitest": "^5.1.0",
     "vue": "^3.5.0",
     "vue-tsc": "^2.2.0"
   },

@@ -13,6 +13,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm install
+      - run: npm ci
       - run: npm run build
       - run: npm run typecheck
+      - run: npm test
+      - name: Build demo site
+        working-directory: demo
+        run: |
+          npm install --no-audit --no-fund
+          npm run build

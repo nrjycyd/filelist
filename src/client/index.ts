@@ -3,7 +3,9 @@ import FileList from './FileList.vue'
 
 export { FileList }
 export { default as VPFileList } from './FileList.vue'
-export type { FileListProps, OpenListEntry } from './types.js'
+export { fileListLocales, formatLabel, resolveLabels } from './locales.js'
+export * from './utils.js'
+export type { FileListLabels, FileListLocale, FileListProps, OpenListEntry } from './types'
 
 /**
  * Register `<FileList>` and `<VPFileList>` globally.

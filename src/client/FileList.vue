@@ -7,7 +7,10 @@
  *   <FileList />  // 演示模式
  */
 import { computed, onMounted, ref } from 'vue'
-import type { FileListProps } from './types'
+import type { FileListLabels, FileListProps } from './types'
+import { formatLabel, resolveLabels } from './locales'
+import { compareNodes, encodePath, extOf, formatDate, formatSize, joinPath } from './utils'
+import type { SortKey } from './utils'
 
 interface OLItem {
   name: string
@@ -26,15 +29,20 @@ interface FNode extends OLItem {
   children: FNode[]
 }
 
-type SortKey = 'name' | 'size' | 'modified'
-
 const props = withDefaults(defineProps<FileListProps>(), {
   base: '',
   path: '/',
   token: '',
   password: '',
   title: '',
+  locale: 'zh-CN',
 })
+
+const text = computed<FileListLabels>(() => resolveLabels(props.locale, props.labels))
+
+function t(key: keyof FileListLabels, values?: Record<string, string | number>): string {
+  return formatLabel(text.value[key], values)
+}
 
 const demo = computed(() => !props.base)
 const baseUrl = computed(() => props.base.replace(/\/+$/, ''))
@@ -138,9 +146,6 @@ async function request<T>(apiPath: string, body?: unknown): Promise<T> {
   return payload.data as T
 }
 
-function joinPath(parent: string, name: string) {
-  return (parent.endsWith('/') ? parent : `${parent}/`) + name
-}
 
 async function listDir(path: string): Promise<OLItem[]> {
   if (demo.value) {
@@ -190,20 +195,8 @@ async function loadSiteTitle() {
 }
 
 /* ---------------- 树状态 ---------------- */
-function compareNodes(a: FNode, b: FNode): number {
-  if (a.is_dir !== b.is_dir) return a.is_dir ? -1 : 1
-  let result = 0
-  if (sortKey.value === 'size') result = a.size - b.size
-  else if (sortKey.value === 'modified') {
-    result = new Date(a.modified).getTime() - new Date(b.modified).getTime()
-  } else {
-    result = a.name.localeCompare(b.name, 'zh-Hans-CN', { numeric: true })
-  }
-  return sortAsc.value ? result : -result
-}
-
 function sortTree(nodes: FNode[]) {
-  nodes.sort(compareNodes)
+  nodes.sort((a, b) => compareNodes(a, b, sortKey.value, sortAsc.value))
   for (const node of nodes) {
     if (node.children.length) sortTree(node.children)
   }
@@ -263,7 +256,7 @@ async function toggleExpand(node: FNode) {
       sortTree(node.children)
       node.loaded = true
     } catch (error) {
-      showToast(`打开文件夹失败：${errorText(error)}`)
+      showToast(t('folderFailed', { message: errorText(error) }))
       return
     } finally {
       node.loading = false
@@ -374,13 +367,13 @@ function triggerBlob(blob: Blob, name: string) {
 async function download(node: FNode) {
   if (node.is_dir) return
   if (demo.value) {
-    showToast(`演示模式：接入 OpenList 后会下载「${node.name}」`)
+    showToast(t('demoDownload', { name: node.name }))
     return
   }
   try {
     triggerUrl(await resolveUrl(node))
   } catch (error) {
-    showToast(`下载失败：${errorText(error)}`)
+    showToast(t('downloadFailed', { message: errorText(error) }))
   }
 }
 
@@ -393,13 +386,13 @@ function canPreview(node: FNode): boolean {
 
 async function preview(node: FNode) {
   if (demo.value) {
-    showToast(`演示模式：接入 OpenList 后可预览「${node.name}」`)
+    showToast(t('demoPreview', { name: node.name }))
     return
   }
   try {
     window.open(await resolveUrl(node), '_blank', 'noopener')
   } catch (error) {
-    showToast(`预览失败：${errorText(error)}`)
+    showToast(t('previewFailed', { message: errorText(error) }))
   }
 }
 
@@ -407,7 +400,7 @@ async function batchDownload() {
   const files = allFiles.value.filter((file) => selected.value.has(file.path))
   if (!files.length) return
   if (demo.value) {
-    showToast(`演示模式：将打包已勾选的 ${files.length} 个文件`)
+    showToast(t('demoBatch', { count: files.length }))
     return
   }
   batchBusy.value = true
@@ -437,41 +430,17 @@ async function batchDownload() {
     batchProgress.value = 100
     triggerBlob(
       new Blob([data as unknown as BlobPart], { type: 'application/zip' }),
-      `${(props.title || '资源').replace(/[\\/:*?"<>|]/g, '_')}.zip`,
+      `${(props.title || t('defaultZip')).replace(/[\\/:*?"<>|]/g, '_')}.zip`,
     )
     selected.value = new Set()
   } catch (error) {
-    showToast(`打包失败：${errorText(error)}`)
+    showToast(t('batchFailed', { message: errorText(error) }))
   } finally {
     batchBusy.value = false
   }
 }
 
 /* ---------------- 展示辅助 ---------------- */
-function formatSize(size: number): string {
-  if (!size) return '-'
-  const units = ['B', 'KB', 'MB', 'GB', 'TB']
-  let index = 0
-  let value = size
-  while (value >= 1024 && index < units.length - 1) {
-    value /= 1024
-    index += 1
-  }
-  return `${value >= 100 ? Math.round(value) : value.toFixed(1)} ${units[index]}`
-}
-
-function formatDate(iso: string): string {
-  if (!iso) return '-'
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return iso.slice(0, 10)
-  const pad = (value: number) => String(value).padStart(2, '0')
-  return `${date.getFullYear()}/${pad(date.getMonth() + 1)}/${pad(date.getDate())}`
-}
-
-function extOf(name: string): string {
-  const match = name.match(/\.([a-z0-9]+)$/i)
-  return match ? match[1].toUpperCase() : ''
-}
 
 function submitPassword() {
   activePassword.value = passwordInput.value
@@ -480,7 +449,7 @@ function submitPassword() {
 }
 
 const displayTitle = computed(
-  () => props.title || siteTitle.value || (props.path === '/' ? '全部文件' : props.path),
+  () => props.title || siteTitle.value || (props.path === '/' ? t('allFiles') : props.path),
 )
 
 onMounted(() => {
@@ -495,31 +464,31 @@ onMounted(() => {
       <div class="fl-title">
         <span class="fl-title-icon">🗂️</span>
         <span class="fl-title-text">{{ displayTitle }}</span>
-        <span v-if="demo" class="fl-demo-badge">演示数据</span>
+        <span v-if="demo" class="fl-demo-badge">{{ t('demoBadge') }}</span>
       </div>
       <div class="fl-tools">
-        <input v-model="keyword" class="fl-search" type="text" placeholder="筛选文件名" />
-        <button class="fl-btn" type="button" @click="loadRoot">刷新</button>
+        <input v-model="keyword" class="fl-search" type="text" :placeholder="t('filter')" />
+        <button class="fl-btn" type="button" @click="loadRoot">{{ t('refresh') }}</button>
         <button
           class="fl-btn fl-btn-primary"
           type="button"
           :disabled="selected.size === 0 || batchBusy"
           @click="batchDownload"
         >
-          {{ batchBusy ? `打包中 ${batchProgress}%` : `批量下载${selected.size ? `（${selected.size}）` : ''}` }}
+          {{ batchBusy ? t('batching', { percent: batchProgress }) : selected.size ? t('batchCount', { count: selected.size }) : t('batch') }}
         </button>
       </div>
     </div>
 
     <div v-if="needsPassword" class="fl-password">
-      <span>该目录受密码保护：</span>
+      <span>{{ t('passwordPrompt') }}</span>
       <input
         v-model="passwordInput"
         type="password"
-        placeholder="输入目录密码"
+        :placeholder="t('passwordPlaceholder')"
         @keyup.enter="submitPassword"
       />
-      <button class="fl-btn fl-btn-primary" type="button" @click="submitPassword">打开</button>
+      <button class="fl-btn fl-btn-primary" type="button" @click="submitPassword">{{ t('open') }}</button>
     </div>
 
     <div class="fl-row fl-head">
@@ -532,29 +501,29 @@ onMounted(() => {
         />
       </span>
       <span class="fl-cell fl-cell-name" @click="setSort('name')">
-        文件名<span class="fl-sort">{{ sortKey === 'name' ? (sortAsc ? '▲' : '▼') : '' }}</span>
+        {{ t('columnName') }}<span class="fl-sort">{{ sortKey === 'name' ? (sortAsc ? '▲' : '▼') : '' }}</span>
       </span>
       <span class="fl-cell fl-cell-size" @click="setSort('size')">
-        文件大小<span class="fl-sort">{{ sortKey === 'size' ? (sortAsc ? '▲' : '▼') : '' }}</span>
+        {{ t('columnSize') }}<span class="fl-sort">{{ sortKey === 'size' ? (sortAsc ? '▲' : '▼') : '' }}</span>
       </span>
       <span class="fl-cell fl-cell-date" @click="setSort('modified')">
-        最后修改日期<span class="fl-sort">{{ sortKey === 'modified' ? (sortAsc ? '▲' : '▼') : '' }}</span>
+        {{ t('columnDate') }}<span class="fl-sort">{{ sortKey === 'modified' ? (sortAsc ? '▲' : '▼') : '' }}</span>
       </span>
       <span class="fl-cell fl-cell-op"></span>
     </div>
 
-    <div v-if="loadingRoot" class="fl-status">加载中…</div>
+    <div v-if="loadingRoot" class="fl-status">{{ t('loading') }}</div>
     <div v-else-if="errorMsg" class="fl-status fl-error">
-      加载失败：{{ errorMsg }}
+      {{ t('loadFailed', { message: errorMsg }) }}
       <p v-if="/guest/i.test(errorMsg)" class="fl-hint">
-        在 OpenList 后台启用 guest，或给组件传一个只读 token。
+        {{ t('guestHint') }}
       </p>
       <p v-if="/failed to fetch|networkerror/i.test(errorMsg)" class="fl-hint">
-        可能是跨域或混合内容被拦截，检查 OpenList 的 cors 配置与页面协议。
+        {{ t('corsHint') }}
       </p>
-      <button class="fl-btn" type="button" @click="loadRoot">重试</button>
+      <button class="fl-btn" type="button" @click="loadRoot">{{ t('retry') }}</button>
     </div>
-    <div v-else-if="visible.length === 0" class="fl-status">没有文件</div>
+    <div v-else-if="visible.length === 0" class="fl-status">{{ t('empty') }}</div>
 
     <div
       v-for="node in visible"
@@ -598,17 +567,17 @@ onMounted(() => {
             v-if="canPreview(node)"
             class="fl-download"
             type="button"
-            title="预览"
+            :title="t('preview')"
             @click="preview(node)"
           ><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
-          <button class="fl-download" type="button" title="下载" @click="download(node)"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg></button>
+          <button class="fl-download" type="button" :title="t('download')" @click="download(node)"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg></button>
         </template>
       </span>
     </div>
 
     <div class="fl-foot">
-      <span>{{ allFiles.length }} 个已加载文件 · 已选 {{ selected.size }} 项</span>
-      <span v-if="unloadedFolders"> · {{ unloadedFolders }} 个目录未展开，未计入全选</span>
+      <span>{{ t('loaded', { count: allFiles.length }) }} · {{ t('selected', { count: selected.size }) }}</span>
+      <span v-if="unloadedFolders"> · {{ t('unloaded', { count: unloadedFolders }) }}</span>
     </div>
 
     <div v-if="toast" class="fl-toast">{{ toast }}</div>
