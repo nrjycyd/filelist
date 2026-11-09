@@ -200,8 +200,8 @@ pnpm run pack:check
 
 ```bash
 cd demo
-npm install
-npm run build
+pnpm install
+pnpm run build
 ```
 
 ## License
