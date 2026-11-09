@@ -167,9 +167,20 @@ async function listDir(path: string, password = activePassword.value): Promise<O
   return data?.content ?? []
 }
 
+function absoluteUrl(raw: string): string {
+  if (!raw) return ''
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(raw)) return raw
+  const root = baseUrl.value || (typeof window !== 'undefined' ? window.location.origin : '')
+  try {
+    return new URL(raw, `${root}/`).href
+  } catch {
+    return raw
+  }
+}
+
 async function resolveUrl(node: FNode): Promise<string> {
   if (demo.value) return ''
-  if (node.raw_url) return node.raw_url
+  if (node.raw_url) return absoluteUrl(node.raw_url)
   const cached = downloadCache.get(node.path)
   if (cached) return cached
   let url = ''
@@ -178,7 +189,7 @@ async function resolveUrl(node: FNode): Promise<string> {
       path: node.path,
       password: node.password || activePassword.value,
     })
-    url = data?.raw_url ?? ''
+    url = absoluteUrl(data?.raw_url ?? '')
   } catch {
     url = ''
   }
