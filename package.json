@@ -1,0 +1,65 @@
+{
+  "name": "vitepress-plugin-filelist",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "OpenList file browser for VitePress: tree view, batch ZIP download, password and token support.",
+  "author": "EduSprout",
+  "license": "MIT",
+  "homepage": "https://github.com/your-name/vitepress-plugin-filelist",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-name/vitepress-plugin-filelist.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-name/vitepress-plugin-filelist/issues"
+  },
+  "keywords": [
+    "vitepress",
+    "vitepress-plugin",
+    "openlist",
+    "alist",
+    "filelist",
+    "netdisk"
+  ],
+  "exports": {
+    ".": "./dist/node/index.js",
+    "./client": {
+      "browser": "./dist/client/browser/index.js",
+      "default": "./dist/client/ssr/index.js"
+    },
+    "./style.css": "./dist/client/style.css",
+    "./package.json": "./package.json"
+  },
+  "module": "./dist/node/index.js",
+  "types": "./dist/node/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "tsdown --watch",
+    "build": "tsdown && node scripts/fix-dts.mjs",
+    "typecheck": "tsc --noEmit",
+    "pack:check": "npm pack --dry-run"
+  },
+  "peerDependencies": {
+    "vitepress": ">=1.0.0",
+    "vue": "^3.5.0"
+  },
+  "dependencies": {
+    "fflate": "^0.8.3",
+    "vitepress-tuck": "^0.12.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsdown": "^0.23.7",
+    "typescript": "^5.6.0",
+    "unplugin-vue": "^8.0.1",
+    "vitepress": "^2.0.0-alpha.21",
+    "vue": "^3.5.0",
+    "vue-tsc": "^2.2.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}
