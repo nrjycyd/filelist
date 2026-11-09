@@ -29,6 +29,8 @@ jobs:
       - run: npm run build
       - name: Build demo site
         working-directory: demo
+        env:
+          PAGES_BASE: /${{ github.event.repository.name }}/
         run: |
           npm install --no-audit --no-fund
           npm run build
