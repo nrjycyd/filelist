@@ -73,6 +73,8 @@ export default {
 | --- | --- | --- | --- |
 | `base` | `string` | `''` | OpenList 站点地址；为空时进入演示模式 |
 | `path` | `string` | `'/'` | 初始目录 |
+| `sources` | `FileListSource[]` | `[]` | 多根挂载；设置后忽略 `path` |
+| `expanded` | `boolean` | `false` | 目录根是否默认展开 |
 | `token` | `string` | `''` | 可选只读 token；不传则以游客身份请求 |
 | `password` | `string` | `''` | 目录密码，也可以在运行时输入 |
 | `title` | `string` | `''` | 工具栏标题；为空时回退到 OpenList 的 `site_title` |
@@ -80,6 +82,35 @@ export default {
 | `labels` | `Partial<FileListLabels>` | `undefined` | 按 key 覆盖单条文案 |
 
 同时注册了 `<FileList>` 和 `<VPFileList>` 两个组件名。
+
+## 多根挂载
+
+```md
+<FileList
+  base="https://pan.example.com"
+  title="课程资料"
+  :sources="[
+    { path: '/课程资料/语文' },
+    { path: '/课程资料/数学', expanded: true },
+    { path: '/课程资料/说明.pdf' }
+  ]"
+/>
+```
+
+- 目录路径挂载为根文件夹，默认折叠；`expanded` 可为全局或单个 source 打开
+- 文件路径挂载为一条文件记录，直接预览/下载
+- 根目录复选框与勾选、全选效果一致：选中根目录会选中其已加载的子项
+- 每个 source 可单独设置 `title`、`password`
+- 根节点顺序按 `sources` 顺序，子项仍按名称/大小/日期排序
+
+```ts
+interface FileListSource {
+  path: string
+  title?: string
+  password?: string
+  expanded?: boolean
+}
+```
 
 ## 国际化
 

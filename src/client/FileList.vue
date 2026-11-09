@@ -7,7 +7,7 @@
  *   <FileList />  // 演示模式
  */
 import { computed, onMounted, ref } from 'vue'
-import type { FileListLabels, FileListProps } from './types'
+import type { FileListLabels, FileListProps, FileListSource } from './types'
 import { formatLabel, resolveLabels } from './locales'
 import { compareNodes, encodePath, extOf, formatDate, formatSize, joinPath } from './utils'
 import type { SortKey } from './utils'
@@ -18,6 +18,7 @@ interface OLItem {
   is_dir: boolean
   modified: string
   sign?: string
+  raw_url?: string
 }
 
 interface FNode extends OLItem {
@@ -27,11 +28,15 @@ interface FNode extends OLItem {
   loaded: boolean
   loading: boolean
   children: FNode[]
+  password?: string
+  isRoot?: boolean
 }
 
 const props = withDefaults(defineProps<FileListProps>(), {
   base: '',
   path: '/',
+  sources: () => [] as FileListSource[],
+  expanded: false,
   token: '',
   password: '',
   title: '',
@@ -147,14 +152,14 @@ async function request<T>(apiPath: string, body?: unknown): Promise<T> {
 }
 
 
-async function listDir(path: string): Promise<OLItem[]> {
+async function listDir(path: string, password = activePassword.value): Promise<OLItem[]> {
   if (demo.value) {
     await new Promise((resolve) => setTimeout(resolve, 220))
     return DEMO_TREE[path] ?? []
   }
   const data = await request<{ content?: OLItem[] }>('/api/fs/list', {
     path,
-    password: activePassword.value,
+    password,
     page: 1,
     per_page: 0,
     refresh: false,
@@ -164,13 +169,14 @@ async function listDir(path: string): Promise<OLItem[]> {
 
 async function resolveUrl(node: FNode): Promise<string> {
   if (demo.value) return ''
+  if (node.raw_url) return node.raw_url
   const cached = downloadCache.get(node.path)
   if (cached) return cached
   let url = ''
   try {
     const data = await request<{ raw_url?: string }>('/api/fs/get', {
       path: node.path,
-      password: activePassword.value,
+      password: node.password || activePassword.value,
     })
     url = data?.raw_url ?? ''
   } catch {
@@ -202,7 +208,7 @@ function sortTree(nodes: FNode[]) {
   }
 }
 
-function toNodes(items: OLItem[], parent: string, depth: number): FNode[] {
+function toNodes(items: OLItem[], parent: string, depth: number, password = ''): FNode[] {
   return items.map((item) => ({
     ...item,
     path: joinPath(parent, item.name),
@@ -211,6 +217,7 @@ function toNodes(items: OLItem[], parent: string, depth: number): FNode[] {
     loaded: false,
     loading: false,
     children: [],
+    password,
   }))
 }
 
@@ -220,7 +227,65 @@ function setSort(key: SortKey) {
     sortKey.value = key
     sortAsc.value = true
   }
-  sortTree(roots.value)
+  if (props.sources.length) {
+    for (const root of roots.value) {
+      if (root.children.length) sortTree(root.children)
+    }
+  } else {
+    sortTree(roots.value)
+  }
+}
+
+function sourceName(path: string): string {
+  const parts = path.split('/').filter(Boolean)
+  return parts[parts.length - 1] || path
+}
+
+async function loadChildren(node: FNode): Promise<boolean> {
+  if (node.loaded) return true
+  node.loading = true
+  try {
+    const items = await listDir(node.path, node.password)
+    node.children = toNodes(items, node.path, node.depth + 1, node.password)
+    sortTree(node.children)
+    node.loaded = true
+    return true
+  } catch (error) {
+    showToast(t('folderFailed', { message: errorText(error) }))
+    return false
+  } finally {
+    node.loading = false
+  }
+}
+
+async function loadSourceRoot(source: FileListSource): Promise<FNode> {
+  const path = source.path
+  const password = source.password ?? ''
+  let item: OLItem = { name: sourceName(path), size: 0, is_dir: true, modified: '' }
+  if (demo.value) {
+    if (/\/[^/]+\.[^/]+$/.test(path)) {
+      item = { ...item, is_dir: false, modified: '2026-09-01T08:00:00+08:00' }
+    }
+  } else {
+    try {
+      const data = await request<OLItem>('/api/fs/get', { path, password })
+      item = { ...item, ...data }
+    } catch {
+      // Keep it as a directory; expanding will surface the real error.
+    }
+  }
+  return {
+    ...item,
+    name: source.title || item.name || sourceName(path),
+    path,
+    depth: 0,
+    expanded: source.expanded ?? props.expanded,
+    loaded: false,
+    loading: false,
+    children: [],
+    password,
+    isRoot: true,
+  }
 }
 
 async function loadRoot() {
@@ -228,8 +293,18 @@ async function loadRoot() {
   errorMsg.value = ''
   needsPassword.value = false
   try {
+    if (props.sources.length) {
+      const nodes = await Promise.all(props.sources.map((source) => loadSourceRoot(source)))
+      roots.value = nodes
+      for (const node of roots.value) {
+        if (node.is_dir && node.expanded) node.expanded = await loadChildren(node)
+      }
+      selected.value = new Set()
+      downloadCache.clear()
+      return
+    }
     const items = await listDir(props.path)
-    roots.value = toNodes(items, props.path, 0)
+    roots.value = toNodes(items, props.path, 0, activePassword.value)
     sortTree(roots.value)
     selected.value = new Set()
     downloadCache.clear()
@@ -248,20 +323,7 @@ async function toggleExpand(node: FNode) {
     node.expanded = false
     return
   }
-  if (!node.loaded) {
-    node.loading = true
-    try {
-      const items = await listDir(node.path)
-      node.children = toNodes(items, node.path, node.depth + 1)
-      sortTree(node.children)
-      node.loaded = true
-    } catch (error) {
-      showToast(t('folderFailed', { message: errorText(error) }))
-      return
-    } finally {
-      node.loading = false
-    }
-  }
+  if (!(await loadChildren(node))) return
   node.expanded = true
 }
 
@@ -529,7 +591,7 @@ onMounted(() => {
       v-for="node in visible"
       :key="node.path"
       class="fl-row"
-      :class="{ 'fl-row-dir': node.is_dir, 'fl-row-selected': selected.has(node.path) }"
+      :class="{ 'fl-row-dir': node.is_dir, 'fl-row-root': node.isRoot, 'fl-row-selected': selected.has(node.path) }"
     >
       <span class="fl-cell fl-cell-check">
         <input
@@ -539,7 +601,7 @@ onMounted(() => {
           @change="toggleCheck(node)"
         />
       </span>
-      <span class="fl-cell fl-cell-name" :style="{ paddingLeft: `${node.depth * 22}px` }">
+      <span class="fl-cell fl-cell-name" :title="node.isRoot ? node.path : undefined" :style="{ paddingLeft: `${node.depth * 22}px` }">
         <button
           v-if="node.is_dir"
           class="fl-arrow"

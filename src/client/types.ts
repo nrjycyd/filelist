@@ -35,11 +35,26 @@ export interface FileListLabels {
   defaultZip: string
 }
 
+export interface FileListSource {
+  /** OpenList path, directory or single file. */
+  path: string
+  /** Root label. Defaults to the last path segment. */
+  title?: string
+  /** Per-source folder password. */
+  password?: string
+  /** Initial expanded state for a directory source. Overrides the global `expanded` prop. */
+  expanded?: boolean
+}
+
 export interface FileListProps {
   /** OpenList base URL, e.g. `https://pan.example.com`. Empty string enables demo mode. */
   base?: string
   /** Initial directory, defaults to `/`. */
   path?: string
+  /** Mount multiple paths as root nodes. When set, `path` is ignored. */
+  sources?: FileListSource[]
+  /** Expand directory roots initially. Defaults to `false`. */
+  expanded?: boolean
   /** Optional read-only token. Guest access is used when omitted. */
   token?: string
   /** Folder password. The component also asks at runtime when OpenList reports one. */
