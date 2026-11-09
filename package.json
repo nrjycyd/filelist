@@ -3,15 +3,15 @@
   "version": "0.1.0",
   "type": "module",
   "description": "OpenList file browser for VitePress: tree view, batch ZIP download, i18n, password and token support.",
-  "author": "EduSprout",
+  "author": "nrjycyd",
   "license": "MIT",
-  "homepage": "https://github.com/your-name/vitepress-plugin-filelist",
+  "homepage": "https://github.com/nrjycyd/vitepress-plugin-filelist#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/your-name/vitepress-plugin-filelist.git"
+    "url": "git+https://github.com/nrjycyd/vitepress-plugin-filelist.git"
   },
   "bugs": {
-    "url": "https://github.com/your-name/vitepress-plugin-filelist/issues"
+    "url": "https://github.com/nrjycyd/vitepress-plugin-filelist/issues"
   },
   "keywords": [
     "vitepress",
