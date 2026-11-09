@@ -163,7 +163,7 @@ pnpm test            # Vitest：utils + locale helpers
 pnpm run pack:check
 ```
 
-仓库的 CI 与发布流程使用 npm（`package-lock.json` + `npm ci`）；本地开发也可以把上面的 `pnpm` 换成 `npm`。
+仓库统一使用 pnpm（`pnpm-lock.yaml`），CI 与发布流程执行 `pnpm install --frozen-lockfile`。
 
 `demo/` 下的演示站通过 `file:..` 安装本地包：
 
