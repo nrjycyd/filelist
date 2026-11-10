@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased
+
+### Features
+
+- Refresh keeps the current rows (dimmed) with a progress bar under the header, then swaps in the new tree at once; open folders and surviving selections are kept, and a failed refresh keeps the old data with a toast
+- Folder passwords are asked for in the folder's own row (in place of size / date), so rows below never move; Enter submits, Esc cancels, a wrong password shows “password is incorrect or no permission” in place
+- Optional “remember in this tab” key toggle (sessionStorage, per OpenList base and folder, covers sub-folders); remembered folders show “Remembered · Forget”; stale saved passwords are dropped with a hint; new prop `rememberPassword` (default `true`)
+- Checking a folder stops at a locked sub-folder and asks for its password instead of failing
+- A single `path` that needs a password shows the prompt in place of the list
+- New labels: `refreshing`, `refreshFailed`, `cancel`, `passwordFor`, `passwordWrong`, `passwordStale`, `rememberPassword`, `remembered`, `forgetPassword`, `unlockFolder`, `networkHint`
+
+### Fixes
+
+- “Failed to fetch” errors now hint at `cors.allow_origins` / OpenList-Worker `ALLOW_URLS`
+- An empty loaded total shows “0 B” instead of “-”
+- GET requests no longer send `Content-Type: application/json`, avoiding a needless CORS preflight
+- Removed the global password bar that pushed the list down
+- zh-CN `passwordPlaceholder` is now “输入密码” so it fits the phone-width input
+
 ## 0.4.0 (2026-11-10)
 
 ### Features
