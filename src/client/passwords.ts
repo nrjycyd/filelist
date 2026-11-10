@@ -7,6 +7,8 @@
  * or blocked storage simply means nothing is remembered.
  */
 
+import { isWithin } from './utils'
+
 const PREFIX = 'vitepress-plugin-filelist:passwords:'
 
 type PasswordMap = Record<string, string>
@@ -41,15 +43,7 @@ function write(base: string, map: PasswordMap): void {
 }
 
 function normalise(path: string): string {
-  const trimmed = path.replace(/\/+$/, '')
-  return trimmed || '/'
-}
-
-/** Whether `path` is `folder` itself or inside it. */
-export function isWithin(path: string, folder: string): boolean {
-  const p = normalise(path)
-  const f = normalise(folder)
-  return f === '/' || p === f || p.startsWith(`${f}/`)
+  return path.replace(/\/+$/, '') || '/'
 }
 
 /** The closest remembered folder at or above `path`, if any. */

@@ -1,18 +1,7 @@
 import type { UserConfig } from 'tsdown'
-import fs from 'node:fs'
-import path from 'node:path'
-import process from 'node:process'
 import { mergeConfig } from 'tsdown'
 import vue from 'unplugin-vue/rolldown'
 
-
-function cleanBrowserDts(): void {
-  const file = path.join('dist/client/browser/index.d.ts')
-  if (!fs.existsSync(file))
-    return
-  const content = fs.readFileSync(file, 'utf-8').replace(/^import\s+"\.\.\/style\.css";\r?\n/, '')
-  fs.writeFileSync(file, content)
-}
 const baseConfig: UserConfig = {
   clean: true,
   format: 'esm',
@@ -21,10 +10,6 @@ const baseConfig: UserConfig = {
 
 export function build(): UserConfig[] {
   const outDir = 'dist'
-  const absoluteOutDir = path.join(process.cwd(), outDir)
-  if (fs.existsSync(absoluteOutDir))
-    fs.rmSync(absoluteOutDir, { recursive: true })
-
   return [
     // Node entry: plugin definition, no Vue code
     mergeConfig({}, baseConfig, {

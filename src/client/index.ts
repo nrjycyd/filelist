@@ -3,8 +3,25 @@ import FileList from './FileList.vue'
 
 export { FileList }
 export { default as VPFileList } from './FileList.vue'
-export { fileListLocales, formatLabel, resolveLabels } from './locales.js'
-export * from './utils.js'
+export { fileListLocales, formatLabel, resolveLabels } from './locales'
+// Explicit list: internal helpers stay private, so they can change freely.
+export {
+  compareNodes,
+  encodePath,
+  extOf,
+  fileKind,
+  fillPreviewUrl,
+  formatDate,
+  formatSize,
+  iframePreviewsFor,
+  joinPath,
+  previewKind,
+  totalSize,
+  uniqueEntryName,
+  zipEntryName,
+  zipSegment,
+} from './utils'
+export type { FileKind, IframePreview, PreviewKind, SortableNode, SortKey } from './utils'
 export type { FileListLabels, FileListLocale, FileListProps, FileListSource, OpenListEntry } from './types'
 
 /**

@@ -33,7 +33,8 @@ const dir = (name: string): SortableNode => ({
 
 describe('formatSize', () => {
   it('handles empty and invalid values', () => {
-    expect(formatSize(0)).toBe('-')
+    expect(formatSize(0)).toBe('0 B')
+    expect(formatSize(-1)).toBe('-')
     expect(formatSize(Number.NaN)).toBe('-')
   })
 

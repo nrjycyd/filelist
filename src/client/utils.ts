@@ -11,6 +11,13 @@ export function joinPath(parent: string, name: string): string {
   return (parent.endsWith('/') ? parent : `${parent}/`) + name
 }
 
+/** Whether `path` is `folder` itself or inside it (segment-wise, trailing slashes ignored). */
+export function isWithin(path: string, folder: string): boolean {
+  const p = path.replace(/\/+$/, '') || '/'
+  const f = folder.replace(/\/+$/, '') || '/'
+  return f === '/' || p === f || p.startsWith(`${f}/`)
+}
+
 export function encodePath(path: string): string {
   return path.split('/').map(encodeURIComponent).join('/')
 }
@@ -53,8 +60,9 @@ export function uniqueEntryName(name: string, used: Set<string>): string {
   return candidate
 }
 
+/** Human-readable size. `0` reads `0 B`; missing, negative or invalid sizes read `-`. */
 export function formatSize(size: number): string {
-  if (!size || !Number.isFinite(size)) return '-'
+  if (!Number.isFinite(size) || size < 0) return '-'
   const units = ['B', 'KB', 'MB', 'GB', 'TB']
   let index = 0
   let value = size
@@ -74,9 +82,15 @@ export function formatDate(iso: string): string {
   return `${date.getFullYear()}/${pad(date.getMonth() + 1)}/${pad(date.getDate())}`
 }
 
-export function extOf(name: string): string {
+/** Lower-case extension (letters and digits only), or `''`. */
+function extension(name: string): string {
   const match = name.match(/\.([a-z0-9]+)$/i)
-  return match ? match[1].toUpperCase() : ''
+  return match ? match[1].toLowerCase() : ''
+}
+
+/** Upper-case extension for the type badge, e.g. `PDF`. */
+export function extOf(name: string): string {
+  return extension(name).toUpperCase()
 }
 
 export type FileKind =
@@ -90,24 +104,49 @@ export type FileKind =
   | 'code'
   | 'other'
 
-const FILE_KINDS: Record<string, FileKind> = {}
-const KIND_EXTS: Record<Exclude<FileKind, 'other'>, string[]> = {
-  doc: ['doc', 'docx', 'odt', 'rtf', 'txt', 'md', 'pages', 'wps'],
-  sheet: ['xls', 'xlsx', 'ods', 'csv', 'tsv', 'numbers', 'et'],
-  slide: ['ppt', 'pptx', 'odp', 'key', 'dps'],
-  pdf: ['pdf'],
-  image: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif', 'heic'],
-  media: ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'mp4', 'webm', 'mov', 'mkv', 'avi'],
-  archive: ['zip', 'rar', '7z', 'tar', 'gz', 'tgz', 'bz2', 'xz', 'iso'],
-  code: ['js', 'ts', 'json', 'html', 'css', 'py', 'java', 'c', 'cpp', 'go', 'rs', 'sh', 'yml', 'yaml', 'xml'],
-}
-for (const [kind, exts] of Object.entries(KIND_EXTS)) {
-  for (const ext of exts) FILE_KINDS[ext] = kind as FileKind
+export type PreviewKind = 'image' | 'video' | 'audio' | 'text' | 'pdf' | 'none'
+
+/**
+ * One table for every known extension: the badge family (`FileKind`) and how
+ * the preview dialog shows it (`PreviewKind`; Office and the like are `none`).
+ */
+const EXTENSIONS: Array<[FileKind, PreviewKind, string]> = [
+  ['doc', 'text', 'txt md markdown'],
+  ['doc', 'none', 'doc docx odt rtf pages wps'],
+  ['sheet', 'text', 'csv tsv'],
+  ['sheet', 'none', 'xls xlsx ods numbers et'],
+  ['slide', 'none', 'ppt pptx odp key dps'],
+  ['pdf', 'pdf', 'pdf'],
+  ['image', 'image', 'png jpg jpeg gif webp svg bmp ico avif'],
+  ['image', 'none', 'heic'],
+  ['media', 'video', 'mp4 webm m4v mov ogv'],
+  ['media', 'audio', 'mp3 wav ogg oga m4a aac flac opus'],
+  ['media', 'none', 'mkv avi'],
+  ['archive', 'none', 'zip rar 7z tar gz tgz bz2 xz iso'],
+  [
+    'code',
+    'text',
+    'js mjs cjs ts tsx jsx vue json html htm css scss less py java kt c h cpp hpp cs go rs rb php sh bat ps1 sql yml yaml xml toml ini conf properties',
+  ],
+  ['other', 'text', 'log srt vtt ass lrc gitignore env'],
+]
+
+const BY_EXTENSION = new Map<string, { kind: FileKind; preview: PreviewKind }>()
+for (const [kind, preview, list] of EXTENSIONS) {
+  for (const ext of list.split(' ')) BY_EXTENSION.set(ext, { kind, preview })
 }
 
 /** Rough file family, used to colour the type badge. */
 export function fileKind(name: string): FileKind {
-  return FILE_KINDS[extOf(name).toLowerCase()] ?? 'other'
+  return BY_EXTENSION.get(extension(name))?.kind ?? 'other'
+}
+
+/**
+ * How a file is shown in the preview dialog. Office documents and anything
+ * else the browser cannot render are `none` (info + download).
+ */
+export function previewKind(name: string): PreviewKind {
+  return BY_EXTENSION.get(extension(name))?.preview ?? 'none'
 }
 
 /** Sum of the `size` of the given entries, ignoring missing or invalid sizes. */
@@ -135,41 +174,6 @@ export function compareNodes(
   return ascending ? result : -result
 }
 
-/* ---------------- preview ---------------- */
-
-export type PreviewKind = 'image' | 'video' | 'audio' | 'text' | 'pdf' | 'none'
-
-const PREVIEW_EXTS: Record<Exclude<PreviewKind, 'none'>, string[]> = {
-  image: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif'],
-  video: ['mp4', 'webm', 'm4v', 'mov', 'ogv'],
-  audio: ['mp3', 'wav', 'ogg', 'oga', 'm4a', 'aac', 'flac', 'opus'],
-  text: [
-    'txt', 'md', 'markdown', 'log', 'json', 'csv', 'tsv', 'xml', 'yml', 'yaml', 'toml', 'ini', 'conf',
-    'properties', 'js', 'mjs', 'cjs', 'ts', 'tsx', 'jsx', 'vue', 'css', 'scss', 'less', 'html', 'htm',
-    'py', 'java', 'kt', 'c', 'h', 'cpp', 'hpp', 'cs', 'go', 'rs', 'rb', 'php', 'sh', 'bat', 'ps1',
-    'sql', 'srt', 'vtt', 'ass', 'lrc', 'gitignore', 'env',
-  ],
-  pdf: ['pdf'],
-}
-
-const PREVIEW_KINDS: Record<string, PreviewKind> = {}
-for (const [kind, exts] of Object.entries(PREVIEW_EXTS)) {
-  for (const ext of exts) PREVIEW_KINDS[ext] = kind as PreviewKind
-}
-
-function lowerExt(name: string): string {
-  const dot = name.lastIndexOf('.')
-  return dot >= 0 ? name.slice(dot + 1).toLowerCase() : ''
-}
-
-/**
- * How a file is shown in the preview dialog. Office documents and anything
- * else the browser cannot render are `none` (info + download).
- */
-export function previewKind(name: string): PreviewKind {
-  return PREVIEW_KINDS[lowerExt(name)] ?? 'none'
-}
-
 export interface IframePreview {
   label: string
   scheme: string
@@ -189,7 +193,7 @@ export function iframePreviewsFor(name: string, setting: string | undefined): If
     return []
   }
   if (!parsed || typeof parsed !== 'object') return []
-  const ext = lowerExt(name)
+  const ext = extension(name)
   const out: IframePreview[] = []
   for (const [key, viewers] of Object.entries(parsed as Record<string, unknown>)) {
     let hit = false

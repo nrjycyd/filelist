@@ -1,14 +1,17 @@
 <script setup lang="ts">
 /**
- * PreviewDialog.vue —— 文件预览弹窗（原生 <dialog>，不跳转页面）
+ * File preview in a native <dialog>, without leaving the page.
  *
- * image / video / audio：原生标签；text：Range 读取前 maxTextBytes；
- * pdf：OpenList `iframe_previews` 中的查看器，未配置时用浏览器自带阅读器（Blob）；
- * 其它类型（含 Office）、失败、过大、演示模式：文件信息 + 下载。
+ * image / video / audio: native elements; text: the first `maxTextBytes`
+ * through a Range request; pdf: the first matching OpenList `iframe_previews`
+ * viewer, else the browser's reader through a Blob. Anything else (Office
+ * included), failures, oversized PDFs and demo mode: file info + download.
  */
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import type { FileListLabels } from './types'
+import Icon from './Icon.vue'
 import { formatLabel } from './locales'
+import type { PreviewKind } from './utils'
 import { extOf, fileKind, formatDate, formatSize, previewKind } from './utils'
 
 export interface PreviewFile {
@@ -76,8 +79,7 @@ const tooLarge = computed(
   () => kind.value === 'pdf' && !props.viewer && (props.file?.size ?? 0) > props.maxPdfBytes,
 )
 
-type Mode = PreviewKindMode | 'demo' | 'failed' | 'unsupported' | 'tooLarge'
-type PreviewKindMode = 'image' | 'video' | 'audio' | 'text' | 'pdf'
+type Mode = Exclude<PreviewKind, 'none'> | 'demo' | 'failed' | 'unsupported' | 'tooLarge'
 
 const mode = computed<Mode>(() => {
   if (props.demo) return 'demo'
@@ -259,16 +261,16 @@ function markFailed() {
         <div v-if="total > 1 || (mode === 'image' && !busy)" class="fl-preview-tools fl-preview-nav">
           <template v-if="total > 1">
             <button class="fl-preview-tool" type="button" :aria-label="t('previous')" :title="t('previous')" @click="emit('prev')">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6" /></svg>
+              <Icon name="previous" :size="18" />
             </button>
             <span class="fl-preview-count">{{ position }} / {{ total }}</span>
             <button class="fl-preview-tool" type="button" :aria-label="t('next')" :title="t('next')" @click="emit('next')">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
+              <Icon name="next" :size="18" />
             </button>
           </template>
           <template v-if="mode === 'image' && !busy">
             <button class="fl-preview-tool fl-preview-rotate" type="button" :aria-label="t('rotate')" :title="t('rotate')" @click="rotation = (rotation + 90) % 360">
-              <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7" /><path d="M21 4v5h-5" /></svg>
+              <Icon name="refresh" :size="17" />
             </button>
             <button
               class="fl-preview-tool fl-preview-zoom"
@@ -278,16 +280,16 @@ function markFailed() {
               :title="t('actualSize')"
               @click="actualSize = !actualSize"
             >
-              <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /><path v-if="!actualSize" d="M11 8v6M8 11h6" /><path v-else d="M8 11h6" /></svg>
+              <Icon :name="actualSize ? 'zoomOut' : 'zoomIn'" :size="17" />
             </button>
           </template>
         </div>
         <div class="fl-preview-tools fl-preview-actions">
           <button v-if="!demo" class="fl-preview-tool fl-preview-download" type="button" :aria-label="t('download')" :title="t('download')" @click="emit('download')">
-            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M5 21h14" /></svg>
+            <Icon name="download" :size="17" />
           </button>
           <button class="fl-preview-tool fl-preview-close" type="button" autofocus :aria-label="t('close')" :title="t('close')" @click="emit('close')">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12" /><path d="M18 6 6 18" /></svg>
+            <Icon name="close" :size="18" />
           </button>
         </div>
       </header>
@@ -322,7 +324,7 @@ function markFailed() {
           <span class="fl-type fl-preview-badge" :data-kind="fileKind(file.name)" aria-hidden="true">{{ extOf(file.name) || 'FILE' }}</span>
           <p class="fl-preview-message">{{ infoMessage }}</p>
           <button v-if="!demo" class="fl-btn fl-btn-primary" type="button" @click="emit('download')">
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M5 21h14" /></svg>
+            <Icon name="download" :size="15" />
             {{ t('download') }}
           </button>
         </div>

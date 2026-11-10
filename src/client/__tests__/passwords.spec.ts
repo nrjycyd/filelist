@@ -3,10 +3,10 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import {
   findRememberedPassword,
   forgetFolderPassword,
-  isWithin,
   rememberedFolders,
   rememberFolderPassword,
 } from '../passwords'
+import { isWithin } from '../utils'
 
 describe('remembered passwords', () => {
   beforeEach(() => sessionStorage.clear())

@@ -18,6 +18,8 @@ export interface FileListLabels {
   loading: string
   loadFailed: string
   guestHint: string
+  /** Shown (and appended to toasts) for browser network errors, usually CORS. */
+  /** Shown (and appended to toasts) for browser network errors, usually CORS. */
   corsHint: string
   retry: string
   empty: string
@@ -75,7 +77,7 @@ export interface FileListLabels {
   /** Refresh failed; the old rows stay. `{message}` */
   refreshFailed: string
   cancel: string
-  /** Placeholder / accessible name of a folder's password input. `{name}` */
+  /** Accessible name of a folder's password input. `{name}` */
   passwordFor: string
   /** OpenList cannot tell a wrong password from missing permission. */
   passwordWrong: string
@@ -88,7 +90,7 @@ export interface FileListLabels {
   forgetPassword: string
   /** Lock button on a folder that needs a password. `{name}` */
   unlockFolder: string
-  /** Appended to failure toasts for browser network errors (usually CORS). */
+  /** @deprecated Network failures now append `corsHint`. */
   networkHint: string
 }
 
