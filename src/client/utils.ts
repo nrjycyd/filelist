@@ -15,6 +15,44 @@ export function encodePath(path: string): string {
   return path.split('/').map(encodeURIComponent).join('/')
 }
 
+/**
+ * Make one path segment safe as a ZIP entry segment: no separators,
+ * no `.` / `..` traversal, no empty names.
+ */
+export function zipSegment(name: string): string {
+  const cleaned = name.replace(/[\\/]/g, '_').trim()
+  if (!cleaned || cleaned === '.' || cleaned === '..') return '_'
+  return cleaned
+}
+
+/** Join path segments into a ZIP entry name, sanitising each segment. */
+export function zipEntryName(segments: string[]): string {
+  return segments.map(zipSegment).join('/')
+}
+
+/**
+ * Return `name`, or `name (2)`, `name (3)`... when it is already in `used`.
+ * The suffix goes before the extension of the last segment. Adds the result to `used`.
+ */
+export function uniqueEntryName(name: string, used: Set<string>): string {
+  let candidate = name
+  if (used.has(candidate)) {
+    const slash = name.lastIndexOf('/')
+    const dir = name.slice(0, slash + 1)
+    const base = name.slice(slash + 1)
+    const dot = base.lastIndexOf('.')
+    const stem = dot > 0 ? base.slice(0, dot) : base
+    const ext = dot > 0 ? base.slice(dot) : ''
+    let index = 2
+    do {
+      candidate = `${dir}${stem} (${index})${ext}`
+      index += 1
+    } while (used.has(candidate))
+  }
+  used.add(candidate)
+  return candidate
+}
+
 export function formatSize(size: number): string {
   if (!size || !Number.isFinite(size)) return '-'
   const units = ['B', 'KB', 'MB', 'GB', 'TB']

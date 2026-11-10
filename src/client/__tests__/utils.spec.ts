@@ -7,6 +7,9 @@ import {
   formatSize,
   joinPath,
   type SortableNode,
+  uniqueEntryName,
+  zipEntryName,
+  zipSegment,
 } from '../utils'
 
 const file = (name: string, size = 0): SortableNode => ({
@@ -96,5 +99,25 @@ describe('compareNodes', () => {
     const older = { ...file('a'), modified: '2025-01-01T00:00:00Z' }
     const newer = { ...file('b'), modified: '2026-01-01T00:00:00Z' }
     expect(compareNodes(older, newer, 'modified', true)).toBeLessThan(0)
+  })
+})
+
+describe('zip entry names', () => {
+  it('joins segments and neutralises separators and traversal', () => {
+    expect(zipEntryName(['课程', '第1章.pdf'])).toBe('课程/第1章.pdf')
+    expect(zipEntryName(['a/b', 'c\\d.txt'])).toBe('a_b/c_d.txt')
+    expect(zipEntryName(['..', '.', ' ', 'ok.txt'])).toBe('_/_/_/ok.txt')
+    expect(zipSegment('  name  ')).toBe('name')
+  })
+
+  it('suffixes duplicates before the extension', () => {
+    const used = new Set<string>()
+    expect(uniqueEntryName('资料/a.txt', used)).toBe('资料/a.txt')
+    expect(uniqueEntryName('资料/a.txt', used)).toBe('资料/a (2).txt')
+    expect(uniqueEntryName('资料/a.txt', used)).toBe('资料/a (3).txt')
+    expect(uniqueEntryName('README', used)).toBe('README')
+    expect(uniqueEntryName('README', used)).toBe('README (2)')
+    expect(uniqueEntryName('.env', used)).toBe('.env')
+    expect(uniqueEntryName('.env', used)).toBe('.env (2)')
   })
 })

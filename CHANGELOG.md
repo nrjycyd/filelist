@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Bug Fixes
+
+- Batch ZIP keeps the folder structure, so same-named files from different folders or sources no longer overwrite each other; entry names are sanitised and de-duplicated
+- Checking a folder now loads its whole subtree and selects every nested file, not just the first level
+- Multi-source mode: sources without their own `password` fall back to the component / runtime password, and a password-protected folder now shows the password prompt
+
+### Tests
+
+- Component tests for `FileList` (`@vue/test-utils` + `happy-dom`)
+
 ## 0.1.0 (2026-11-09)
 
 ### Features

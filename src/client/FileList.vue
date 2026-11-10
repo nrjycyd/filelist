@@ -9,7 +9,7 @@
 import { computed, onMounted, ref } from 'vue'
 import type { FileListLabels, FileListProps, FileListSource } from './types'
 import { formatLabel, resolveLabels } from './locales'
-import { compareNodes, encodePath, extOf, formatDate, formatSize, joinPath } from './utils'
+import { compareNodes, extOf, formatDate, formatSize, joinPath, uniqueEntryName, zipEntryName } from './utils'
 import type { SortKey } from './utils'
 
 interface OLItem {
@@ -30,6 +30,8 @@ interface FNode extends OLItem {
   children: FNode[]
   password?: string
   isRoot?: boolean
+  /** Path segments of this node inside a batch ZIP. */
+  zipPath: string[]
 }
 
 const props = withDefaults(defineProps<FileListProps>(), {
@@ -77,6 +79,10 @@ function showToast(msg: string) {
 
 function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
+}
+
+function isPasswordError(error: unknown): boolean {
+  return /password|密码/i.test(errorText(error))
 }
 
 /* ---------------- 演示数据 ---------------- */
@@ -219,7 +225,13 @@ function sortTree(nodes: FNode[]) {
   }
 }
 
-function toNodes(items: OLItem[], parent: string, depth: number, password = ''): FNode[] {
+function toNodes(
+  items: OLItem[],
+  parent: string,
+  depth: number,
+  password = '',
+  zipParent: string[] = [],
+): FNode[] {
   return items.map((item) => ({
     ...item,
     path: joinPath(parent, item.name),
@@ -229,6 +241,7 @@ function toNodes(items: OLItem[], parent: string, depth: number, password = ''):
     loading: false,
     children: [],
     password,
+    zipPath: [...zipParent, item.name],
   }))
 }
 
@@ -256,12 +269,13 @@ async function loadChildren(node: FNode): Promise<boolean> {
   if (node.loaded) return true
   node.loading = true
   try {
-    const items = await listDir(node.path, node.password)
-    node.children = toNodes(items, node.path, node.depth + 1, node.password)
+    const items = await listDir(node.path, node.password || activePassword.value)
+    node.children = toNodes(items, node.path, node.depth + 1, node.password, node.zipPath)
     sortTree(node.children)
     node.loaded = true
     return true
   } catch (error) {
+    if (isPasswordError(error)) needsPassword.value = true
     showToast(t('folderFailed', { message: errorText(error) }))
     return false
   } finally {
@@ -279,15 +293,19 @@ async function loadSourceRoot(source: FileListSource): Promise<FNode> {
     }
   } else {
     try {
-      const data = await request<OLItem>('/api/fs/get', { path, password })
+      const data = await request<OLItem>('/api/fs/get', {
+        path,
+        password: password || activePassword.value,
+      })
       item = { ...item, ...data }
     } catch {
       // Keep it as a directory; expanding will surface the real error.
     }
   }
+  const name = source.title || item.name || sourceName(path)
   return {
     ...item,
-    name: source.title || item.name || sourceName(path),
+    name,
     path,
     depth: 0,
     expanded: source.expanded ?? props.expanded,
@@ -296,6 +314,8 @@ async function loadSourceRoot(source: FileListSource): Promise<FNode> {
     children: [],
     password,
     isRoot: true,
+    // A file root keeps its real file name (and extension) inside the ZIP.
+    zipPath: [item.is_dir ? name : item.name || sourceName(path)],
   }
 }
 
@@ -321,7 +341,7 @@ async function loadRoot() {
     downloadCache.clear()
   } catch (error) {
     const message = errorText(error)
-    if (/password|密码/i.test(message)) needsPassword.value = true
+    if (isPasswordError(error)) needsPassword.value = true
     else errorMsg.value = message
   } finally {
     loadingRoot.value = false
@@ -375,10 +395,32 @@ function isIndeterminate(node: FNode): boolean {
   return hit > 0 && hit < files.length
 }
 
-async function toggleCheck(node: FNode) {
-  if (node.is_dir && !node.loaded) await toggleExpand(node)
+/** Load a directory and all of its sub-directories. */
+async function loadTree(node: FNode): Promise<boolean> {
+  if (!node.is_dir) return true
+  if (!(await loadChildren(node))) return false
+  for (const child of node.children) {
+    if (child.is_dir && !(await loadTree(child))) return false
+  }
+  return true
+}
+
+async function toggleCheck(node: FNode, event?: Event) {
+  const input = event?.target as HTMLInputElement | null
+  // Selecting a folder includes every nested file, so load the whole subtree first.
+  if (node.is_dir && !isChecked(node)) {
+    const ok = await loadTree(node)
+    if (ok) node.expanded = true
+    else {
+      if (input) input.checked = isChecked(node)
+      return
+    }
+  }
   const files = descendantFiles(node)
-  if (!files.length) return
+  if (!files.length) {
+    if (input) input.checked = false
+    return
+  }
   const next = new Set(selected.value)
   if (files.every((file) => next.has(file.path))) {
     files.forEach((file) => next.delete(file.path))
@@ -480,6 +522,7 @@ async function batchDownload() {
   batchProgress.value = 0
   try {
     const entries: Record<string, Uint8Array> = {}
+    const usedNames = new Set<string>()
     const queue = [...files]
     let done = 0
     const worker = async () => {
@@ -488,7 +531,9 @@ async function batchDownload() {
         if (!file) break
         const response = await fetch(await resolveUrl(file))
         if (!response.ok) throw new Error(`${file.name}：HTTP ${response.status}`)
-        entries[file.name] = new Uint8Array(await response.arrayBuffer())
+        entries[uniqueEntryName(zipEntryName(file.zipPath), usedNames)] = new Uint8Array(
+          await response.arrayBuffer(),
+        )
         done += 1
         batchProgress.value = Math.round((done / files.length) * 90)
       }
@@ -609,7 +654,7 @@ onMounted(() => {
           type="checkbox"
           :checked="isChecked(node)"
           :indeterminate.prop="isIndeterminate(node)"
-          @change="toggleCheck(node)"
+          @change="toggleCheck(node, $event)"
         />
       </span>
       <span class="fl-cell fl-cell-name" :title="node.isRoot ? node.path : undefined" :style="{ paddingLeft: `${node.depth * 22}px` }">
