@@ -28,6 +28,7 @@ type MockTree = Record<string, MockItem[]>
 
 interface Call {
   path: string
+  headers?: Record<string, string>
   body?: { path?: string; password?: string }
 }
 
@@ -35,7 +36,14 @@ const dir = (name: string): MockItem => ({ name, is_dir: true })
 const file = (name: string): MockItem => ({ name, is_dir: false })
 
 /** Minimal OpenList server: `/api/fs/list`, `/api/fs/get`, `/p/...` and folder passwords. */
-function mockOpenList(tree: MockTree, passwords: Record<string, string> = {}) {
+interface MockOptions {
+  /** Extra public settings, e.g. `iframe_previews`. */
+  settings?: Record<string, string>
+  /** Override `/p/<path>` responses. */
+  files?: Record<string, { status?: number; body?: string }>
+}
+
+function mockOpenList(tree: MockTree, passwords: Record<string, string> = {}, options: MockOptions = {}) {
   const calls: Call[] = []
   const json = (data: unknown, code = 200, message = 'success') =>
     new Response(JSON.stringify({ code, message, data }), {
@@ -47,9 +55,9 @@ function mockOpenList(tree: MockTree, passwords: Record<string, string> = {}) {
     const url = new URL(String(input))
     const pathname = decodeURIComponent(url.pathname)
     const body = typeof init?.body === 'string' ? JSON.parse(init.body) : undefined
-    calls.push({ path: pathname, body })
+    calls.push({ path: pathname, body, headers: { ...((init?.headers as Record<string, string>) ?? {}) } })
 
-    if (pathname === '/api/public/settings') return json({ site_title: 'Pan' })
+    if (pathname === '/api/public/settings') return json({ site_title: 'Pan', ...options.settings })
 
     if (pathname === '/api/fs/list' || pathname === '/api/fs/get') {
       const target: string = body.path
@@ -78,7 +86,11 @@ function mockOpenList(tree: MockTree, passwords: Record<string, string> = {}) {
       })
     }
 
-    if (pathname.startsWith('/p/')) return new Response(new TextEncoder().encode(pathname))
+    if (pathname.startsWith('/p/')) {
+      const custom = options.files?.[pathname.slice(2)]
+      if (custom) return new Response(custom.body ?? '', { status: custom.status ?? 200 })
+      return new Response(new TextEncoder().encode(pathname))
+    }
     return new Response('not found', { status: 404 })
   })
 
@@ -339,5 +351,137 @@ describe('FileList toolbar and rows', () => {
 
     expect(row(wrapper, 'A').attributes('style')).toContain('--fl-depth: 0')
     expect(row(wrapper, 'x.txt').attributes('style')).toContain('--fl-depth: 1')
+  })
+})
+
+describe('FileList preview dialog', () => {
+  const dialogOf = (wrapper: VueWrapper) => wrapper.find('dialog.fl-preview')
+  const openPreview = async (wrapper: VueWrapper, name: string) => {
+    await row(wrapper, name).find(`[aria-label="预览 ${name}"]`).trigger('click')
+    await flushPromises()
+  }
+
+  it('shows the preview button only for types the dialog can render', async () => {
+    mockOpenList({ '/': [file('a.pdf'), file('b.png'), file('c.docx'), file('d.txt'), file('e.zip')] })
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+
+    const hasPreview = (name: string) => row(wrapper, name).find(`[aria-label="预览 ${name}"]`).exists()
+    expect(hasPreview('a.pdf')).toBe(true)
+    expect(hasPreview('b.png')).toBe(true)
+    expect(hasPreview('d.txt')).toBe(true)
+    expect(hasPreview('c.docx')).toBe(false)
+    expect(hasPreview('e.zip')).toBe(false)
+  })
+
+  it('opens images in the dialog without navigating or downloading', async () => {
+    mockOpenList({ '/': [file('b.png')] })
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null)
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+
+    await openPreview(wrapper, 'b.png')
+    const dialog = dialogOf(wrapper)
+    expect(dialog.attributes('open')).toBeDefined()
+    expect(dialog.find('.fl-preview-name').text()).toBe('b.png')
+    expect(dialog.find('img.fl-preview-image').attributes('src')).toBe(`${BASE}/p/b.png`)
+    expect(open).not.toHaveBeenCalled()
+    expect(HTMLAnchorElement.prototype.click).not.toHaveBeenCalled()
+
+    await dialog.find('.fl-preview-rotate').trigger('click')
+    expect(dialog.find('img.fl-preview-image').attributes('style')).toContain('rotate(90deg)')
+  })
+
+  it('reads text with a Range request and shows it as plain text', async () => {
+    const { calls } = mockOpenList({ '/': [file('notes.md')] }, {}, { files: { '/notes.md': { body: '# 标题\n正文' } } })
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+
+    await openPreview(wrapper, 'notes.md')
+    await vi.waitFor(() => expect(dialogOf(wrapper).find('.fl-preview-text pre').exists()).toBe(true))
+    expect(dialogOf(wrapper).find('.fl-preview-text pre').text()).toBe('# 标题\n正文')
+    const fileCall = calls.find((call) => call.path === '/p/notes.md')
+    expect(fileCall?.headers?.Range).toBe(`bytes=0-${1024 * 1024 - 1}`)
+  })
+
+  it('uses the PDF viewer configured in OpenList when there is one', async () => {
+    const iframePreviews = JSON.stringify({
+      'doc,docx': { Microsoft: 'https://view.officeapps.live.com/op/view.aspx?src=$e_url' },
+      pdf: { 'PDF.js': 'https://res.oplist.org/pdf.js/web/viewer.html?file=$e_url' },
+    })
+    mockOpenList({ '/': [file('a.pdf')] }, {}, { settings: { iframe_previews: iframePreviews } })
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+
+    await openPreview(wrapper, 'a.pdf')
+    expect(dialogOf(wrapper).find('iframe.fl-preview-frame').attributes('src')).toBe(
+      `https://res.oplist.org/pdf.js/web/viewer.html?file=${encodeURIComponent(`${BASE}/p/a.pdf`)}`,
+    )
+  })
+
+  it('falls back to the browser PDF reader through a Blob when no viewer is configured', async () => {
+    mockOpenList({ '/': [file('a.pdf')] })
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+
+    await openPreview(wrapper, 'a.pdf')
+    await vi.waitFor(() => expect(dialogOf(wrapper).find('iframe.fl-preview-frame').exists()).toBe(true))
+    expect(dialogOf(wrapper).find('iframe.fl-preview-frame').attributes('src')).toBe('blob:zip')
+  })
+
+  it('shows info and a download button when the preview fails', async () => {
+    mockOpenList({ '/': [file('broken.txt')] }, {}, { files: { '/broken.txt': { status: 404 } } })
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+
+    await openPreview(wrapper, 'broken.txt')
+    await vi.waitFor(() => expect(dialogOf(wrapper).find('.fl-preview-info').exists()).toBe(true))
+    expect(dialogOf(wrapper).find('.fl-preview-message').text()).toContain('无法在页面内预览')
+
+    await dialogOf(wrapper).find('.fl-preview-info .fl-btn-primary').trigger('click')
+    await flushPromises()
+    expect(HTMLAnchorElement.prototype.click).toHaveBeenCalled()
+  })
+
+  it('steps through previewable files with the buttons and arrow keys, then closes', async () => {
+    mockOpenList({ '/': [file('a.png'), file('b.docx'), file('c.txt'), file('d.mp4')] })
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+
+    await openPreview(wrapper, 'a.png')
+    const dialog = dialogOf(wrapper)
+    expect(dialog.find('.fl-preview-count').text()).toBe('1 / 3')
+
+    await dialog.find('[aria-label="下一个"]').trigger('click')
+    await flushPromises()
+    expect(dialog.find('.fl-preview-name').text()).toBe('c.txt')
+
+    await dialog.trigger('keydown', { key: 'ArrowRight' })
+    await flushPromises()
+    expect(dialog.find('.fl-preview-name').text()).toBe('d.mp4')
+    expect(dialog.find('video.fl-preview-video').attributes('src')).toBe(`${BASE}/p/d.mp4`)
+
+    await dialog.trigger('keydown', { key: 'ArrowRight' })
+    await flushPromises()
+    expect(dialog.find('.fl-preview-name').text()).toBe('a.png')
+
+    await dialog.find('[aria-label="关闭"]').trigger('click')
+    await flushPromises()
+    expect(dialog.attributes('open')).toBeUndefined()
+    expect(dialog.find('.fl-preview-panel').exists()).toBe(false)
+  })
+
+  it('shows a demo message in demo mode', async () => {
+    const wrapper = mount(FileList, { props: {}, attachTo: document.body })
+    await flushPromises()
+    await vi.waitFor(() => expect(wrapper.findAll('.fl-row:not(.fl-head)').length).toBeGreaterThan(0))
+
+    await row(wrapper, 'assignments').find('.fl-arrow').trigger('click')
+    await vi.waitFor(() => expect(wrapper.text()).toContain('作业提交说明.pdf'))
+    await openPreview(wrapper, '作业提交说明.pdf')
+
+    const dialog = dialogOf(wrapper)
+    expect(dialog.find('.fl-preview-message').text()).toContain('演示模式')
+    expect(dialog.find('.fl-preview-download').exists()).toBe(false)
   })
 })

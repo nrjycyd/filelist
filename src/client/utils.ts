@@ -134,3 +134,103 @@ export function compareNodes(
   }
   return ascending ? result : -result
 }
+
+/* ---------------- preview ---------------- */
+
+export type PreviewKind = 'image' | 'video' | 'audio' | 'text' | 'pdf' | 'none'
+
+const PREVIEW_EXTS: Record<Exclude<PreviewKind, 'none'>, string[]> = {
+  image: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif'],
+  video: ['mp4', 'webm', 'm4v', 'mov', 'ogv'],
+  audio: ['mp3', 'wav', 'ogg', 'oga', 'm4a', 'aac', 'flac', 'opus'],
+  text: [
+    'txt', 'md', 'markdown', 'log', 'json', 'csv', 'tsv', 'xml', 'yml', 'yaml', 'toml', 'ini', 'conf',
+    'properties', 'js', 'mjs', 'cjs', 'ts', 'tsx', 'jsx', 'vue', 'css', 'scss', 'less', 'html', 'htm',
+    'py', 'java', 'kt', 'c', 'h', 'cpp', 'hpp', 'cs', 'go', 'rs', 'rb', 'php', 'sh', 'bat', 'ps1',
+    'sql', 'srt', 'vtt', 'ass', 'lrc', 'gitignore', 'env',
+  ],
+  pdf: ['pdf'],
+}
+
+const PREVIEW_KINDS: Record<string, PreviewKind> = {}
+for (const [kind, exts] of Object.entries(PREVIEW_EXTS)) {
+  for (const ext of exts) PREVIEW_KINDS[ext] = kind as PreviewKind
+}
+
+function lowerExt(name: string): string {
+  const dot = name.lastIndexOf('.')
+  return dot >= 0 ? name.slice(dot + 1).toLowerCase() : ''
+}
+
+/**
+ * How a file is shown in the preview dialog. Office documents and anything
+ * else the browser cannot render are `none` (info + download).
+ */
+export function previewKind(name: string): PreviewKind {
+  return PREVIEW_KINDS[lowerExt(name)] ?? 'none'
+}
+
+export interface IframePreview {
+  label: string
+  scheme: string
+}
+
+/**
+ * Viewers from OpenList's public `iframe_previews` setting that match a file,
+ * in the order OpenList lists them. Keys are comma-separated extensions or a
+ * `/regex/flags` tested against the extension, as in OpenList's frontend.
+ */
+export function iframePreviewsFor(name: string, setting: string | undefined): IframePreview[] {
+  if (!setting) return []
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(setting)
+  } catch {
+    return []
+  }
+  if (!parsed || typeof parsed !== 'object') return []
+  const ext = lowerExt(name)
+  const out: IframePreview[] = []
+  for (const [key, viewers] of Object.entries(parsed as Record<string, unknown>)) {
+    let hit = false
+    if (key.startsWith('/')) {
+      const end = key.lastIndexOf('/')
+      try {
+        hit = end > 0 && new RegExp(key.slice(1, end), key.slice(end + 1)).test(ext)
+      } catch {
+        hit = false
+      }
+    } else {
+      hit = key.split(',').map((item) => item.trim().toLowerCase()).includes(ext)
+    }
+    if (!hit || !viewers || typeof viewers !== 'object') continue
+    for (const [label, scheme] of Object.entries(viewers as Record<string, unknown>)) {
+      if (typeof scheme === 'string' && /^https?:\/\//i.test(scheme)) out.push({ label, scheme })
+    }
+  }
+  return out
+}
+
+function applyUrlOps(placeholder: string, url: string): string {
+  const ops = placeholder.slice(1, placeholder.lastIndexOf('url')).replace(/d$/, '').match(/[eb]/g) ?? []
+  let value = url
+  for (const op of ops.reverse()) {
+    value = op === 'e' ? encodeURIComponent(value) : btoa(String.fromCharCode(...new TextEncoder().encode(value)))
+  }
+  return value
+}
+
+/**
+ * Fill an OpenList preview scheme: `$name`, `$url` (raw URL) and `$durl`
+ * (signed download URL), each optionally prefixed with `e` (URI-encode) or
+ * `b` (base64), e.g. `$e_url`, `$b_url`, `$e_durl`.
+ */
+export function fillPreviewUrl(
+  scheme: string,
+  args: { name: string; rawUrl: string; downloadUrl: string },
+): string {
+  return scheme
+    .replace(/\$name/g, args.name)
+    .replace(/\$[eb_]*durl/g, (placeholder) => applyUrlOps(placeholder, args.downloadUrl))
+    .replace(/\$[eb_]*url/g, (placeholder) => applyUrlOps(placeholder, args.rawUrl))
+}

@@ -5,6 +5,9 @@ import {
   extOf,
   formatDate,
   fileKind,
+  fillPreviewUrl,
+  iframePreviewsFor,
+  previewKind,
   formatSize,
   joinPath,
   totalSize,
@@ -144,5 +147,49 @@ describe('totalSize', () => {
     expect(totalSize([{ size: 10 }, { size: 5 }])).toBe(15)
     expect(totalSize([{ size: Number.NaN }, { size: -1 }, {}, { size: 3 }])).toBe(3)
     expect(totalSize([])).toBe(0)
+  })
+})
+
+describe('previewKind', () => {
+  it('maps extensions to what the dialog can render', () => {
+    expect(previewKind('a.PNG')).toBe('image')
+    expect(previewKind('a.mp4')).toBe('video')
+    expect(previewKind('a.flac')).toBe('audio')
+    expect(previewKind('README.md')).toBe('text')
+    expect(previewKind('a.pdf')).toBe('pdf')
+    expect(previewKind('a.docx')).toBe('none')
+    expect(previewKind('a.mkv')).toBe('none')
+    expect(previewKind('Makefile')).toBe('none')
+  })
+})
+
+describe('iframePreviewsFor', () => {
+  const setting = JSON.stringify({
+    'doc,docx': { Microsoft: 'https://office/view?src=$e_url', Google: 'https://google/gview?url=$e_url' },
+    '/^pdf$/i': { 'PDF.js': 'https://pdfjs/viewer.html?file=$e_url' },
+    epub: { Local: 'javascript:alert(1)' },
+  })
+
+  it('matches extension lists and regex keys in order', () => {
+    expect(iframePreviewsFor('a.DOCX', setting).map((item) => item.label)).toEqual(['Microsoft', 'Google'])
+    expect(iframePreviewsFor('a.pdf', setting)).toEqual([{ label: 'PDF.js', scheme: 'https://pdfjs/viewer.html?file=$e_url' }])
+    expect(iframePreviewsFor('a.txt', setting)).toEqual([])
+  })
+
+  it('ignores non-http viewers and invalid settings', () => {
+    expect(iframePreviewsFor('a.epub', setting)).toEqual([])
+    expect(iframePreviewsFor('a.pdf', 'not json')).toEqual([])
+    expect(iframePreviewsFor('a.pdf', undefined)).toEqual([])
+  })
+})
+
+describe('fillPreviewUrl', () => {
+  const args = { name: '说明.pdf', rawUrl: 'https://pan/p/说明.pdf?sign=a', downloadUrl: 'https://pan/d/x.pdf?sign=b' }
+
+  it('fills OpenList placeholders', () => {
+    expect(fillPreviewUrl('v?file=$e_url', args)).toBe(`v?file=${encodeURIComponent(args.rawUrl)}`)
+    expect(fillPreviewUrl('v?file=$url', args)).toBe(`v?file=${args.rawUrl}`)
+    expect(fillPreviewUrl('v?d=$e_durl&n=$name', args)).toBe(`v?d=${encodeURIComponent(args.downloadUrl)}&n=${args.name}`)
+    expect(fillPreviewUrl('v?b=$b_url', { ...args, rawUrl: 'https://pan/p/a.pdf' })).toBe(`v?b=${btoa('https://pan/p/a.pdf')}`)
   })
 })

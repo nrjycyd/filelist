@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Features
+
+- In-page preview dialog (native `<dialog>`, no navigation or new tab): images (rotate, actual size), video, audio, text (first 1 MB via a Range request) and PDF (OpenList's `iframe_previews` viewer, else the browser reader through a Blob up to 50 MB)
+- Office and other types are not previewed: no preview button, and the dialog shows file info with a download button when it cannot render a file (failure, too large)
+- ← / → steps through the previewable files in the list; Esc or a backdrop click closes; full screen on phones
+- New labels: `close`, `previous`, `next`, `rotate`, `actualSize`, `previewUnsupported`, `previewUnavailable`, `previewTooLarge`, `textTruncated`; `previewFailed` is deprecated
+
+### Fixes
+
+- The preview button no longer downloads the file: OpenList serves `/p/` and `/d/` with `Content-Disposition: attachment`, so opening `raw_url` in a new tab always downloaded
+
 ## 0.3.1 (2026-11-10)
 
 ### Style
