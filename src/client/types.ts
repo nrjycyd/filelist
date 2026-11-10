@@ -70,6 +70,26 @@ export interface FileListLabels {
   previewTooLarge: string
   /** Preview dialog: only the first `{size}` of a text file is shown. */
   textTruncated: string
+  /** Refresh button while refreshing. */
+  refreshing: string
+  /** Refresh failed; the old rows stay. `{message}` */
+  refreshFailed: string
+  cancel: string
+  /** Placeholder / accessible name of a folder's password input. `{name}` */
+  passwordFor: string
+  /** OpenList cannot tell a wrong password from missing permission. */
+  passwordWrong: string
+  /** A password remembered in this tab no longer works. */
+  passwordStale: string
+  /** The key toggle next to a password input. */
+  rememberPassword: string
+  /** Tag on a folder whose password is remembered. */
+  remembered: string
+  forgetPassword: string
+  /** Lock button on a folder that needs a password. `{name}` */
+  unlockFolder: string
+  /** Appended to failure toasts for browser network errors (usually CORS). */
+  networkHint: string
 }
 
 export interface FileListSource {
@@ -98,6 +118,11 @@ export interface FileListProps {
   password?: string
   /** Toolbar title. Falls back to `site_title` from `/api/public/settings`. */
   title?: string
+  /**
+   * Offer to remember folder passwords in this browser tab (sessionStorage,
+   * cleared when the tab closes). Defaults to `true`; `false` hides the option.
+   */
+  rememberPassword?: boolean
   /** Built-in locale. Defaults to `zh-CN`. */
   locale?: FileListLocale
   /** Per-key label overrides on top of the locale preset. */

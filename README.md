@@ -80,6 +80,7 @@ export default {
 | `expanded` | `boolean` | `false` | 目录根是否默认展开 |
 | `token` | `string` | `''` | 可选只读 token；不传则以游客身份请求 |
 | `password` | `string` | `''` | 目录密码，也可以在运行时输入 |
+| `rememberPassword` | `boolean` | `true` | 输入密码时是否提供“在此标签页中记住”开关；`false` 时不写入 sessionStorage |
 | `title` | `string` | `''` | 工具栏标题；为空时回退到 OpenList 的 `site_title` |
 | `locale` | `'zh-CN' \| 'en-US'` | `'zh-CN'` | 内置文案预设 |
 | `labels` | `Partial<FileListLabels>` | `undefined` | 按 key 覆盖单条文案 |
@@ -103,7 +104,7 @@ export default {
 - 目录路径挂载为根文件夹，默认折叠；`expanded` 可为全局或单个 source 打开
 - 文件路径挂载为一条文件记录，直接预览/下载
 - 勾选根目录会加载并选中其下所有文件；ZIP 内以根节点名称（`title` 或路径末段）作为顶层文件夹，文件根保留原文件名
-- 每个 source 可单独设置 `title`、`password`；未设置 `password` 的 source 使用组件的 `password` 或运行时输入的密码，遇到需要密码的目录会弹出密码输入框
+- 每个 source 可单独设置 `title`、`password`；未设置 `password` 的 source 使用组件的 `password` 或运行时输入的密码，遇到需要密码的目录会在该行原地显示密码输入框（见下文）
 - 根节点顺序按 `sources` 顺序，子项仍按名称/大小/日期排序
 
 ```ts
@@ -124,6 +125,16 @@ interface FileListSource {
   - 表头排序改为下拉选择
   - 勾选后操作条吸附在组件顶部，位于 VitePress 导航栏 / “On this page” 栏下方，只在本组件范围内吸附
 - 颜色全部取自 VitePress 主题变量，暗色模式自动适配
+
+## 刷新与目录密码
+
+- **刷新**：保留当前列表并调暗，表头下方显示进度条；完成后整体替换，已展开的目录和仍存在的勾选会保留。刷新失败时保留旧数据并提示。刷新只重新读取 OpenList 的目录缓存（游客没有写权限，无法强制刷新存储）
+- **目录密码**：点击加锁目录（或勾选包含它的目录）时，密码输入框直接出现在该行的大小 / 日期位置，行高不变，下方文件不会移动；勾选在遇到加锁子目录时停下并请求密码
+  - Enter 提交，Esc 取消；密码错误时在原位提示“密码不正确或无权访问”（OpenList 无法区分密码错误和无权限）
+  - 钥匙按钮可开启“在此标签页中记住（关闭标签页后失效）”，密码存在 sessionStorage，按 OpenList 地址和目录区分，也覆盖子目录；已记住的目录显示“已记住 · 忘记”
+  - 保存的密码失效时自动删除，并提示重新输入
+  - 本次页面中输入过的密码（即使没有记住）在刷新后仍然有效
+- 单一 `path` 本身需要密码时，在列表位置显示密码输入框
 
 吸顶偏移默认根据 `.VPNav`、`.VPLocalNav` 的实际高度自动计算；自定义主题可手动指定：
 
@@ -174,7 +185,7 @@ import { fileListLocales, formatLabel, resolveLabels } from 'vitepress-plugin-fi
 ## OpenList 要求
 
 1. **游客只读权限**：开启游客用户，或传入只读 `token`
-2. **CORS**：OpenList 的 `cors.allow_origins` 必须包含站点来源（默认 `*`）
+2. **CORS**：OpenList 的 `cors.allow_origins` 必须包含站点来源（默认 `*`）；使用 OpenList-Worker 时设置 `ALLOW_URLS`（逗号分隔，完整来源，如 `https://docs.example.com,http://localhost:5173`，不支持通配符）。出现“Failed to fetch”时组件会提示检查这两项。GET 请求不带 `Content-Type`，避免多余的预检
 3. **同协议**：HTTPS 页面不能请求 HTTP 的 OpenList（混合内容）
 4. **token 是公开的**：只放可撤销的只读 token，不要放管理 token
 
