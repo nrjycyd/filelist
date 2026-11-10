@@ -92,6 +92,29 @@ export interface FileListLabels {
   unlockFolder: string
   /** @deprecated Network failures now append `corsHint`. */
   networkHint: string
+  /** Batch progress detail. `{done}` `{total}` sizes, `{files}` `{count}` file counts */
+  batchProgress: string
+  /** Batch finished. `{name}` `{count}` `{size}` */
+  batchDone: string
+  batchCanceled: string
+  /** In-memory ZIP over `zipWarnSize`. `{size}` */
+  zipWarnTitle: string
+  /** `{limit}` */
+  zipWarnText: string
+  /** Desktop browsers that cannot stream: point to one that can. */
+  zipStreamTip: string
+  zipContinue: string
+  /** In-memory ZIP over `zipMaxSize`. `{size}` */
+  zipBlockTitle: string
+  /** `{limit}` */
+  zipBlockText: string
+  gotIt: string
+  /** Last row of a long folder. `{count}` */
+  moreRemaining: string
+  showMore: string
+  showAll: string
+  /** Fewer than a page left. `{count}` */
+  showRest: string
 }
 
 export interface FileListSource {
@@ -125,6 +148,21 @@ export interface FileListProps {
    * cleared when the tab closes). Defaults to `true`; `false` hides the option.
    */
   rememberPassword?: boolean
+  /**
+   * Rows shown per folder before “Show more”. Defaults to `200`; `0` shows
+   * everything. Data is still loaded in full; only rendering is limited.
+   */
+  pageSize?: number
+  /**
+   * Browsers that must build the ZIP in memory (Firefox, Safari) ask first above
+   * this many MB. Defaults to 500 (200 on touch devices); `0` never asks.
+   */
+  zipWarnSize?: number
+  /**
+   * …and refuse above this many MB. Defaults to 2048 (1024 on touch devices);
+   * `0` means no limit. Chrome and Edge stream to disk and skip both checks.
+   */
+  zipMaxSize?: number
   /** Built-in locale. Defaults to `zh-CN`. */
   locale?: FileListLocale
   /** Per-key label overrides on top of the locale preset. */

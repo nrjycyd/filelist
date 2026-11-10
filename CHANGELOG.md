@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### Features
+
+- Batch ZIP streams straight to disk in Chrome / Edge (system “Save as” dialog, no size limit, tiny memory use)
+- Browsers that must zip in memory (Firefox, Safari, iPhone) ask first above `zipWarnSize` and refuse above `zipMaxSize` (MB; 500 / 2048 by default, 200 / 1024 on touch devices; `0` disables each)
+- Batch progress shows bytes and file counts in the selection bar, with a Cancel button; selection is locked while zipping
+- Long folders show `pageSize` rows (default 200; `0` = all) followed by “N more · Show more · Show all”; filtering shows every match, folder checks include hidden files, and the shown count survives refreshes
+- New labels: `batchProgress`, `batchDone`, `batchCanceled`, `zipWarnTitle`, `zipWarnText`, `zipStreamTip`, `zipContinue`, `zipBlockTitle`, `zipBlockText`, `gotIt`, `moreRemaining`, `showMore`, `showAll`, `showRest`
+
+### Changes
+
+- ZIPs are built with `client-zip` instead of `fflate`: files are stored (not compressed) and streamed one after another; archives over 4 GB use Zip64
+
 ## 0.5.1 (2026-11-10)
 
 ### Fixes

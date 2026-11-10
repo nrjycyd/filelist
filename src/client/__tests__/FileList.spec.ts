@@ -8,14 +8,27 @@ import type { FileListProps } from '../types'
 
 const zipMock = vi.hoisted(() => ({ entries: null as Record<string, Uint8Array> | null }))
 
-vi.mock('fflate', () => ({
-  zip: (
-    entries: Record<string, Uint8Array>,
-    callback: (error: Error | null, data: Uint8Array) => void,
-  ) => {
-    zipMock.entries = entries
-    callback(null, new Uint8Array([0x50, 0x4b]))
-  },
+vi.mock('client-zip', () => ({
+  makeZip: (files: AsyncIterable<{ name: string; input: ReadableStream<Uint8Array> }>) =>
+    new ReadableStream<Uint8Array>({
+      async start(controller) {
+        const entries: Record<string, Uint8Array> = {}
+        try {
+          for await (const file of files) {
+            const reader = file.input.getReader()
+            const parts: number[] = []
+            for (let part = await reader.read(); !part.done; part = await reader.read()) parts.push(...part.value)
+            entries[file.name] = new Uint8Array(parts)
+          }
+        } catch (error) {
+          controller.error(error)
+          return
+        }
+        zipMock.entries = entries
+        controller.enqueue(new Uint8Array([0x50, 0x4b]))
+        controller.close()
+      },
+    }),
 }))
 
 const BASE = 'https://pan.example.com'
@@ -779,5 +792,188 @@ describe('FileList audit regressions', () => {
     })
     await vi.waitFor(() => expect(row(wrapper, '加密示例（密码 1234）').classes()).toContain('fl-row-locked'))
     expect(row(wrapper, 'notes').classes()).not.toContain('fl-row-locked')
+  })
+})
+
+describe('FileList batch ZIP limits and streaming', () => {
+  const pick = async (wrapper: VueWrapper, ...names: string[]) => {
+    for (const name of names) await check(wrapper, name)
+  }
+
+  it('asks before an in-memory ZIP above zipWarnSize, and zips on confirm', async () => {
+    mockOpenList({ '/': [file('a.pdf'), file('b.pdf')] })
+    const wrapper = mountList({ path: '/', zipWarnSize: 1e-9 })
+    await flushPromises()
+    await pick(wrapper, 'a.pdf', 'b.pdf')
+
+    await wrapper.find('.fl-bar .fl-btn-primary').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('.fl-confirm-title').text()).toBe('文件较大（2 B）')
+    expect(zipMock.entries).toBeNull()
+
+    await wrapper.findAll('.fl-confirm-actions button').at(-1)!.trigger('click')
+    await vi.waitFor(() => expect(Object.keys(zipMock.entries ?? {})).toEqual(['a.pdf', 'b.pdf']))
+    await flushPromises()
+    expect(wrapper.find('.fl-confirm-panel').exists()).toBe(false)
+    expect(wrapper.find('.fl-toast').text()).toContain('已打包')
+  })
+
+  it('cancelling the warning zips nothing', async () => {
+    mockOpenList({ '/': [file('a.pdf')] })
+    const wrapper = mountList({ path: '/', zipWarnSize: 1e-9 })
+    await flushPromises()
+    await pick(wrapper, 'a.pdf')
+    await wrapper.find('.fl-bar .fl-btn-primary').trigger('click')
+    await flushPromises()
+    await wrapper.findAll('.fl-confirm-actions button')[0].trigger('click')
+    await flushPromises()
+    expect(wrapper.find('.fl-confirm-panel').exists()).toBe(false)
+    expect(zipMock.entries).toBeNull()
+    expect(wrapper.find('.fl-selection-count').text()).toBe('已选 1 项')
+  })
+
+  it('refuses above zipMaxSize with a single button', async () => {
+    mockOpenList({ '/': [file('a.pdf')] })
+    const wrapper = mountList({ path: '/', zipMaxSize: 1e-9 })
+    await flushPromises()
+    await pick(wrapper, 'a.pdf')
+    await wrapper.find('.fl-bar .fl-btn-primary').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('.fl-confirm-title').text()).toBe('无法打包 1 B')
+    const buttons = wrapper.findAll('.fl-confirm-actions button')
+    expect(buttons.map((button) => button.text())).toEqual(['知道了'])
+    await buttons[0].trigger('click')
+    expect(zipMock.entries).toBeNull()
+  })
+
+  it('streams into a picked file when the browser supports it', async () => {
+    mockOpenList({ '/': [file('a.pdf')] })
+    const written: number[] = []
+    const picker = vi.fn(async () => ({
+      name: 'mine.zip',
+      createWritable: async () =>
+        new WritableStream<Uint8Array>({
+          write(chunk) {
+            written.push(...chunk)
+          },
+        }),
+    }))
+    vi.stubGlobal('showSaveFilePicker', picker)
+    vi.stubGlobal('isSecureContext', true)
+    const wrapper = mountList({ path: '/', title: '资料', zipMaxSize: 1e-9 })
+    await flushPromises()
+    await pick(wrapper, 'a.pdf')
+    await wrapper.find('.fl-bar .fl-btn-primary').trigger('click')
+    await vi.waitFor(() => expect(written).toEqual([0x50, 0x4b]))
+    await flushPromises()
+
+    expect(picker).toHaveBeenCalledWith(expect.objectContaining({ suggestedName: '资料.zip' }))
+    expect(wrapper.find('.fl-confirm-panel').exists()).toBe(false)
+    expect(wrapper.find('.fl-toast').text()).toContain('mine.zip')
+    expect(wrapper.find('.fl-selection').exists()).toBe(false)
+  })
+
+  it('does nothing when the save dialog is dismissed', async () => {
+    mockOpenList({ '/': [file('a.pdf')] })
+    vi.stubGlobal('showSaveFilePicker', vi.fn(async () => {
+      throw new DOMException('dismissed', 'AbortError')
+    }))
+    vi.stubGlobal('isSecureContext', true)
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+    await pick(wrapper, 'a.pdf')
+    await wrapper.find('.fl-bar .fl-btn-primary').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('.fl-toast').exists()).toBe(false)
+    expect(wrapper.find('.fl-selection-count').text()).toBe('已选 1 项')
+  })
+
+  it('shows progress, locks selection, and can be cancelled', async () => {
+    mockOpenList({ '/': [file('a.pdf')] })
+    const original = globalThis.fetch
+    vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      if (!String(input).includes('/p/')) return original(input, init)
+      // A download that never finishes until aborted.
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new Uint8Array([1]))
+          init?.signal?.addEventListener('abort', () => controller.error(init.signal?.reason))
+        },
+      })
+      return new Response(body)
+    }))
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+    await pick(wrapper, 'a.pdf')
+    await wrapper.find('.fl-bar .fl-btn-primary').trigger('click')
+    await vi.waitFor(() => expect(wrapper.find('.fl-zip-cancel').exists()).toBe(true))
+
+    expect(wrapper.find('.fl-selection-count').text()).toMatch(/^打包中 \d+%$/)
+    expect(wrapper.find('.fl-clear').exists()).toBe(false)
+    expect((row(wrapper, 'a.pdf').find('.fl-cell-check input').element as HTMLInputElement).disabled).toBe(true)
+
+    await wrapper.find('.fl-zip-cancel').trigger('click')
+    await vi.waitFor(() => expect(wrapper.find('.fl-toast').text()).toBe('已取消下载'))
+    expect(wrapper.find('.fl-zip-cancel').exists()).toBe(false)
+    expect(wrapper.find('.fl-selection-count').text()).toBe('已选 1 项')
+  })
+})
+
+describe('FileList long folders', () => {
+  const many = (count: number) => Array.from({ length: count }, (_, index) => file(`f${String(index + 1).padStart(2, '0')}.txt`))
+  const names = (wrapper: VueWrapper) =>
+    wrapper.findAll('.fl-row:not(.fl-head):not(.fl-more)').map((item) => item.find('.fl-name').text())
+
+  it('shows a page per folder, then more, then the rest', async () => {
+    mockOpenList({ '/': many(8) })
+    const wrapper = mountList({ path: '/', pageSize: 3 })
+    await flushPromises()
+    expect(names(wrapper)).toEqual(['f01.txt', 'f02.txt', 'f03.txt'])
+    expect(wrapper.find('.fl-more-count').text()).toBe('还有 5 项')
+    expect(wrapper.findAll('.fl-more-btn').map((button) => button.text())).toEqual(['显示更多 3 项', '全部显示'])
+
+    await wrapper.findAll('.fl-more-btn')[0].trigger('click')
+    expect(names(wrapper)).toHaveLength(6)
+    expect(wrapper.findAll('.fl-more-btn').map((button) => button.text())).toEqual(['显示剩余 2 项'])
+
+    await wrapper.find('.fl-more-btn').trigger('click')
+    expect(names(wrapper)).toHaveLength(8)
+    expect(wrapper.find('.fl-more').exists()).toBe(false)
+  })
+
+  it('limits each folder on its own and keeps the count across a refresh', async () => {
+    mockOpenList({ '/': [dir('A'), ...many(4)], '/A': many(5) })
+    const wrapper = mountList({ path: '/', pageSize: 2 })
+    await flushPromises()
+    await wrapper.findAll('.fl-more-btn')[1].trigger('click')
+    await row(wrapper, 'A').find('.fl-arrow').trigger('click')
+    await flushPromises()
+    expect(wrapper.findAll('.fl-more')).toHaveLength(1)
+    expect(wrapper.find('.fl-more').attributes('style')).toContain('--fl-depth: 1')
+
+    await wrapper.find('.fl-refresh').trigger('click')
+    await flushPromises()
+    expect(names(wrapper)).toHaveLength(1 + 2 + 4)
+  })
+
+  it('selects hidden files with their folder, and filtering shows every match', async () => {
+    mockOpenList({ '/': [dir('A')], '/A': many(5) })
+    const wrapper = mountList({ path: '/', pageSize: 2 })
+    await flushPromises()
+    await check(wrapper, 'A')
+    expect(wrapper.find('.fl-selection-count').text()).toBe('已选 5 项')
+    expect(names(wrapper)).toHaveLength(3)
+
+    await wrapper.find('.fl-search input').setValue('f0')
+    expect(names(wrapper)).toHaveLength(6)
+    expect(wrapper.find('.fl-more').exists()).toBe(false)
+  })
+
+  it('shows everything with pageSize 0', async () => {
+    mockOpenList({ '/': many(12) })
+    const wrapper = mountList({ path: '/', pageSize: 0 })
+    await flushPromises()
+    expect(names(wrapper)).toHaveLength(12)
+    expect(wrapper.find('.fl-more').exists()).toBe(false)
   })
 })

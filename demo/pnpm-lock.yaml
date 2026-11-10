@@ -358,6 +358,9 @@ packages:
     resolution: {integrity: sha512-TQMmc3w+5AxjpL8iIiwebF73dRDF4fBIieAqGn9RGCWaEVwQ6Fb2cGe31Yns0RRIzii5goJ1Y7xbMwo1TxMplw==}
     engines: {node: '>= 20.19.0'}
 
+  client-zip@2.5.1:
+    resolution: {integrity: sha512-yOvNSBsQX1B7wtdvIVXJEIIShrlPiX+adhli7sWvQhsx3nX1DjvpSt+AwOxaX+3DCsT/Yx0nRy5hIjRLIYfebw==}
+
   comma-separated-tokens@2.0.3:
     resolution: {integrity: sha512-Fu4hJdvzeylCfQPp9SGWidpzrMs7tTrlu6Vb8XGaRGck8QSNZJJp538Wrb60Lax4fPwR64ViY468OIUTbRlGZg==}
 
@@ -399,9 +402,6 @@ packages:
     peerDependenciesMeta:
       picomatch:
         optional: true
-
-  fflate@0.8.3:
-    resolution: {integrity: sha512-tbZNuJrLwGUp3zshBtdy4W+ORxZuIh8a5ilyIEQDC5rY1f3U20JMry0Ll3WBzU58EZKsEuJFXhb5gwv8CsPvgA==}
 
   focus-trap@8.2.4:
     resolution: {integrity: sha512-oy6dj7WZYgMbbpoOA29K5W++473F1zEzdI1oJgPb6x7yWT36YaWedUe6i6YPWEt5quSh0pRMohVyHLWXUxtdxg==}
@@ -1044,6 +1044,8 @@ snapshots:
     dependencies:
       readdirp: 5.1.1
 
+  client-zip@2.5.1: {}
+
   comma-separated-tokens@2.0.3: {}
 
   confbox@0.1.8: {}
@@ -1069,8 +1071,6 @@ snapshots:
   fdir@6.5.0(picomatch@4.0.7):
     optionalDependencies:
       picomatch: 4.0.7
-
-  fflate@0.8.3: {}
 
   focus-trap@8.2.4:
     dependencies:
@@ -1390,7 +1390,7 @@ snapshots:
 
   vitepress-plugin-filelist@file:..(rolldown@1.2.16)(vite@8.3.6)(vitepress@2.0.0-alpha.21(postcss@8.5.32))(vue@3.5.45):
     dependencies:
-      fflate: 0.8.3
+      client-zip: 2.5.1
       vitepress: 2.0.0-alpha.21(postcss@8.5.32)
       vitepress-tuck: 0.12.2(rolldown@1.2.16)(vite@8.3.6)(vitepress@2.0.0-alpha.21(postcss@8.5.32))(vue@3.5.45)
       vue: 3.5.45
