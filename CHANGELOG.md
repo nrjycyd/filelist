@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- Toasts are pinned to the bottom of the screen instead of the bottom of the card, so they stay visible when a long folder pushes the card's end off screen
+- A failed batch ZIP opens a dialog with the reason (which file, which error) and a hint to retry with fewer files, instead of a toast that was easy to miss (new labels `batchFailedTitle`, `batchFailedHint`)
+
 ## 0.6.1 (2026-11-10)
 
 ### Fixes

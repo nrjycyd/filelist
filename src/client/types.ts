@@ -92,6 +92,9 @@ export interface FileListLabels {
   unlockFolder: string
   /** @deprecated Network failures now append `corsHint`. */
   networkHint: string
+  /** Title of the dialog when a batch ZIP fails (the reason is the text). */
+  batchFailedTitle: string
+  batchFailedHint: string
   /** Single file handed to the browser's download manager. `{name}` */
   downloadStarted: string
   /** Batch progress detail. `{done}` `{total}` sizes, `{files}` `{count}` file counts */

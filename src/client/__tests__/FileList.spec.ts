@@ -1024,3 +1024,24 @@ describe('FileList batch ZIP concurrency', () => {
     expect(peak).toBe(4)
   })
 })
+
+describe('FileList batch ZIP failure', () => {
+  it('explains a failed ZIP in a dialog and keeps the selection', async () => {
+    mockOpenList({ '/': [file('a.pdf'), file('b.pdf')] }, {}, { files: { '/b.pdf': { status: 500 } } })
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+    await check(wrapper, 'a.pdf')
+    await check(wrapper, 'b.pdf')
+    await wrapper.find('.fl-bar .fl-btn-primary').trigger('click')
+    await vi.waitFor(() => expect(wrapper.find('.fl-confirm-title').exists()).toBe(true))
+
+    expect(wrapper.find('.fl-confirm-title').text()).toBe('打包失败')
+    expect(wrapper.find('.fl-confirm-text').text()).toBe('b.pdf：HTTP 500')
+    expect(wrapper.findAll('.fl-confirm-actions button').map((button) => button.text())).toEqual(['知道了'])
+    expect(wrapper.find('.fl-toast').exists()).toBe(false)
+    expect(wrapper.find('.fl-selection-count').text()).toBe('已选 2 项')
+
+    await wrapper.find('.fl-confirm-actions button').trigger('click')
+    expect(wrapper.find('.fl-confirm-panel').exists()).toBe(false)
+  })
+})
