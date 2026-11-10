@@ -493,18 +493,6 @@ function toggleCheckAll() {
     : new Set(allFiles.value.map((file) => file.path))
 }
 
-const unloadedFolders = computed(() => {
-  let count = 0
-  const walk = (nodes: FNode[]) => {
-    for (const node of nodes) {
-      if (node.is_dir && !node.loaded) count += 1
-      if (node.children.length) walk(node.children)
-    }
-  }
-  walk(roots.value)
-  return count
-})
-
 function triggerUrl(url: string) {
   const anchor = document.createElement('a')
   anchor.href = url
@@ -844,7 +832,6 @@ onBeforeUnmount(() => {
 
     <div class="fl-foot">
       <span>{{ t('loaded', { count: allFiles.length }) }} · {{ t('totalSize', { size: formatSize(loadedBytes) }) }}</span>
-      <span v-if="unloadedFolders" class="fl-foot-hint">{{ t('unloaded', { count: unloadedFolders }) }}</span>
     </div>
 
     <div v-if="toast" class="fl-toast" role="status">{{ toast }}</div>

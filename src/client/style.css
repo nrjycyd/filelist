@@ -488,10 +488,6 @@
   color: var(--vp-c-brand-1);
 }
 
-.fl-name-dir {
-  font-weight: 600;
-}
-
 .fl-meta {
   display: none;
 }
