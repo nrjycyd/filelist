@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- Single-file downloads no longer flash a new tab: OpenList's own `/p/` and `/d/` links (always attachments) download in place; storage providers' direct links still open in a new tab so the page is never replaced. A toast confirms the hand-off (new label `downloadStarted`)
+
+### Performance
+
+- Batch ZIP fetches four files at a time (order in the ZIP unchanged): 300 small files over a 40 ms link went from about 31 s to 7 s
+- Batch progress updates at most every 100 ms instead of on every chunk
+
 ## 0.6.0 (2026-11-10)
 
 ### Features

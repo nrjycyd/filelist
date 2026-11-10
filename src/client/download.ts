@@ -1,11 +1,20 @@
 import { uniqueEntryName, zipEntryName } from './utils'
 
-/** Open a file URL; OpenList serves `/p/` and `/d/` as attachments, so this downloads. */
-export function openUrl(url: string): void {
+/**
+ * Hand a file URL to the browser's own download manager.
+ *
+ * `sameTab` is for links known to answer as attachments (OpenList `/p/`, `/d/`):
+ * the browser downloads and the page stays put, with no tab flashing open.
+ * Other links (a storage provider's direct URL may display inline) open in a
+ * new tab so the document page is never replaced. `download` also keeps a
+ * same-origin link out of the VitePress router and names the file.
+ */
+export function openUrl(url: string, options: { sameTab: boolean; name: string }): void {
   const anchor = document.createElement('a')
   anchor.href = url
-  anchor.target = '_blank'
+  anchor.download = options.name
   anchor.rel = 'noopener'
+  if (!options.sameTab) anchor.target = '_blank'
   document.body.appendChild(anchor)
   anchor.click()
   anchor.remove()
@@ -78,10 +87,15 @@ export async function pickZipFile(name: string): Promise<FileSystemFileHandle | 
 }
 
 /**
- * The ZIP as a stream: files are fetched one after another and passed through
+ * The ZIP as a stream: files are fetched a few at a time and passed through
  * as they arrive, stored without compression (most shared files are already
  * compressed). Clashing entry names get ` (2)`, ` (3)`...
  */
+/** Files fetched at once: hides per-file latency, stays under the browser's 6 per host. */
+const CONCURRENCY = 4
+/** Progress updates at most this often (ms), so the bar does not re-render per chunk. */
+const PROGRESS_INTERVAL = 100
+
 async function zipStream<T extends ZipFile>(files: T[], options: ZipOptions<T>): Promise<ReadableStream<Uint8Array>> {
   const { makeZip } = await import('client-zip')
   const progress: ZipProgress = {
@@ -90,13 +104,31 @@ async function zipStream<T extends ZipFile>(files: T[], options: ZipOptions<T>):
     files: 0,
     totalFiles: files.length,
   }
-  const report = () => options.onProgress({ ...progress })
-  report()
+  let reportedAt = 0
+  const report = (force = false) => {
+    const now = Date.now()
+    if (!force && now - reportedAt < PROGRESS_INTERVAL) return
+    reportedAt = now
+    options.onProgress({ ...progress })
+  }
+  report(true)
 
   async function* entries() {
     const used = new Set<string>()
+    // Up to CONCURRENCY requests run ahead; entries still go into the ZIP in order.
+    const ahead: Array<Promise<Response>> = []
+    let started = 0
+    const startNext = () => {
+      const file = files[started++]
+      const response = options.urlOf(file).then((url) => fetch(url, { signal: options.signal }))
+      response.catch(() => {}) // surfaced when its turn comes
+      ahead.push(response)
+    }
+    while (started < files.length && ahead.length < CONCURRENCY) startNext()
+
     for (const file of files) {
-      const response = await fetch(await options.urlOf(file), { signal: options.signal })
+      const response = await ahead.shift()!
+      if (started < files.length) startNext()
       if (!response.ok || !response.body) throw new Error(`${file.name}：HTTP ${response.status}`)
       const counted = response.body.pipeThrough(
         new TransformStream<Uint8Array, Uint8Array>({
@@ -107,7 +139,7 @@ async function zipStream<T extends ZipFile>(files: T[], options: ZipOptions<T>):
           },
           flush() {
             progress.files += 1
-            report()
+            report(progress.files === progress.totalFiles)
           },
         }),
       )

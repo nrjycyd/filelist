@@ -36,3 +36,17 @@ describe('zipToBlob', () => {
     vi.doUnmock('client-zip')
   })
 })
+
+describe('openUrl', () => {
+  it('opens other links in a new tab so the page is never replaced', async () => {
+    const { openUrl } = await import('../download')
+    const anchors: HTMLAnchorElement[] = []
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      anchors.push(this)
+    })
+    openUrl('https://s3.example.com/a.png?sig=1', { sameTab: false, name: 'a.png' })
+    openUrl('https://pan.example.com/p/a.png', { sameTab: true, name: 'a.png' })
+    expect(anchors.map((anchor) => anchor.target)).toEqual(['_blank', ''])
+    expect(document.querySelector('a')).toBeNull()
+  })
+})

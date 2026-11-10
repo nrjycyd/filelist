@@ -76,6 +76,7 @@ export function createDemoApi(delay = 220): OpenListApi {
     settings: async () => ({ title: '', iframePreviews: '' }),
     fileUrl: async () => '',
     directUrl: () => '',
+    isAttachmentUrl: () => false,
     clearCache: () => {},
   }
 }

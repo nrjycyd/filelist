@@ -570,7 +570,9 @@ async function download(node: FNode) {
     return
   }
   try {
-    openUrl(await fileUrlOf(node))
+    const url = await fileUrlOf(node)
+    openUrl(url, { sameTab: api.value.isAttachmentUrl(url), name: node.name })
+    showToast(t('downloadStarted', { name: node.name }))
   } catch (error) {
     showToast(t('downloadFailed', { message: errorText(error) }))
   }

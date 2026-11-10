@@ -977,3 +977,50 @@ describe('FileList long folders', () => {
     expect(wrapper.find('.fl-more').exists()).toBe(false)
   })
 })
+
+describe('FileList single download', () => {
+  it('downloads OpenList links in place, without a new tab, and says so', async () => {
+    mockOpenList({ '/': [file('a.pdf')] })
+    const anchors: HTMLAnchorElement[] = []
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      anchors.push(this)
+    })
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+    await row(wrapper, 'a.pdf').find('.fl-download').trigger('click')
+    await flushPromises()
+
+    expect(anchors).toHaveLength(1)
+    expect(anchors[0].href).toBe(`${BASE}/p/a.pdf`)
+    expect(anchors[0].target).toBe('')
+    expect(anchors[0].getAttribute('download')).toBe('a.pdf')
+    expect(wrapper.find('.fl-toast').text()).toBe('已交给浏览器下载：a.pdf')
+  })
+})
+
+describe('FileList batch ZIP concurrency', () => {
+  it('fetches at most four files at once and keeps their order in the ZIP', async () => {
+    const names = Array.from({ length: 9 }, (_, index) => `f${index + 1}.txt`)
+    mockOpenList({ '/': names.map(file) })
+    const original = globalThis.fetch
+    let inFlight = 0
+    let peak = 0
+    vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      if (!String(input).includes('/p/')) return original(input, init)
+      inFlight += 1
+      peak = Math.max(peak, inFlight)
+      // Later files answer faster, so order only holds if the ZIP keeps it.
+      const index = Number(String(input).match(/f(\d+)/)?.[1] ?? 0)
+      await new Promise((resolve) => setTimeout(resolve, 40 - index * 4))
+      inFlight -= 1
+      return new Response(new TextEncoder().encode(String(input)))
+    }))
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+    await wrapper.find('.fl-head .fl-cell-check input').trigger('change')
+    const entries = await zipSelected(wrapper)
+
+    expect(Object.keys(entries)).toEqual(names)
+    expect(peak).toBe(4)
+  })
+})
