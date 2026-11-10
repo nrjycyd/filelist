@@ -2,9 +2,17 @@
 
 ## Unreleased
 
+### Features
+
+- Markdown and HTML previews can switch between source (default) and rendered. Markdown uses VitePress' doc style, is sanitised with DOMPurify (rendering is refused if the sanitiser does not work), keeps only http(s) / mailto links (new tab) and shows relative images as their alt text; markdown-it and DOMPurify load on demand. HTML renders in an empty-`sandbox` iframe: no scripts, forms or popups, no access to the page. The choice is kept while the page is open
+- Deep search: when the filter can only see loaded folders, “Deep search” loads the remaining sub-folders under the mounted paths (four at a time, `deepSearchLimit` per run, default 500) and matches appear in place, as normal rows. Stop / Continue; locked folders are skipped and counted. No OpenList search index needed
+- Filter matches are highlighted
+- Name sorting follows `locale`: pinyin for `zh-CN`, alphabetical for `en-US`, numbers in natural order either way; `compareNodes` takes an optional locale
+- New labels: `deepHint`, `deepSearch`, `deepRunning`, `deepStop`, `deepDone`, `deepCapped`, `deepContinue`, `deepSkipped`, `deepFailed`, `viewMode`, `viewSource`, `viewRendered`, `htmlSandboxNote`, `imageOmitted`
+
 ### Internal
 
-- Browser tests (Playwright) run in CI on every push and PR: a fixture site in `demo/e2e` against a mock OpenList, in Chromium desktop, a phone profile and WebKit (WebKit not required yet). They check row heights and zero shift, folder passwords, refresh, show more, single downloads staying on the page with an on-screen toast, and ZIPs (in memory, streamed, cancelled, failed)
+- Browser tests (Playwright) run in CI on every push and PR: a fixture site in `demo/e2e` against a mock OpenList, in Chromium desktop, a phone profile and WebKit, all required. They check row heights and zero shift, folder passwords, refresh, show more, single downloads staying on the page with an on-screen toast, and ZIPs (in memory, streamed, cancelled, failed)
 
 ## 0.6.2 (2026-11-10)
 

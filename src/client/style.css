@@ -824,7 +824,8 @@
 
 /* ---------------- long folders ---------------- */
 
-.fl-more {
+.fl-more,
+.fl-deep {
   background: var(--vp-c-bg-soft);
 }
 
@@ -866,6 +867,37 @@
   font-weight: 400;
   background: transparent;
   border-color: transparent;
+}
+
+/* ---------------- filter and deep search ---------------- */
+
+.fl-hit {
+  padding: 0 1px;
+  color: inherit;
+  background: var(--fl-hit-bg, rgb(250 204 21 / 32%));
+  border-radius: 3px;
+}
+
+.fl-deep {
+  position: relative;
+}
+
+.fl-deep-bar {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 30%;
+  height: 2px;
+  background: var(--vp-c-brand-1);
+  animation: fl-progress 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fl-deep-bar {
+    width: 100%;
+    animation: none;
+    opacity: 0.6;
+  }
 }
 
 /* ---------------- confirm dialog ---------------- */
@@ -1316,6 +1348,62 @@
   background: var(--vp-c-default-soft);
 }
 
+/* Markdown / HTML: source or rendered */
+.fl-preview-view {
+  display: inline-flex;
+  padding: 2px;
+  margin-left: 6px;
+  background: var(--vp-c-default-soft);
+  border-radius: 8px;
+}
+
+.fl-preview-view-btn {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+  color: var(--vp-c-text-2);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+}
+
+.fl-preview-view-btn[aria-pressed='true'] {
+  font-weight: 600;
+  color: var(--vp-c-text-1);
+  background: var(--vp-c-bg);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 12%);
+}
+
+.fl-preview-rendered {
+  display: flex;
+  flex-direction: column;
+}
+
+.fl-preview .fl-md {
+  box-sizing: border-box;
+  max-width: 860px;
+  padding: 16px 24px 32px;
+  margin: 0 auto;
+}
+
+.fl-md-image {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 12px;
+  color: var(--vp-c-text-2);
+  border: 1px dashed var(--vp-c-divider);
+  border-radius: 6px;
+}
+
+.fl-preview-html {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  background: #fff;
+  border: 0;
+}
+
 .fl-preview-count {
   min-width: 44px;
   font-size: 12px;
@@ -1485,6 +1573,12 @@
 
   .fl-preview-count {
     min-width: 36px;
+  }
+
+  .fl-preview-view-btn {
+    height: 36px;
+    padding: 0 14px;
+    font-size: 14px;
   }
 
   .fl-preview .fl-preview-head .fl-type {

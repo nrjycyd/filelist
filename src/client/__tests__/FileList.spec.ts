@@ -119,7 +119,7 @@ function mountList(props: FileListProps) {
 function row(wrapper: Pick<VueWrapper, 'findAll'>, name: string) {
   const match = wrapper
     .findAll('.fl-row:not(.fl-head)')
-    .find((item) => item.find('.fl-name').text().endsWith(name))
+    .find((item) => item.find('.fl-name').exists() && item.find('.fl-name').text().endsWith(name))
   if (!match) throw new Error(`row "${name}" not found`)
   return match
 }
@@ -1043,5 +1043,154 @@ describe('FileList batch ZIP failure', () => {
 
     await wrapper.find('.fl-confirm-actions button').trigger('click')
     expect(wrapper.find('.fl-confirm-panel').exists()).toBe(false)
+  })
+})
+
+describe('FileList preview: Markdown and HTML rendering', () => {
+  const openText = async (wrapper: VueWrapper, name: string) => {
+    await row(wrapper, name).find('.fl-preview-btn').trigger('click')
+    await flushPromises()
+    const dialog = wrapper.find('dialog.fl-preview')
+    await vi.waitFor(() => expect(dialog.find('.fl-preview-text').exists()).toBe(true))
+    return dialog
+  }
+
+  it('shows Markdown source by default and never renders without a working sanitiser', async () => {
+    // happy-dom has no DOMPurify support, so this also proves the safety net:
+    // rendering is refused and the source stays. Real rendering runs in e2e.
+    const body = '# 标题\n\n<script>window.__pwned = 1</script>'
+    mockOpenList({ '/': [file('guide.md')] }, {}, { files: { '/guide.md': { body } } })
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+    const dialog = await openText(wrapper, 'guide.md')
+
+    expect(dialog.find('.fl-preview-text pre').text()).toContain('# 标题')
+    const buttons = dialog.findAll('.fl-preview-view-btn')
+    expect(buttons.map((button) => button.text())).toEqual(['源码', '渲染'])
+    expect(buttons[0].attributes('aria-pressed')).toBe('true')
+
+    await buttons[1].trigger('click')
+    await vi.waitFor(() => expect(dialog.findAll('.fl-preview-view-btn')[0].attributes('aria-pressed')).toBe('true'))
+    expect(dialog.find('.fl-md').exists()).toBe(false)
+    expect(dialog.find('.fl-preview-text pre').text()).toContain('<script>')
+    expect((window as unknown as { __pwned?: number }).__pwned).toBeUndefined()
+  })
+
+  it('renders HTML only inside an empty sandbox and remembers the choice', async () => {
+    mockOpenList(
+      { '/': [file('page.html'), file('notes.txt')] },
+      {},
+      { files: { '/page.html': { body: '<h1>Hi</h1><script>alert(1)</script>' } } },
+    )
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+    let dialog = await openText(wrapper, 'page.html')
+    expect(dialog.find('.fl-preview-text pre').text()).toContain('<h1>Hi</h1>')
+
+    await dialog.findAll('.fl-preview-view-btn')[1].trigger('click')
+    const frame = dialog.find('iframe.fl-preview-html')
+    expect(frame.attributes('sandbox')).toBe('')
+    expect(frame.attributes('srcdoc')).toContain('<h1>Hi</h1>')
+    expect(dialog.find('.fl-preview-note').text()).toBe('已禁用脚本；网页引用的相对路径资源不会加载')
+
+    // Plain text files get no switch.
+    await dialog.find('.fl-preview-close').trigger('click')
+    dialog = await openText(wrapper, 'notes.txt')
+    expect(dialog.find('.fl-preview-view').exists()).toBe(false)
+    await dialog.find('.fl-preview-close').trigger('click')
+
+    // Reopening an HTML file keeps “rendered”.
+    dialog = await openText(wrapper, 'page.html')
+    expect(dialog.find('iframe.fl-preview-html').exists()).toBe(true)
+  })
+})
+
+describe('FileList deep search', () => {
+  const tree: MockTree = {
+    '/': [dir('A'), dir('Locked'), file('readme.txt')],
+    '/A': [dir('B'), file('a-notes.txt')],
+    '/A/B': [dir('C')],
+    '/A/B/C': [file('target-1.pdf')],
+    '/Locked': [file('target-2.pdf')],
+  }
+  const names = (wrapper: VueWrapper) =>
+    wrapper.findAll('.fl-row:not(.fl-head):not(.fl-more):not(.fl-deep)').map((item) => item.find('.fl-name').text())
+  const deepRow = (wrapper: VueWrapper) => wrapper.find('.fl-deep')
+
+  it('loads the unloaded folders and shows matches in place', async () => {
+    const { calls } = mockOpenList(tree, { '/Locked': 'pw' })
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+    await wrapper.find('.fl-search input').setValue('target')
+    expect(names(wrapper)).toEqual([])
+    expect(deepRow(wrapper).text()).toContain('只筛选了已加载的内容')
+
+    await deepRow(wrapper).find('.fl-more-btn').trigger('click')
+    await flushPromises()
+    expect(names(wrapper)).toEqual(['A', 'B', 'C', 'target-1.pdf'])
+    expect(row(wrapper, 'target-1.pdf').find('.fl-hit').text()).toBe('target')
+    expect(deepRow(wrapper).text()).toBe('已搜索全部 4 个文件夹 · 跳过 1 个加密文件夹')
+    // Locked folder skipped quietly: no toast, no prompt.
+    expect(wrapper.find('.fl-toast').exists()).toBe(false)
+    expect(wrapper.find('.fl-row-prompting').exists()).toBe(false)
+
+    // A match is a normal row: it can be selected.
+    await check(wrapper, 'target-1.pdf')
+    expect(wrapper.find('.fl-selection-count').text()).toBe('已选 1 项')
+
+    // Clearing the filter returns to the previous (collapsed) state, data kept.
+    const listed = calls.filter((call) => call.path === '/api/fs/list').length
+    await wrapper.find('.fl-search input').setValue('')
+    expect(names(wrapper)).toEqual(['A', 'Locked', 'readme.txt'])
+    expect(row(wrapper, 'Locked').classes()).toContain('fl-row-locked')
+    expect(deepRow(wrapper).exists()).toBe(false)
+    await wrapper.find('.fl-search input').setValue('target')
+    expect(names(wrapper)).toContain('target-1.pdf')
+    expect(calls.filter((call) => call.path === '/api/fs/list')).toHaveLength(listed)
+  })
+
+  it('stops at deepSearchLimit and continues on request', async () => {
+    mockOpenList(tree, { '/Locked': 'pw' })
+    const wrapper = mountList({ path: '/', deepSearchLimit: 2 })
+    await flushPromises()
+    await wrapper.find('.fl-search input').setValue('target')
+    await deepRow(wrapper).find('.fl-more-btn').trigger('click')
+    await flushPromises()
+    expect(deepRow(wrapper).text()).toContain('已查找 2 个文件夹，还有未搜索的子目录')
+    expect(names(wrapper)).not.toContain('target-1.pdf')
+
+    await deepRow(wrapper).find('.fl-more-btn').trigger('click')
+    await flushPromises()
+    expect(names(wrapper)).toContain('target-1.pdf')
+    expect(deepRow(wrapper).text()).toContain('已搜索全部 4 个文件夹')
+  })
+
+  it('can be stopped while running', async () => {
+    mockOpenList(tree)
+    const original = globalThis.fetch
+    vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      await new Promise((resolve) => setTimeout(resolve, 20))
+      return original(input, init)
+    }))
+    const wrapper = mountList({ path: '/' })
+    await vi.waitFor(() => expect(names(wrapper)).toHaveLength(3))
+    await wrapper.find('.fl-search input').setValue('target')
+    await deepRow(wrapper).find('.fl-more-btn').trigger('click')
+    expect(deepRow(wrapper).text()).toContain('正在深度搜索')
+
+    await deepRow(wrapper).find('.fl-more-btn').trigger('click')
+    expect(deepRow(wrapper).text()).toContain('深度搜索')
+    expect(deepRow(wrapper).text()).not.toContain('正在')
+    await new Promise((resolve) => setTimeout(resolve, 200))
+    await flushPromises()
+    expect(names(wrapper)).not.toContain('target-1.pdf')
+  })
+
+  it('shows no deep row when everything is already loaded', async () => {
+    mockOpenList({ '/': [file('a.txt'), file('b.txt')] })
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+    await wrapper.find('.fl-search input').setValue('a')
+    expect(deepRow(wrapper).exists()).toBe(false)
   })
 })

@@ -2,7 +2,9 @@
 /**
  * File preview in a native <dialog>, without leaving the page.
  *
- * image / video / audio: native elements; text: the first `maxTextBytes`
+ * image / video / audio: native elements; text: the first `maxTextBytes`,
+ * with Markdown and HTML switchable between source (default) and rendered
+ * (Markdown sanitised in VitePress' doc style, HTML in a script-less sandbox);
  * through a Range request; pdf: the first matching OpenList `iframe_previews`
  * viewer, else the browser's reader through a Blob. Anything else (Office
  * included), failures, oversized PDFs and demo mode: file info + download.
@@ -10,6 +12,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import type { FileListLabels } from './types'
 import Icon from './Icon.vue'
+import { renderMarkdown } from './markdown'
 import { formatLabel } from './locales'
 import type { PreviewKind } from './utils'
 import { extOf, fileKind, formatDate, formatSize, previewKind } from './utils'
@@ -72,8 +75,19 @@ const truncated = ref(false)
 const blobUrl = ref('')
 const rotation = ref(0)
 const actualSize = ref(false)
+/** Markdown / HTML: show the source or render it. Kept while the page is open. */
+const view = ref<'source' | 'rendered'>('source')
+const renderedHtml = ref('')
 let controller: AbortController | undefined
 let loadSeq = 0
+
+/** Text files that can also be rendered. */
+const renderAs = computed<'markdown' | 'html' | null>(() => {
+  const name = props.file?.name ?? ''
+  if (/\.(md|markdown)$/i.test(name)) return 'markdown'
+  if (/\.html?$/i.test(name)) return 'html'
+  return null
+})
 
 const tooLarge = computed(
   () => kind.value === 'pdf' && !props.viewer && (props.file?.size ?? 0) > props.maxPdfBytes,
@@ -98,6 +112,8 @@ const busy = computed(
     (props.resolving || loadingBody.value || (!props.src && !tooLarge.value)),
 )
 
+const canRender = computed(() => !!renderAs.value && mode.value === 'text' && !busy.value)
+
 const infoMessage = computed(() => {
   const file = props.file
   if (!file) return ''
@@ -120,6 +136,7 @@ function resetBody() {
   loadingBody.value = false
   bodyFailed.value = false
   textContent.value = ''
+  renderedHtml.value = ''
   truncated.value = false
   rotation.value = 0
   actualSize.value = false
@@ -198,6 +215,20 @@ watch(
 )
 
 watch(
+  () => [view.value, renderAs.value, textContent.value] as const,
+  async ([current, as, text]) => {
+    if (current !== 'rendered' || as !== 'markdown' || !text) return
+    const seq = loadSeq
+    try {
+      const html = await renderMarkdown(text, (alt) => t('imageOmitted', { alt }))
+      if (seq === loadSeq) renderedHtml.value = html
+    } catch {
+      if (seq === loadSeq) view.value = 'source'
+    }
+  },
+)
+
+watch(
   () => props.open,
   (open) => {
     const el = dialog.value
@@ -258,7 +289,7 @@ function markFailed() {
           <span class="fl-preview-name">{{ file.name }}</span>
           <span class="fl-preview-meta">{{ formatSize(file.size) }} · {{ formatDate(file.modified) }}</span>
         </div>
-        <div v-if="total > 1 || (mode === 'image' && !busy)" class="fl-preview-tools fl-preview-nav">
+        <div v-if="total > 1 || (mode === 'image' && !busy) || canRender" class="fl-preview-tools fl-preview-nav">
           <template v-if="total > 1">
             <button class="fl-preview-tool" type="button" :aria-label="t('previous')" :title="t('previous')" @click="emit('prev')">
               <Icon name="previous" :size="18" />
@@ -283,6 +314,16 @@ function markFailed() {
               <Icon :name="actualSize ? 'zoomOut' : 'zoomIn'" :size="17" />
             </button>
           </template>
+          <span v-if="canRender" class="fl-preview-view" role="group" :aria-label="t('viewMode')">
+            <button
+              v-for="option in (['source', 'rendered'] as const)"
+              :key="option"
+              class="fl-preview-view-btn"
+              type="button"
+              :aria-pressed="view === option"
+              @click="view = option"
+            >{{ t(option === 'source' ? 'viewSource' : 'viewRendered') }}</button>
+          </span>
         </div>
         <div class="fl-preview-tools fl-preview-actions">
           <button v-if="!demo" class="fl-preview-tool fl-preview-download" type="button" :aria-label="t('download')" :title="t('download')" @click="emit('download')">
@@ -315,9 +356,19 @@ function markFailed() {
           @error="markFailed"
         ></video>
         <audio v-else-if="mode === 'audio'" class="fl-preview-audio" :src="src" controls preload="metadata" @error="markFailed"></audio>
-        <div v-else-if="mode === 'text'" class="fl-preview-text">
+        <div v-else-if="mode === 'text'" class="fl-preview-text" :class="{ 'fl-preview-rendered': renderAs && view === 'rendered' }">
           <p v-if="truncated" class="fl-preview-note">{{ t('textTruncated', { size: formatSize(maxTextBytes) }) }}</p>
-          <pre>{{ textContent }}</pre>
+          <template v-if="renderAs === 'markdown' && view === 'rendered'">
+            <!-- sanitised by renderMarkdown (DOMPurify) -->
+            <div v-if="renderedHtml" class="vp-doc fl-md" v-html="renderedHtml"></div>
+            <div v-else class="fl-preview-status" role="status">{{ t('loading') }}</div>
+          </template>
+          <template v-else-if="renderAs === 'html' && view === 'rendered'">
+            <p class="fl-preview-note">{{ t('htmlSandboxNote') }}</p>
+            <!-- empty sandbox: no scripts, no forms, no popups, an opaque origin -->
+            <iframe class="fl-preview-html" sandbox="" referrerpolicy="no-referrer" :srcdoc="textContent" :title="file.name"></iframe>
+          </template>
+          <pre v-else>{{ textContent }}</pre>
         </div>
         <iframe v-else-if="mode === 'pdf'" class="fl-preview-frame" :src="viewer || blobUrl" :title="file.name"></iframe>
         <div v-else class="fl-preview-info">

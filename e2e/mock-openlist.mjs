@@ -10,12 +10,26 @@ const DAY = '2026-10-01T00:00:00Z'
 
 const dir = (name) => ({ name, size: 0, is_dir: true, modified: DAY })
 const file = (name, size) => ({ name, size, is_dir: false, modified: DAY })
+const text = (name, content) => ({ ...file(name, Buffer.byteLength(content)), content })
+
+const GUIDE = [
+  '# 安装指南',
+  '',
+  '[官网](https://example.com) · [另一篇](./other.md)',
+  '',
+  '![拓扑图](./img/topo.png)',
+  '',
+  '<script>window.__pwned = 1</script><img src="x" onerror="window.__pwned = 2">',
+].join('\n')
+const PAGE = '<h1 id="title">报告</h1><script>parent.__pwned = 3</script>'
 
 export const tree = {
   '/': [
     dir('Locked'),
     dir('photos'),
     dir('videos'),
+    dir('docs'),
+    dir('deep'),
     file('big-a.bin', 2 * MB),
     file('big-b.bin', 2 * MB),
     file('broken.bin', 4 * KB),
@@ -24,8 +38,13 @@ export const tree = {
   '/Locked': [file('secret-1.txt', 3 * KB), file('secret-2.txt', 3 * KB)],
   '/photos': Array.from({ length: 450 }, (_, i) => file(`IMG_${String(i + 1).padStart(4, '0')}.jpg`, 2 * KB + i)),
   '/videos': [],
+  '/docs': [text('guide.md', GUIDE), text('page.html', PAGE)],
+  '/deep': [dir('a'), dir('Locked deep')],
+  '/deep/a': [dir('b')],
+  '/deep/a/b': [file('needle-report.pdf', 3 * KB)],
+  '/deep/Locked deep': [file('needle-secret.pdf', 3 * KB)],
 }
-const passwords = { '/Locked': '1234' }
+const passwords = { '/Locked': '1234', '/deep/Locked deep': '5678' }
 
 const parentOf = (path) => path.slice(0, path.lastIndexOf('/')) || '/'
 const find = (path) => (tree[parentOf(path)] || []).find((item) => item.name === path.split('/').pop())
@@ -63,7 +82,7 @@ const server = createServer((req, res) => {
         'Content-Length': item.size,
         'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(item.name)}`,
       })
-      return res.end(Buffer.alloc(item.size, 7))
+      return res.end(item.content ?? Buffer.alloc(item.size, 7))
     }
     res.writeHead(404).end()
   })

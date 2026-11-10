@@ -50,9 +50,9 @@ export function toNodes(items: OLItem[], parent: FNode | { path: string; depth: 
   }))
 }
 
-export function sortTree(nodes: FNode[], key: SortKey, ascending: boolean): void {
-  nodes.sort((a, b) => compareNodes(a, b, key, ascending))
-  for (const node of nodes) if (node.children.length) sortTree(node.children, key, ascending)
+export function sortTree(nodes: FNode[], key: SortKey, ascending: boolean, locale?: string): void {
+  nodes.sort((a, b) => compareNodes(a, b, key, ascending, locale))
+  for (const node of nodes) if (node.children.length) sortTree(node.children, key, ascending, locale)
 }
 
 /** Loaded files at or under a node. */
