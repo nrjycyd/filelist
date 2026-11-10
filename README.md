@@ -5,8 +5,8 @@
 ## 功能
 
 - 📁 树形目录，文件夹按需加载
-- ✅ 勾选文件；选中文件夹会连带其已加载的子项
-- 📦 批量打包 ZIP（基于 `fflate`），带进度
+- ✅ 勾选文件；选中文件夹会自动加载并选中其下所有层级的文件
+- 📦 批量打包 ZIP（基于 `fflate`），带进度；保留目录结构，不同目录的同名文件不会互相覆盖
 - ⬇️ 单文件下载与预览（`/d/`、`/p/`、`fs/get` 的 `raw_url`）
 - 🔐 目录密码输入，可选只读 token
 - 🔎 当前树过滤，按名称 / 大小 / 日期排序
@@ -99,8 +99,8 @@ export default {
 
 - 目录路径挂载为根文件夹，默认折叠；`expanded` 可为全局或单个 source 打开
 - 文件路径挂载为一条文件记录，直接预览/下载
-- 根目录复选框与勾选、全选效果一致：选中根目录会选中其已加载的子项
-- 每个 source 可单独设置 `title`、`password`
+- 勾选根目录会加载并选中其下所有文件；ZIP 内以根节点名称（`title` 或路径末段）作为顶层文件夹，文件根保留原文件名
+- 每个 source 可单独设置 `title`、`password`；未设置 `password` 的 source 使用组件的 `password` 或运行时输入的密码，遇到需要密码的目录会弹出密码输入框
 - 根节点顺序按 `sources` 顺序，子项仍按名称/大小/日期排序
 
 ```ts
@@ -181,7 +181,7 @@ Deno 可以安装 npm 依赖，但目前用 Deno 构建 VitePress 会在 rolldow
 ## 说明
 
 - 批量 ZIP 通过 `raw_url`（OpenList `/p/` 代理）下载，CORS 保持在 OpenList 源上
-- 全选只统计已加载的文件；页脚会显示还有多少文件夹未展开
+- 表头全选只统计已加载的文件，页脚会显示还有多少文件夹未展开；勾选单个文件夹则会递归加载其全部子目录（目录很深或很多时会逐个请求，可能较慢）
 - 目录以 `per_page: 0` 请求全部条目；超大目录可能较慢，暂未实现分页
 
 ## 开发
@@ -190,7 +190,7 @@ Deno 可以安装 npm 依赖，但目前用 Deno 构建 VitePress 会在 rolldow
 pnpm install
 pnpm run build       # 生成 dist/node、dist/client/ssr、dist/client/browser、style.css
 pnpm run typecheck
-pnpm test            # Vitest：utils + locale helpers
+pnpm test            # Vitest：utils、locale helpers、FileList 组件
 pnpm run pack:check
 ```
 
