@@ -52,10 +52,13 @@
   },
   "dependencies": {
     "client-zip": "^2.5.1",
+    "dompurify": "^3.4.17",
+    "markdown-it": "^14.3.3",
     "vitepress-tuck": "^0.12.2"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
+    "@types/markdown-it": "^14.2.0",
     "@types/node": "^22.10.0",
     "@vue/test-utils": "^2.5.1",
     "happy-dom": "^21.0.4",

@@ -157,11 +157,28 @@ export function totalSize(items: Array<{ size?: number }>): number {
   )
 }
 
+const collators = new Map<string, Intl.Collator>()
+
+/**
+ * Name order for a UI locale: pinyin for Chinese, alphabetical for English,
+ * with numbers in natural order (“2” before “10”) either way.
+ */
+function collatorFor(locale: string): Intl.Collator {
+  const tag = locale.toLowerCase().startsWith('zh') ? 'zh-Hans-CN' : 'en'
+  let collator = collators.get(tag)
+  if (!collator) {
+    collator = new Intl.Collator(tag, { numeric: true, sensitivity: 'base' })
+    collators.set(tag, collator)
+  }
+  return collator
+}
+
 export function compareNodes(
   a: SortableNode,
   b: SortableNode,
   key: SortKey,
   ascending = true,
+  locale = 'zh-CN',
 ): number {
   if (a.is_dir !== b.is_dir) return a.is_dir ? -1 : 1
   let result = 0
@@ -169,7 +186,8 @@ export function compareNodes(
   else if (key === 'modified') {
     result = new Date(a.modified).getTime() - new Date(b.modified).getTime()
   } else {
-    result = a.name.localeCompare(b.name, 'zh-Hans-CN', { numeric: true })
+    // Names equal for the collator (e.g. only case differs) still get a stable order.
+    result = collatorFor(locale).compare(a.name, b.name) || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0)
   }
   return ascending ? result : -result
 }

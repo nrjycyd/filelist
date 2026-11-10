@@ -194,3 +194,26 @@ describe('fillPreviewUrl', () => {
     expect(fillPreviewUrl('v?b=$b_url', { ...args, rawUrl: 'https://pan/p/a.pdf' })).toBe(`v?b=${btoa('https://pan/p/a.pdf')}`)
   })
 })
+
+describe('compareNodes locale', () => {
+  const named = (name: string) => ({ name, size: 0, is_dir: false, modified: '' })
+  const order = (names: string[], locale?: string) =>
+    [...names].map(named).sort((a, b) => compareNodes(a, b, 'name', true, locale)).map((item) => item.name)
+
+  it('sorts Chinese names by pinyin for zh-CN', () => {
+    expect(order(['张三', '李四', '王五', '安'], 'zh-CN')).toEqual(['安', '李四', '王五', '张三'])
+  })
+
+  it('sorts English names alphabetically, ignoring case, for en-US', () => {
+    expect(order(['banana', 'Apple', 'cherry', 'apple2'], 'en-US')).toEqual(['Apple', 'apple2', 'banana', 'cherry'])
+  })
+
+  it('keeps numbers in natural order in both locales', () => {
+    expect(order(['file10', 'file2', 'file1'], 'en-US')).toEqual(['file1', 'file2', 'file10'])
+    expect(order(['第10章', '第2章', '第1章'], 'zh-CN')).toEqual(['第1章', '第2章', '第10章'])
+  })
+
+  it('defaults to the Chinese order', () => {
+    expect(order(['张三', '安'])).toEqual(['安', '张三'])
+  })
+})

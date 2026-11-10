@@ -231,3 +231,61 @@ test('a failed ZIP explains why in a dialog on screen', async ({ page }, info) =
   await dialog.locator('.fl-btn-primary').click()
   await expect(list(page).locator('.fl-selection-count')).toHaveText('已选 2 项')
 })
+
+test('Markdown shows source first and renders safely in the VitePress style', async ({ page }) => {
+  await open(page)
+  await opener(row(page, 'docs')).click()
+  await row(page, 'guide.md').locator('.fl-preview-btn').click()
+  const dialog = page.locator('dialog.fl-preview')
+  await expect(dialog.locator('.fl-preview-text pre')).toContainText('# 安装指南')
+
+  await dialog.locator('.fl-preview-view-btn', { hasText: '渲染' }).click()
+  const doc = dialog.locator('.fl-md.vp-doc')
+  await expect(doc.locator('h1')).toHaveText('安装指南')
+  await expect(doc.locator('a')).toHaveCount(1)
+  await expect(doc.locator('a')).toHaveAttribute('target', '_blank')
+  await expect(doc).toContainText('另一篇')
+  await expect(doc.locator('.fl-md-image')).toHaveText(['［图片：拓扑图］', '［图片：x］'])
+  await expect(doc.locator('script')).toHaveCount(0)
+  expect(await doc.innerHTML()).not.toContain('onerror')
+  expect(await page.evaluate(() => (window as unknown as { __pwned?: number }).__pwned)).toBeUndefined()
+  // VitePress' doc styles apply (headings are larger than body text).
+  const sizes = await doc.evaluate((el) => [
+    Number.parseFloat(getComputedStyle(el.querySelector('h1')!).fontSize),
+    Number.parseFloat(getComputedStyle(el.querySelector('p')!).fontSize),
+  ])
+  expect(sizes[0]).toBeGreaterThan(sizes[1])
+})
+
+test('HTML renders in a script-less sandbox', async ({ page }) => {
+  await open(page)
+  await opener(row(page, 'docs')).click()
+  await row(page, 'page.html').locator('.fl-preview-btn').click()
+  const dialog = page.locator('dialog.fl-preview')
+  await expect(dialog.locator('.fl-preview-text pre')).toContainText('<h1 id="title">')
+
+  await dialog.locator('.fl-preview-view-btn', { hasText: '渲染' }).click()
+  const frame = dialog.locator('iframe.fl-preview-html')
+  await expect(frame).toHaveAttribute('sandbox', '')
+  await expect(page.frameLocator('iframe.fl-preview-html').locator('#title')).toHaveText('报告')
+  expect((await box(frame)).height).toBeGreaterThan(200)
+  await page.waitForTimeout(300)
+  expect(await page.evaluate(() => (window as unknown as { __pwned?: number }).__pwned)).toBeUndefined()
+})
+
+test('deep search finds files in folders that were never opened, in place', async ({ page }) => {
+  await open(page)
+  await list(page).locator('.fl-search input').fill('needle')
+  const deep = list(page).locator('.fl-deep')
+  await expect(deep).toContainText('只筛选了已加载的内容')
+  await deep.locator('.fl-more-btn').click()
+
+  await expect(row(page, 'needle-report.pdf')).toBeVisible()
+  for (const folder of ['deep', 'a', 'b']) await expect(row(page, folder)).toBeVisible()
+  // The root "Locked" and "deep/Locked deep" are skipped without prompting.
+  await expect(deep).toContainText('跳过 2 个加密文件夹')
+  await expect(list(page).locator('.fl-row-prompting')).toHaveCount(0)
+  await expect(row(page, 'needle-secret.pdf')).toHaveCount(0)
+  await check(page, 'needle-report.pdf')
+  await expect(list(page).locator('.fl-selection-count')).toHaveText('已选 1 项')
+})

@@ -92,6 +92,24 @@ export interface FileListLabels {
   unlockFolder: string
   /** @deprecated Network failures now append `corsHint`. */
   networkHint: string
+  /** Deep search: the row at the end of a filtered list. `{count}` where noted */
+  deepHint: string
+  deepSearch: string
+  deepRunning: string
+  deepStop: string
+  deepDone: string
+  deepCapped: string
+  deepContinue: string
+  deepSkipped: string
+  deepFailed: string
+  /** Markdown / HTML preview: the source / rendered switch. */
+  viewMode: string
+  viewSource: string
+  viewRendered: string
+  /** Above a rendered HTML file. */
+  htmlSandboxNote: string
+  /** Stands in for a Markdown image with a relative path. `{alt}` */
+  imageOmitted: string
   /** Title of the dialog when a batch ZIP fails (the reason is the text). */
   batchFailedTitle: string
   batchFailedHint: string
@@ -158,6 +176,11 @@ export interface FileListProps {
    * everything. Data is still loaded in full; only rendering is limited.
    */
   pageSize?: number
+  /**
+   * Deep search loads at most this many folders per click (“Continue” goes on).
+   * Defaults to `500`.
+   */
+  deepSearchLimit?: number
   /**
    * Browsers that must build the ZIP in memory (Firefox, Safari) ask first above
    * this many MB. Defaults to 500 (200 on touch devices); `0` never asks.
