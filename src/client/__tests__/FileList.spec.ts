@@ -2,6 +2,7 @@
 import type { VueWrapper } from '@vue/test-utils'
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { defineComponent, h } from 'vue'
 import FileList from '../FileList.vue'
 import type { FileListProps } from '../types'
 
@@ -102,7 +103,7 @@ function mountList(props: FileListProps) {
   return mount(FileList, { props: { base: BASE, ...props }, attachTo: document.body })
 }
 
-function row(wrapper: VueWrapper, name: string) {
+function row(wrapper: Pick<VueWrapper, 'findAll'>, name: string) {
   const match = wrapper
     .findAll('.fl-row:not(.fl-head)')
     .find((item) => item.find('.fl-name').text().endsWith(name))
@@ -700,5 +701,83 @@ describe('FileList small fixes', () => {
     expect(settings?.headers?.['Content-Type']).toBeUndefined()
     const list = calls.find((call) => call.path === '/api/fs/list')
     expect(list?.headers?.['Content-Type']).toBe('application/json')
+  })
+})
+
+describe('FileList audit regressions', () => {
+  it('keeps a typed (not remembered) source-root password across a refresh', async () => {
+    const { calls } = mockOpenList({ '/s': [file('a.txt')] }, { '/s': 'pw' })
+    const wrapper = mountList({ sources: [{ path: '/s' }] })
+    await flushPromises()
+    await row(wrapper, 's').find('.fl-lock').trigger('click')
+    await row(wrapper, 's').find('.fl-unlock-row input').setValue('pw')
+    await row(wrapper, 's').find('.fl-unlock-row').trigger('submit')
+    await flushPromises()
+    expect(row(wrapper, 'a.txt').exists()).toBe(true)
+
+    await wrapper.find('.fl-refresh').trigger('click')
+    await flushPromises()
+    expect(row(wrapper, 's').classes()).not.toContain('fl-row-locked')
+    expect(row(wrapper, 'a.txt').exists()).toBe(true)
+    expect(calls.filter((call) => call.path === '/api/fs/get' && call.body?.path === '/s').at(-1)?.body?.password).toBe('pw')
+    expect(sessionStorage.length).toBe(0)
+  })
+
+  it('links the error to the input for paths with spaces, with ids unique per instance', async () => {
+    mockOpenList({ '/': [dir('my folder')], '/my folder': [] }, { '/my folder': 'x' })
+    // Two lists on one page share one app, as in VitePress.
+    const page = mount(
+      defineComponent(() => () => [h(FileList, { base: BASE, path: '/' }), h(FileList, { base: BASE, path: '/' })]),
+      { attachTo: document.body },
+    )
+    await flushPromises()
+    const [first, second] = page.findAllComponents(FileList)
+    for (const wrapper of [first, second]) {
+      await row(wrapper, 'my folder').find('.fl-arrow').trigger('click')
+      await flushPromises()
+      await row(wrapper, 'my folder').find('.fl-unlock-row input').setValue('bad')
+      await row(wrapper, 'my folder').find('.fl-unlock-row').trigger('submit')
+      await flushPromises()
+    }
+    const ids = [first, second].map((wrapper) => {
+      const input = row(wrapper, 'my folder').find('.fl-unlock-row input').element
+      const id = input.getAttribute('aria-describedby') ?? ''
+      expect(id).not.toMatch(/\s/)
+      expect(document.getElementById(id)?.textContent).toBe('密码不正确或无权访问')
+      return id
+    })
+    expect(new Set(ids).size).toBe(2)
+  })
+
+  it('shows the CORS hint for Safari-style network errors on first load', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      throw new TypeError('Load failed')
+    }))
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+    expect(wrapper.find('.fl-error').text()).toContain('ALLOW_URLS')
+  })
+
+  it('shows 0 B for an empty file', async () => {
+    mockOpenList({ '/': [] })
+    vi.stubGlobal('fetch', vi.fn(async (input: string | URL) => {
+      const path = new URL(String(input)).pathname
+      const data = path === '/api/fs/list'
+        ? { content: [{ name: 'empty.txt', is_dir: false, size: 0, modified: '2026-01-01T00:00:00Z' }] }
+        : {}
+      return new Response(JSON.stringify({ code: 200, message: 'success', data }))
+    }))
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+    expect(row(wrapper, 'empty.txt').find('.fl-cell-size').text()).toBe('0 B')
+  })
+
+  it('locks a demo source folder until its password is entered', async () => {
+    const wrapper = mount(FileList, {
+      props: { sources: [{ path: '/加密示例（密码 1234）' }, { path: '/notes' }] },
+      attachTo: document.body,
+    })
+    await vi.waitFor(() => expect(row(wrapper, '加密示例（密码 1234）').classes()).toContain('fl-row-locked'))
+    expect(row(wrapper, 'notes').classes()).not.toContain('fl-row-locked')
   })
 })

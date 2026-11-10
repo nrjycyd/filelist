@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- In `sources` mode, a source root unlocked with a typed (not remembered) password locked again on refresh; all password lookups now go through one resolver
+- Password error messages are linked to their input with per-instance ids (`useId`): paths with spaces broke `aria-describedby`, and several lists on one page could share an id
+- Safari's “Load failed” now shows the CORS hint on first load too (one network-error check instead of two)
+- A 0-byte file shows “0 B” instead of “-”: `formatSize(0)` now returns `0 B`; missing or negative sizes still read “-”
+- The ZIP's blob URL is released after 30 s instead of right after the click, which could cancel the download in some browsers
+
+### Changes
+
+- Network-failure toasts append `corsHint`; `networkHint` is deprecated
+- `vitepress-plugin-filelist/client` lists its exports explicitly (same names as before); internal helpers are no longer exported by accident
+- One extension table drives badges and previews: `markdown`, `vue`, `mjs`, `toml`, `ini` and similar now get a doc / code badge, `m4v` / `ogv` a media badge
+- The preview button's class is `fl-preview-btn` (was `fl-download`, same as the download button)
+
+### Internal
+
+- `FileList.vue` split into `api.ts`, `demo.ts`, `tree.ts`, `usePasswords.ts`, `download.ts` and `Icon.vue`; the folder and single-path unlock flows share one implementation
+- Folder counts, sizes and check states come from one pass over the tree instead of walking each subtree several times per row
+- `typecheck` runs `vue-tsc` (templates and tests included) in CI and release; removed dead code in `tsdown.config.ts`
+
 ## 0.5.0 (2026-11-10)
 
 ### Features

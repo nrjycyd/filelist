@@ -39,7 +39,7 @@
   "scripts": {
     "dev": "tsdown --watch",
     "build": "tsdown && node scripts/fix-dts.mjs",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "vue-tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "pack:check": "npm pack --dry-run"

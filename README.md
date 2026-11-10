@@ -203,7 +203,7 @@ import { fileListLocales, formatLabel, resolveLabels } from 'vitepress-plugin-fi
 | 入口 | 内容 |
 | --- | --- |
 | `vitepress-plugin-filelist` | `fileList` 插件（默认导出） |
-| `vitepress-plugin-filelist/client` | `FileList`、`VPFileList`、`enhanceAppWithFileList`、类型 |
+| `vitepress-plugin-filelist/client` | `FileList`、`VPFileList`、`enhanceAppWithFileList`、文案工具（`fileListLocales`、`formatLabel`、`resolveLabels`）、格式与文件类型工具（`formatSize`、`formatDate`、`fileKind`、`previewKind` 等）、类型 |
 | `vitepress-plugin-filelist/style.css` | 组件样式 |
 
 ## 兼容性
@@ -237,10 +237,24 @@ Deno 可以安装 npm 依赖，但目前用 Deno 构建 VitePress 会在 rolldow
 ```bash
 pnpm install
 pnpm run build       # 生成 dist/node、dist/client/ssr、dist/client/browser、style.css
-pnpm run typecheck
-pnpm test            # Vitest：utils、locale helpers、FileList 组件
+pnpm run typecheck   # vue-tsc，包含 .vue 模板与测试
+pnpm test            # Vitest：工具函数、密码、下载、FileList 组件
 pnpm run pack:check
 ```
+
+源码结构（`src/client`）：
+
+| 文件 | 职责 |
+| --- | --- |
+| `FileList.vue` | 组件：把下列模块接到界面 |
+| `api.ts` | OpenList 接口、文件地址缓存、错误判断 |
+| `demo.ts` | 演示数据（与 `api.ts` 同一接口） |
+| `tree.ts` | 树节点、排序、目录统计 |
+| `usePasswords.ts` / `passwords.ts` | 目录密码的选择顺序 / 标签页内记住 |
+| `download.ts` | 单文件下载、批量 ZIP |
+| `PreviewDialog.vue` | 预览弹窗 |
+| `Icon.vue` / `icons.ts` | 图标 |
+| `utils.ts` | 路径、格式化、文件类型表 |
 
 仓库统一使用 pnpm（`pnpm-lock.yaml`），CI 与发布流程执行 `pnpm install --frozen-lockfile`。
 
