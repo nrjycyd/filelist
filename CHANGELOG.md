@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Internal
+
+- Browser tests (Playwright) run in CI on every push and PR: a fixture site in `demo/e2e` against a mock OpenList, in Chromium desktop, a phone profile and WebKit (WebKit not required yet). They check row heights and zero shift, folder passwords, refresh, show more, single downloads staying on the page with an on-screen toast, and ZIPs (in memory, streamed, cancelled, failed)
+
 ## 0.6.2 (2026-11-10)
 
 ### Fixes

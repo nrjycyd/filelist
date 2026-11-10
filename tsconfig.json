@@ -14,5 +14,5 @@
     "types": ["node"],
     "noEmit": true
   },
-  "include": ["src", "tsdown.config.ts", "scripts"]
+  "include": ["src", "tsdown.config.ts", "scripts", "e2e", "playwright.config.ts"]
 }
