@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Style
+
+- Folder names in the list are no longer bold
+- Removed the footer hint “N folder(s) not expanded, excluded from select-all”; the `unloaded` label is deprecated
+
 ## 0.3.0 (2026-11-10)
 
 ### Features

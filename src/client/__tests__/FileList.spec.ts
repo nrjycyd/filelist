@@ -319,6 +319,17 @@ describe('FileList toolbar and rows', () => {
     expect(wrapper.find('.fl-head .fl-cell-name .fl-sort').text()).toBe('▼')
   })
 
+  it('does not show an unexpanded-folders hint in the footer', async () => {
+    mockOpenList({ '/': [dir('A'), dir('B'), file('x.txt')] })
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+
+    const foot = wrapper.find('.fl-foot').text()
+    expect(foot).toContain('1 个已加载文件')
+    expect(foot).not.toContain('未展开')
+    expect(wrapper.find('.fl-foot-hint').exists()).toBe(false)
+  })
+
   it('indents rows by depth', async () => {
     mockOpenList({ '/': [dir('A')], '/A': [file('x.txt')] })
     const wrapper = mountList({ path: '/' })

@@ -25,6 +25,7 @@ export interface FileListLabels {
   download: string
   loaded: string
   selected: string
+  /** @deprecated No longer shown; the footer only shows loaded files and size. */
   unloaded: string
   folderFailed: string
   demoDownload: string
