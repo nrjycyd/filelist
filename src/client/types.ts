@@ -92,6 +92,8 @@ export interface FileListLabels {
   unlockFolder: string
   /** @deprecated Network failures now append `corsHint`. */
   networkHint: string
+  /** Single file handed to the browser's download manager. `{name}` */
+  downloadStarted: string
   /** Batch progress detail. `{done}` `{total}` sizes, `{files}` `{count}` file counts */
   batchProgress: string
   /** Batch finished. `{name}` `{count}` `{size}` */

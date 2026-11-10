@@ -21,6 +21,11 @@ export interface OpenListApi {
   fileUrl: (file: { path: string; raw_url?: string; sign?: string }, password: string) => Promise<string>
   /** OpenList's signed `/d/` link, used by `$durl` preview schemes. */
   directUrl: (file: { path: string; sign?: string }) => string
+  /**
+   * Whether a file URL is OpenList's own `/p/` or `/d/` link, which always
+   * answers as an attachment (so opening it downloads without leaving the page).
+   */
+  isAttachmentUrl: (url: string) => boolean
   /** Drop cached file URLs, all of them or those under `path`. */
   clearCache: (path?: string) => void
 }
@@ -126,6 +131,7 @@ export function createOpenListApi(base: string, token: string): OpenListApi {
       return url
     },
     directUrl,
+    isAttachmentUrl: (url) => !!root && (url.startsWith(`${root}/p/`) || url.startsWith(`${root}/d/`)),
     clearCache(path) {
       if (!path) urls.clear()
       else for (const key of [...urls.keys()]) if (isWithin(key, path)) urls.delete(key)
