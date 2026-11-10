@@ -42,7 +42,9 @@
     "typecheck": "vue-tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "pack:check": "npm pack --dry-run"
+    "pack:check": "npm pack --dry-run",
+    "test:e2e": "playwright test",
+    "e2e:site": "pnpm run build && pnpm --dir demo install --force && pnpm --dir demo run build:e2e"
   },
   "peerDependencies": {
     "vitepress": "^1.0.0 || ^2.0.0-alpha.0",
@@ -53,6 +55,7 @@
     "vitepress-tuck": "^0.12.2"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@types/node": "^22.10.0",
     "@vue/test-utils": "^2.5.1",
     "happy-dom": "^21.0.4",

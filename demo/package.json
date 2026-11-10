@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "vitepress dev docs",
     "build": "vitepress build docs",
-    "preview": "vitepress preview docs"
+    "preview": "vitepress preview docs",
+    "build:e2e": "vitepress build e2e",
+    "preview:e2e": "vitepress preview e2e --port 4173"
   },
   "dependencies": {
     "vitepress": "^2.0.0-alpha.21",

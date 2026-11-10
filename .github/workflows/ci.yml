@@ -24,3 +24,43 @@ jobs:
         run: |
           pnpm install --frozen-lockfile
           pnpm run build
+
+  # Browser tests: the fixture site in demo/e2e against a mock OpenList.
+  e2e:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: chromium
+            browser: chromium
+            projects: --project=chromium --project=mobile
+          - name: webkit
+            browser: webkit
+            projects: --project=webkit
+    name: e2e (${{ matrix.name }})
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build
+      - name: Build the fixture site
+        working-directory: demo
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build:e2e
+      - run: pnpm exec playwright install --with-deps ${{ matrix.browser }}
+      - run: pnpm exec playwright test ${{ matrix.projects }}
+      - name: Upload the report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ matrix.name }}
+          path: |
+            playwright-report
+            test-results
+          retention-days: 7
