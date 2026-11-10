@@ -79,6 +79,45 @@ export function extOf(name: string): string {
   return match ? match[1].toUpperCase() : ''
 }
 
+export type FileKind =
+  | 'doc'
+  | 'sheet'
+  | 'slide'
+  | 'pdf'
+  | 'image'
+  | 'media'
+  | 'archive'
+  | 'code'
+  | 'other'
+
+const FILE_KINDS: Record<string, FileKind> = {}
+const KIND_EXTS: Record<Exclude<FileKind, 'other'>, string[]> = {
+  doc: ['doc', 'docx', 'odt', 'rtf', 'txt', 'md', 'pages', 'wps'],
+  sheet: ['xls', 'xlsx', 'ods', 'csv', 'tsv', 'numbers', 'et'],
+  slide: ['ppt', 'pptx', 'odp', 'key', 'dps'],
+  pdf: ['pdf'],
+  image: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif', 'heic'],
+  media: ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'mp4', 'webm', 'mov', 'mkv', 'avi'],
+  archive: ['zip', 'rar', '7z', 'tar', 'gz', 'tgz', 'bz2', 'xz', 'iso'],
+  code: ['js', 'ts', 'json', 'html', 'css', 'py', 'java', 'c', 'cpp', 'go', 'rs', 'sh', 'yml', 'yaml', 'xml'],
+}
+for (const [kind, exts] of Object.entries(KIND_EXTS)) {
+  for (const ext of exts) FILE_KINDS[ext] = kind as FileKind
+}
+
+/** Rough file family, used to colour the type badge. */
+export function fileKind(name: string): FileKind {
+  return FILE_KINDS[extOf(name).toLowerCase()] ?? 'other'
+}
+
+/** Sum of the `size` of the given entries, ignoring missing or invalid sizes. */
+export function totalSize(items: Array<{ size?: number }>): number {
+  return items.reduce(
+    (sum, item) => sum + (Number.isFinite(item.size) && (item.size ?? 0) > 0 ? (item.size as number) : 0),
+    0,
+  )
+}
+
 export function compareNodes(
   a: SortableNode,
   b: SortableNode,

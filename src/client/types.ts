@@ -6,6 +6,7 @@ export interface FileListLabels {
   filter: string
   refresh: string
   batch: string
+  /** @deprecated No longer shown; the selection count lives in the toolbar. */
   batchCount: string
   batching: string
   passwordPrompt: string
@@ -33,6 +34,23 @@ export interface FileListLabels {
   previewFailed: string
   batchFailed: string
   defaultZip: string
+  /** Text button that clears the selection (wide layout). */
+  clear: string
+  /** Accessible name of the clear-selection button. */
+  clearSelection: string
+  /** `{size}` total, used for the selection and the footer. */
+  totalSize: string
+  /** `{count}` files inside a loaded folder. */
+  folderItems: string
+  /** Label of the compact sort select shown in narrow containers. */
+  sortBy: string
+  selectAll: string
+  /** Accessible name of a row checkbox, `{name}`. */
+  selectItem: string
+  /** Accessible name of the expand button, `{name}`. */
+  expand: string
+  /** Accessible name of the collapse button, `{name}`. */
+  collapse: string
 }
 
 export interface FileListSource {

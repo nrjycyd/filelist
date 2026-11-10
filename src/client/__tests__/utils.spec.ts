@@ -4,8 +4,10 @@ import {
   encodePath,
   extOf,
   formatDate,
+  fileKind,
   formatSize,
   joinPath,
+  totalSize,
   type SortableNode,
   uniqueEntryName,
   zipEntryName,
@@ -119,5 +121,28 @@ describe('zip entry names', () => {
     expect(uniqueEntryName('README', used)).toBe('README (2)')
     expect(uniqueEntryName('.env', used)).toBe('.env')
     expect(uniqueEntryName('.env', used)).toBe('.env (2)')
+  })
+})
+
+describe('fileKind', () => {
+  it('groups extensions into families, case-insensitively', () => {
+    expect(fileKind('a.DOCX')).toBe('doc')
+    expect(fileKind('a.ods')).toBe('sheet')
+    expect(fileKind('a.key')).toBe('slide')
+    expect(fileKind('a.pdf')).toBe('pdf')
+    expect(fileKind('a.webp')).toBe('image')
+    expect(fileKind('a.mp4')).toBe('media')
+    expect(fileKind('a.7z')).toBe('archive')
+    expect(fileKind('a.ts')).toBe('code')
+    expect(fileKind('a.bin')).toBe('other')
+    expect(fileKind('README')).toBe('other')
+  })
+})
+
+describe('totalSize', () => {
+  it('sums valid sizes only', () => {
+    expect(totalSize([{ size: 10 }, { size: 5 }])).toBe(15)
+    expect(totalSize([{ size: Number.NaN }, { size: -1 }, {}, { size: 3 }])).toBe(3)
+    expect(totalSize([])).toBe(0)
   })
 })

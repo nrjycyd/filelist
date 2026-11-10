@@ -10,11 +10,11 @@ describe('locales', () => {
 
   it('resolves the requested locale', () => {
     expect(resolveLabels('en-US').batch).toBe('Download ZIP')
-    expect(resolveLabels('zh-CN').batch).toBe('批量下载')
+    expect(resolveLabels('zh-CN').batch).toBe('下载 ZIP')
   })
 
   it('falls back to zh-CN for unknown locales', () => {
-    expect(resolveLabels('fr-FR' as never).batch).toBe('批量下载')
+    expect(resolveLabels('fr-FR' as never).batch).toBe('下载 ZIP')
   })
 
   it('applies overrides on top of a preset', () => {

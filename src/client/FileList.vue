@@ -6,10 +6,20 @@
  *   <FileList base="https://pan.example.com" path="/课程资料" />
  *   <FileList />  // 演示模式
  */
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import type { FileListLabels, FileListProps, FileListSource } from './types'
 import { formatLabel, resolveLabels } from './locales'
-import { compareNodes, extOf, formatDate, formatSize, joinPath, uniqueEntryName, zipEntryName } from './utils'
+import {
+  compareNodes,
+  extOf,
+  fileKind,
+  formatDate,
+  formatSize,
+  joinPath,
+  totalSize,
+  uniqueEntryName,
+  zipEntryName,
+} from './utils'
 import type { SortKey } from './utils'
 
 interface OLItem {
@@ -251,6 +261,10 @@ function setSort(key: SortKey) {
     sortKey.value = key
     sortAsc.value = true
   }
+  resortAll()
+}
+
+function resortAll() {
   if (props.sources.length) {
     for (const root of roots.value) {
       if (root.children.length) sortTree(root.children)
@@ -440,6 +454,39 @@ const someChecked = computed(
   () => !allChecked.value && allFiles.value.some((file) => selected.value.has(file.path)),
 )
 
+const selectedFiles = computed(() => allFiles.value.filter((file) => selected.value.has(file.path)))
+const selectedBytes = computed(() => totalSize(selectedFiles.value))
+const loadedBytes = computed(() => totalSize(allFiles.value))
+
+function clearSelection() {
+  selected.value = new Set()
+}
+
+function folderFiles(node: FNode): FNode[] {
+  return node.is_dir && node.loaded ? descendantFiles(node) : []
+}
+
+/** Compact sort control for narrow containers, where header cells are hidden. */
+const sortOptions = computed(() =>
+  (['name', 'size', 'modified'] as SortKey[]).flatMap((key) => {
+    const label = t(key === 'name' ? 'columnName' : key === 'size' ? 'columnSize' : 'columnDate')
+    return [
+      { value: `${key}:asc`, label: `${label} ↑` },
+      { value: `${key}:desc`, label: `${label} ↓` },
+    ]
+  }),
+)
+
+const sortValue = computed<string>({
+  get: () => `${sortKey.value}:${sortAsc.value ? 'asc' : 'desc'}`,
+  set: (value) => {
+    const [key, direction] = value.split(':') as [SortKey, string]
+    sortKey.value = key
+    sortAsc.value = direction !== 'desc'
+    resortAll()
+  },
+})
+
 function toggleCheckAll() {
   selected.value = allChecked.value
     ? new Set()
@@ -570,32 +617,82 @@ const displayTitle = computed(
   () => props.title || siteTitle.value || (props.path === '/' ? t('allFiles') : props.path),
 )
 
+/*
+ * In narrow containers the selection bar sticks below the theme's fixed bars.
+ * VitePress 1 and 2 pin different bars at different widths, so measure them.
+ * `--fl-sticky-top` on the component overrides the measured value.
+ */
+const stickyTop = ref(0)
+
+function measureStickyTop() {
+  if (typeof document === 'undefined') return
+  let top = 0
+  for (const el of document.querySelectorAll<HTMLElement>('.VPNav, .VPLocalNav')) {
+    const style = getComputedStyle(el)
+    if (style.display === 'none' || (style.position !== 'fixed' && style.position !== 'sticky')) continue
+    top = Math.max(top, (Number.parseFloat(style.top) || 0) + el.offsetHeight)
+  }
+  stickyTop.value = top
+}
+
 onMounted(() => {
   void loadRoot()
   void loadSiteTitle()
+  measureStickyTop()
+  window.addEventListener('resize', measureStickyTop, { passive: true })
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', measureStickyTop)
+  clearTimeout(toastTimer)
 })
 </script>
 
 <template>
-  <div class="fl-root">
+  <div
+    class="fl-root"
+    :class="{ 'fl-selecting': selected.size > 0 }"
+    :style="{ '--fl-sticky-top-auto': `${stickyTop}px` }"
+  >
     <div class="fl-bar">
-      <div class="fl-title">
-        <span class="fl-title-icon">🗂️</span>
+      <div v-if="selected.size" class="fl-selection" role="status">
+        <span class="fl-selection-count">{{ t('selected', { count: selected.size }) }}</span>
+        <span class="fl-selection-size">{{ t('totalSize', { size: formatSize(selectedBytes) }) }}</span>
+      </div>
+      <div v-else class="fl-title">
         <span class="fl-title-text">{{ displayTitle }}</span>
         <span v-if="demo" class="fl-demo-badge">{{ t('demoBadge') }}</span>
       </div>
+      <button
+        v-if="selected.size"
+        class="fl-clear"
+        type="button"
+        :aria-label="t('clearSelection')"
+        :title="t('clearSelection')"
+        @click="clearSelection"
+      >
+        <svg class="fl-clear-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12" /><path d="M18 6 6 18" /></svg>
+        <span class="fl-clear-text">{{ t('clear') }}</span>
+      </button>
       <div class="fl-tools">
-        <input v-model="keyword" class="fl-search" type="text" :placeholder="t('filter')" />
-        <button class="fl-btn" type="button" @click="loadRoot">{{ t('refresh') }}</button>
-        <button
-          class="fl-btn fl-btn-primary"
-          type="button"
-          :disabled="selected.size === 0 || batchBusy"
-          @click="batchDownload"
-        >
-          {{ batchBusy ? t('batching', { percent: batchProgress }) : selected.size ? t('batchCount', { count: selected.size }) : t('batch') }}
+        <label class="fl-search">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+          <input v-model="keyword" type="text" :placeholder="t('filter')" :aria-label="t('filter')" />
+        </label>
+        <button class="fl-icon-btn" type="button" :aria-label="t('refresh')" :title="t('refresh')" @click="loadRoot">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7" /><path d="M21 4v5h-5" /></svg>
         </button>
       </div>
+      <button
+        v-if="selected.size"
+        class="fl-btn fl-btn-primary"
+        type="button"
+        :disabled="batchBusy"
+        @click="batchDownload"
+      >
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M5 21h14" /></svg>
+        {{ batchBusy ? t('batching', { percent: batchProgress }) : t('batch') }}
+      </button>
     </div>
 
     <div v-if="needsPassword" class="fl-password">
@@ -604,30 +701,46 @@ onMounted(() => {
         v-model="passwordInput"
         type="password"
         :placeholder="t('passwordPlaceholder')"
+        :aria-label="t('passwordPlaceholder')"
         @keyup.enter="submitPassword"
       />
       <button class="fl-btn fl-btn-primary" type="button" @click="submitPassword">{{ t('open') }}</button>
     </div>
 
     <div class="fl-row fl-head">
-      <span class="fl-cell fl-cell-check">
+      <label class="fl-cell fl-cell-check">
         <input
           type="checkbox"
+          :aria-label="t('selectAll')"
           :checked="allChecked"
           :indeterminate.prop="someChecked"
           @change="toggleCheckAll"
         />
+      </label>
+      <span class="fl-cell fl-cell-name">
+        <button class="fl-sort-btn" type="button" :aria-sort="sortKey === 'name' ? (sortAsc ? 'ascending' : 'descending') : undefined" @click="setSort('name')">
+          {{ t('columnName') }}<span class="fl-sort" aria-hidden="true">{{ sortKey === 'name' ? (sortAsc ? '▲' : '▼') : '' }}</span>
+        </button>
       </span>
-      <span class="fl-cell fl-cell-name" @click="setSort('name')">
-        {{ t('columnName') }}<span class="fl-sort">{{ sortKey === 'name' ? (sortAsc ? '▲' : '▼') : '' }}</span>
+      <span class="fl-cell fl-cell-size">
+        <button class="fl-sort-btn" type="button" @click="setSort('size')">
+          {{ t('columnSize') }}<span class="fl-sort" aria-hidden="true">{{ sortKey === 'size' ? (sortAsc ? '▲' : '▼') : '' }}</span>
+        </button>
       </span>
-      <span class="fl-cell fl-cell-size" @click="setSort('size')">
-        {{ t('columnSize') }}<span class="fl-sort">{{ sortKey === 'size' ? (sortAsc ? '▲' : '▼') : '' }}</span>
+      <span class="fl-cell fl-cell-date">
+        <button class="fl-sort-btn" type="button" @click="setSort('modified')">
+          {{ t('columnDate') }}<span class="fl-sort" aria-hidden="true">{{ sortKey === 'modified' ? (sortAsc ? '▲' : '▼') : '' }}</span>
+        </button>
       </span>
-      <span class="fl-cell fl-cell-date" @click="setSort('modified')">
-        {{ t('columnDate') }}<span class="fl-sort">{{ sortKey === 'modified' ? (sortAsc ? '▲' : '▼') : '' }}</span>
+      <span class="fl-cell fl-cell-op">
+        <label class="fl-sort-select">
+          <span>{{ t('sortBy') }}</span>
+          <span class="fl-sort-current" aria-hidden="true">{{ sortOptions.find((option) => option.value === sortValue)?.label }}</span>
+          <select v-model="sortValue" :aria-label="t('sortBy')">
+            <option v-for="option in sortOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+          </select>
+        </label>
       </span>
-      <span class="fl-cell fl-cell-op"></span>
     </div>
 
     <div v-if="loadingRoot" class="fl-status">{{ t('loading') }}</div>
@@ -647,57 +760,93 @@ onMounted(() => {
       v-for="node in visible"
       :key="node.path"
       class="fl-row"
-      :class="{ 'fl-row-dir': node.is_dir, 'fl-row-root': node.isRoot, 'fl-row-selected': selected.has(node.path) }"
+      :class="{
+        'fl-row-dir': node.is_dir,
+        'fl-row-root': node.isRoot,
+        'fl-row-selected': !node.is_dir && selected.has(node.path),
+      }"
+      :style="{ '--fl-depth': node.depth }"
     >
-      <span class="fl-cell fl-cell-check">
+      <label class="fl-cell fl-cell-check">
         <input
           type="checkbox"
+          :aria-label="t('selectItem', { name: node.name })"
           :checked="isChecked(node)"
           :indeterminate.prop="isIndeterminate(node)"
           @change="toggleCheck(node, $event)"
         />
-      </span>
-      <span class="fl-cell fl-cell-name" :title="node.isRoot ? node.path : undefined" :style="{ paddingLeft: `${node.depth * 22}px` }">
+      </label>
+      <span class="fl-cell fl-cell-name" :title="node.isRoot ? node.path : undefined">
+        <span class="fl-indent" aria-hidden="true"></span>
         <button
           v-if="node.is_dir"
           class="fl-arrow"
           type="button"
           :class="{ 'fl-arrow-open': node.expanded }"
+          :aria-label="t(node.expanded ? 'collapse' : 'expand', { name: node.name })"
+          :aria-expanded="node.expanded"
           @click="toggleExpand(node)"
-        >▸</button>
-        <span v-else class="fl-arrow-placeholder"></span>
-        <span
-          class="fl-name"
-          :class="{ 'fl-name-link': node.is_dir }"
-          @click="node.is_dir ? toggleExpand(node) : download(node)"
         >
-          <span v-if="node.is_dir" class="fl-folder-icon">📁</span>
-          <span v-else class="fl-ext-badge">{{ extOf(node.name) || 'FILE' }}</span>
-          {{ node.name }}
-          <span v-if="node.loading" class="fl-loading">…</span>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
+        </button>
+        <span v-else class="fl-arrow-placeholder" aria-hidden="true"></span>
+        <svg v-if="node.is_dir" class="fl-folder-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg>
+        <span v-else class="fl-type" :data-kind="fileKind(node.name)" aria-hidden="true">{{ extOf(node.name) || 'FILE' }}</span>
+        <span class="fl-label">
+          <span
+            class="fl-name"
+            :class="{ 'fl-name-dir': node.is_dir }"
+            @click="node.is_dir ? toggleExpand(node) : download(node)"
+          >{{ node.name }}</span>
+          <span class="fl-meta">
+            <template v-if="node.is_dir">
+              <template v-if="node.loaded">{{ t('folderItems', { count: folderFiles(node).length }) }} · {{ formatSize(totalSize(folderFiles(node))) }}</template>
+            </template>
+            <template v-else>{{ formatSize(node.size) }} · {{ formatDate(node.modified) }}</template>
+          </span>
         </span>
+        <span v-if="node.is_dir && node.loaded" class="fl-count">{{ t('folderItems', { count: folderFiles(node).length }) }}</span>
+        <span v-if="node.loading" class="fl-loading" aria-hidden="true">…</span>
       </span>
-      <span class="fl-cell fl-cell-size">{{ node.is_dir ? '-' : formatSize(node.size) }}</span>
+      <span class="fl-cell fl-cell-size">{{ node.is_dir ? '—' : formatSize(node.size) }}</span>
       <span class="fl-cell fl-cell-date">{{ formatDate(node.modified) }}</span>
       <span class="fl-cell fl-cell-op">
-        <template v-if="!node.is_dir">
+        <button
+          v-if="node.is_dir"
+          class="fl-action fl-arrow-end"
+          type="button"
+          :class="{ 'fl-arrow-open': node.expanded }"
+          :aria-label="t(node.expanded ? 'collapse' : 'expand', { name: node.name })"
+          :aria-expanded="node.expanded"
+          @click="toggleExpand(node)"
+        >
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
+        </button>
+        <template v-else>
           <button
             v-if="canPreview(node)"
-            class="fl-download"
+            class="fl-action fl-download"
             type="button"
+            :aria-label="`${t('preview')} ${node.name}`"
             :title="t('preview')"
             @click="preview(node)"
-          ><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
-          <button class="fl-download" type="button" :title="t('download')" @click="download(node)"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg></button>
+          ><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg></button>
+          <button
+            class="fl-action fl-download"
+            type="button"
+            :aria-label="`${t('download')} ${node.name}`"
+            :title="t('download')"
+            @click="download(node)"
+          ><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M5 21h14" /></svg></button>
         </template>
       </span>
     </div>
 
     <div class="fl-foot">
-      <span>{{ t('loaded', { count: allFiles.length }) }} · {{ t('selected', { count: selected.size }) }}</span>
-      <span v-if="unloadedFolders"> · {{ t('unloaded', { count: unloadedFolders }) }}</span>
+      <span>{{ t('loaded', { count: allFiles.length }) }} · {{ t('totalSize', { size: formatSize(loadedBytes) }) }}</span>
+      <span v-if="unloadedFolders" class="fl-foot-hint">{{ t('unloaded', { count: unloadedFolders }) }}</span>
     </div>
 
-    <div v-if="toast" class="fl-toast">{{ toast }}</div>
+    <div v-if="toast" class="fl-toast" role="status">{{ toast }}</div>
   </div>
 </template>
