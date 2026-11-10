@@ -787,11 +787,13 @@
 }
 
 .fl-toast {
-  position: absolute;
-  bottom: 14px;
+  /* the viewport, not the card: a long list would push the card's bottom off screen */
+  position: fixed;
+  bottom: calc(24px + env(safe-area-inset-bottom));
   left: 50%;
-  z-index: 5;
-  max-width: 92%;
+  z-index: 100;
+  box-sizing: border-box;
+  max-width: min(560px, calc(100vw - 32px));
   padding: 7px 14px;
   overflow: hidden;
   font-size: 13px;

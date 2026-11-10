@@ -590,18 +590,32 @@ function zipLimits(): { warn: number; max: number } {
   return { warn: bytes(props.zipWarnSize, touch ? 200 : 500), max: bytes(props.zipMaxSize, touch ? 1024 : 2048) }
 }
 
-interface ZipNotice {
-  kind: 'warn' | 'block'
-  size: number
-  limit: number
-  files: FNode[]
-}
+/** A ZIP question or notice: over the warning size, over the limit, or failed. */
+type ZipNotice =
+  | { kind: 'warn' | 'block'; size: number; limit: number; files: FNode[] }
+  | { kind: 'failed'; message: string }
 
 const zipNotice = ref<ZipNotice | null>(null)
 /** Only desktop browsers get “use Chrome or Edge”; on iPhone every browser is Safari. */
 const zipTip = computed(() =>
   typeof window !== 'undefined' && !window.matchMedia?.('(pointer: coarse)').matches ? t('zipStreamTip') : '',
 )
+
+const zipDialog = computed(() => {
+  const notice = zipNotice.value
+  if (!notice) return null
+  if (notice.kind === 'failed') {
+    return { title: t('batchFailedTitle'), text: notice.message, tip: t('batchFailedHint'), cancel: t('gotIt') }
+  }
+  const warn = notice.kind === 'warn'
+  return {
+    title: t(warn ? 'zipWarnTitle' : 'zipBlockTitle', { size: formatSize(notice.size) }),
+    text: t(warn ? 'zipWarnText' : 'zipBlockText', { limit: formatSize(notice.limit) }),
+    tip: zipTip.value,
+    confirm: warn ? t('zipContinue') : undefined,
+    cancel: warn ? t('cancel') : t('gotIt'),
+  }
+})
 
 function zipName(): string {
   return zipFileName(props.title || t('defaultZip'))
@@ -666,7 +680,9 @@ async function runZip(
     showToast(t('batchDone', { name, count: files.length, size: formatSize(totalSize(files)) }))
     selected.value = new Set()
   } catch (error) {
-    showToast(controller.signal.aborted ? t('batchCanceled') : t('batchFailed', { message: errorText(error) }))
+    // A failure is worth a dialog: a toast is easy to miss after a long wait.
+    if (controller.signal.aborted) showToast(t('batchCanceled'))
+    else zipNotice.value = { kind: 'failed', message: errorText(error) }
   } finally {
     zipAbort = null
     batchBusy.value = false
@@ -1117,12 +1133,12 @@ onBeforeUnmount(() => {
     <div v-if="toast" class="fl-toast" role="status">{{ toast }}</div>
 
     <ConfirmDialog
-      :open="!!zipNotice"
-      :title="zipNotice ? t(zipNotice.kind === 'warn' ? 'zipWarnTitle' : 'zipBlockTitle', { size: formatSize(zipNotice.size) }) : ''"
-      :text="zipNotice ? t(zipNotice.kind === 'warn' ? 'zipWarnText' : 'zipBlockText', { limit: formatSize(zipNotice.limit) }) : ''"
-      :tip="zipTip"
-      :confirm-label="zipNotice?.kind === 'warn' ? t('zipContinue') : undefined"
-      :cancel-label="zipNotice?.kind === 'warn' ? t('cancel') : t('gotIt')"
+      :open="!!zipDialog"
+      :title="zipDialog?.title ?? ''"
+      :text="zipDialog?.text ?? ''"
+      :tip="zipDialog?.tip"
+      :confirm-label="zipDialog?.confirm"
+      :cancel-label="zipDialog?.cancel ?? ''"
       @confirm="confirmZip"
       @close="zipNotice = null"
     />
