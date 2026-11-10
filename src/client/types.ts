@@ -32,6 +32,7 @@ export interface FileListLabels {
   demoPreview: string
   demoBatch: string
   downloadFailed: string
+  /** @deprecated Preview errors are shown in the dialog (`previewUnavailable`). */
   previewFailed: string
   batchFailed: string
   defaultZip: string
@@ -52,6 +53,23 @@ export interface FileListLabels {
   expand: string
   /** Accessible name of the collapse button, `{name}`. */
   collapse: string
+  /** Preview dialog: close button. */
+  close: string
+  /** Preview dialog: previous / next previewable file. */
+  previous: string
+  next: string
+  /** Preview dialog: rotate image by 90°. */
+  rotate: string
+  /** Preview dialog: toggle the image between fit-to-window and actual size. */
+  actualSize: string
+  /** Preview dialog: file type that is not previewed (Office and others). */
+  previewUnsupported: string
+  /** Preview dialog: preview failed (network, CORS, unsupported codec). */
+  previewUnavailable: string
+  /** Preview dialog: PDF larger than the in-page limit, `{size}`. */
+  previewTooLarge: string
+  /** Preview dialog: only the first `{size}` of a text file is shown. */
+  textTruncated: string
 }
 
 export interface FileListSource {

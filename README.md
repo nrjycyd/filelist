@@ -7,7 +7,8 @@
 - 📁 树形目录，文件夹按需加载
 - ✅ 勾选文件；选中文件夹会自动加载并选中其下所有层级的文件
 - 📦 批量打包 ZIP（基于 `fflate`），带进度；保留目录结构，不同目录的同名文件不会互相覆盖
-- ⬇️ 单文件下载与预览（`/d/`、`/p/`、`fs/get` 的 `raw_url`）
+- ⬇️ 单文件下载（`fs/get` 的 `raw_url`，回退 `/d/`）
+- 👁️ 弹窗预览（不跳转）：图片、音视频、文本、PDF；Office 等其它类型显示文件信息与下载
 - 🔐 目录密码输入，可选只读 token
 - 🔎 当前树过滤，按名称 / 大小 / 日期排序
 - 🎨 紧凑表格：按文件类型着色的扩展名标签、层级引导线，跟随 VitePress 亮 / 暗主题
@@ -132,6 +133,22 @@ interface FileListSource {
 }
 ```
 
+## 预览
+
+点击预览按钮在当前页面的弹窗（原生 `<dialog>`）中显示，不跳转、不打开新标签页。只有能在页面内显示的类型才有预览按钮；点击文件名仍是下载。
+
+| 类型 | 扩展名（节选） | 方式 |
+| --- | --- | --- |
+| 图片 | png、jpg、gif、webp、svg、avif | `<img>`，可旋转、切换原始大小 |
+| 视频 / 音频 | mp4、webm、mov / mp3、m4a、flac、wav | 原生播放器（格式以浏览器支持为准） |
+| 文本 | txt、md、json、csv、yaml、日志与常见代码 | 只读取前 1 MB（Range 请求），纯文本显示 |
+| PDF | pdf | 优先使用 OpenList `iframe_previews` 中配置的 PDF 查看器；未配置时用浏览器自带阅读器（下载后以 Blob 显示，上限 50 MB） |
+| 其它（含 Office、压缩包） | — | 弹窗内显示文件信息和下载按钮 |
+
+- 弹窗内 ← / → 切换当前列表中的可预览文件，Esc 或点击遮罩关闭
+- 读取文本和浏览器 PDF 需要文件地址允许跨域：经 OpenList 代理（`/p/`）时由 OpenList 的 CORS 设置决定；网盘直链由网盘决定。失败时显示“无法在页面内预览”和下载按钮
+- `iframe_previews` 来自 `/api/public/settings`，与 OpenList 网页端使用同一配置，占位符 `$url`、`$e_url`、`$b_url`、`$durl`、`$name` 的含义一致
+
 ## 国际化
 
 ```md
@@ -167,8 +184,8 @@ import { fileListLocales, formatLabel, resolveLabels } from 'vitepress-plugin-fi
 | --- | --- |
 | `POST /api/fs/list` | 目录列表（`per_page: 0`） |
 | `POST /api/fs/get` | 获取下载 / 预览 / 打包用的 `raw_url`；失败时回退到 `/d/...?sign=` |
-| `GET /api/public/settings` | 获取 `site_title` |
-| `GET /d/...`、`GET /p/...` | OpenList 生成的下载 / 预览链接 |
+| `GET /api/public/settings` | 获取 `site_title`、`iframe_previews` |
+| `GET /d/...`、`GET /p/...` | 下载与预览读取的文件地址 |
 
 ## 导出
 

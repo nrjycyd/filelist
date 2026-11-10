@@ -9,13 +9,18 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import type { FileListLabels, FileListProps, FileListSource } from './types'
 import { formatLabel, resolveLabels } from './locales'
+import PreviewDialog from './PreviewDialog.vue'
 import {
   compareNodes,
   extOf,
+  encodePath,
   fileKind,
+  fillPreviewUrl,
   formatDate,
   formatSize,
+  iframePreviewsFor,
   joinPath,
+  previewKind,
   totalSize,
   uniqueEntryName,
   zipEntryName,
@@ -76,6 +81,8 @@ const toast = ref('')
 const sortKey = ref<SortKey>('name')
 const sortAsc = ref(true)
 const siteTitle = ref('')
+/** OpenList's public `iframe_previews` setting (JSON text). */
+const iframePreviews = ref('')
 const batchBusy = ref(false)
 const batchProgress = ref(0)
 const downloadCache = new Map<string, string>()
@@ -209,21 +216,27 @@ async function resolveUrl(node: FNode): Promise<string> {
   } catch {
     url = ''
   }
-  if (!url) {
-    const encoded = node.path.split('/').map(encodeURIComponent).join('/')
-    url = `${baseUrl.value}/d${encoded}${node.sign ? `?sign=${encodeURIComponent(node.sign)}` : ''}`
-  }
+  if (!url) url = directUrl(node)
   downloadCache.set(node.path, url)
   return url
+}
+
+/** OpenList's signed `/d/` download link for a file. */
+function directUrl(node: FNode): string {
+  return `${baseUrl.value}/d${encodePath(node.path)}${node.sign ? `?sign=${encodeURIComponent(node.sign)}` : ''}`
 }
 
 async function loadSiteTitle() {
   if (demo.value) return
   try {
-    const data = await request<{ site_title?: string; title?: string }>('/api/public/settings')
+    const data = await request<{ site_title?: string; title?: string; iframe_previews?: string }>(
+      '/api/public/settings',
+    )
     siteTitle.value = data?.site_title || data?.title || ''
+    iframePreviews.value = data?.iframe_previews || ''
   } catch {
     siteTitle.value = ''
+    iframePreviews.value = ''
   }
 }
 
@@ -527,23 +540,66 @@ async function download(node: FNode) {
   }
 }
 
-const previewable =
-  /\.(?:pdf|png|jpe?g|gif|webp|svg|txt|md|json|mp3|wav|mp4|webm|mov)$/i
+/* ---------------- 预览（弹窗，不跳转） ---------------- */
 
+/** Only types the dialog can actually render get a preview button. */
 function canPreview(node: FNode): boolean {
-  return !node.is_dir && previewable.test(node.name)
+  return !node.is_dir && previewKind(node.name) !== 'none'
 }
 
+const previewNode = ref<FNode | null>(null)
+const previewSrc = ref('')
+const previewViewer = ref('')
+const previewResolving = ref(false)
+const previewError = ref('')
+let previewSeq = 0
+
+/** Previewable files in the order they are listed, for ← / →. */
+const previewList = computed(() => visible.value.filter(canPreview))
+const previewPosition = computed(() =>
+  previewNode.value ? previewList.value.indexOf(previewNode.value) + 1 : 0,
+)
+
 async function preview(node: FNode) {
-  if (demo.value) {
-    showToast(t('demoPreview', { name: node.name }))
-    return
-  }
+  const seq = ++previewSeq
+  previewNode.value = node
+  previewSrc.value = ''
+  previewViewer.value = ''
+  previewError.value = ''
+  previewResolving.value = false
+  if (demo.value || !canPreview(node)) return
+  previewResolving.value = true
   try {
-    window.open(await resolveUrl(node), '_blank', 'noopener')
+    const url = await resolveUrl(node)
+    if (seq !== previewSeq) return
+    previewSrc.value = url
+    if (previewKind(node.name) === 'pdf') {
+      const viewer = iframePreviewsFor(node.name, iframePreviews.value)[0]
+      if (viewer) {
+        previewViewer.value = fillPreviewUrl(viewer.scheme, {
+          name: node.name,
+          rawUrl: url,
+          downloadUrl: directUrl(node),
+        })
+      }
+    }
   } catch (error) {
-    showToast(t('previewFailed', { message: errorText(error) }))
+    if (seq === previewSeq) previewError.value = errorText(error)
+  } finally {
+    if (seq === previewSeq) previewResolving.value = false
   }
+}
+
+function stepPreview(delta: number) {
+  const list = previewList.value
+  if (!list.length) return
+  const index = previewNode.value ? list.indexOf(previewNode.value) : -1
+  void preview(list[(index + delta + list.length) % list.length])
+}
+
+function closePreview() {
+  previewSeq += 1
+  previewNode.value = null
 }
 
 async function batchDownload() {
@@ -835,5 +891,22 @@ onBeforeUnmount(() => {
     </div>
 
     <div v-if="toast" class="fl-toast" role="status">{{ toast }}</div>
+
+    <PreviewDialog
+      :open="!!previewNode"
+      :file="previewNode"
+      :labels="text"
+      :src="previewSrc"
+      :viewer="previewViewer"
+      :resolving="previewResolving"
+      :error="previewError"
+      :demo="demo"
+      :position="previewPosition"
+      :total="previewPosition ? previewList.length : 0"
+      @close="closePreview"
+      @prev="stepPreview(-1)"
+      @next="stepPreview(1)"
+      @download="previewNode && download(previewNode)"
+    />
   </div>
 </template>
