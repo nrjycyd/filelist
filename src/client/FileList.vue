@@ -5,14 +5,16 @@
  * password choice in usePasswords.ts, tree helpers in tree.ts and downloads in
  * download.ts; this component wires them to the UI.
  */
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, useId } from 'vue'
 import type { OLItem } from './api'
 import type { FileListLabels, FileListProps, FileListSource } from './types'
+import type { ZipProgress } from './download'
 import type { FNode, FolderStats, LockState, UnlockError } from './tree'
 import type { SortKey } from './utils'
 import { createOpenListApi, errorText, isNetworkError, isPasswordError } from './api'
 import { createDemoApi } from './demo'
-import { openUrl, saveBlob, zipFileName, zipFiles } from './download'
+import ConfirmDialog from './ConfirmDialog.vue'
+import { canStreamToDisk, openUrl, pickZipFile, saveBlob, zipFileName, zipToBlob, zipToFile } from './download'
 import Icon from './Icon.vue'
 import { formatLabel, resolveLabels } from './locales'
 import PreviewDialog from './PreviewDialog.vue'
@@ -40,6 +42,7 @@ const props = withDefaults(defineProps<FileListProps>(), {
   title: '',
   locale: 'zh-CN',
   rememberPassword: true,
+  pageSize: 200,
 })
 
 const text = computed<FileListLabels>(() => resolveLabels(props.locale, props.labels))
@@ -77,7 +80,8 @@ const sortAsc = ref(true)
 const siteTitle = ref('')
 const iframePreviews = ref('')
 const batchBusy = ref(false)
-const batchProgress = ref(0)
+const zipProgress = ref<ZipProgress | null>(null)
+let zipAbort: AbortController | null = null
 let toastTimer: ReturnType<typeof setTimeout> | undefined
 
 /** The folder listed in single-path mode, as the parent of the top rows. */
@@ -338,6 +342,7 @@ async function loadRoot() {
   errorMsg.value = ''
   try {
     roots.value = await buildTree()
+    shown.clear()
     rootLock.value = null
     selected.value = new Set()
     api.value.clearCache()
@@ -424,21 +429,56 @@ const sortValue = computed<string>({
   },
 })
 
-const visible = computed<FNode[]>(() => {
-  const out: FNode[] = []
+/* ---------------- long folders ---------------- */
+
+/** A “show more” row closing a folder whose children are cut at `pageSize`. */
+interface MoreRow {
+  more: true
+  /** Folder path (the listed folder's path for top-level rows). */
+  key: string
+  depth: number
+  remaining: number
+}
+
+type Row = FNode | MoreRow
+
+/** Rows shown per folder, beyond the first page; kept across refreshes. */
+const shown = reactive(new Map<string, number>())
+
+function limitOf(key: string): number {
+  const size = Math.max(0, Math.floor(props.pageSize ?? 200))
+  return size ? (shown.get(key) ?? size) : Number.POSITIVE_INFINITY
+}
+
+function showMore(row: MoreRow, all: boolean) {
+  const size = Math.max(1, Math.floor(props.pageSize ?? 200))
+  shown.set(row.key, all ? Number.POSITIVE_INFINITY : limitOf(row.key) + size)
+}
+
+function isMore(row: Row): row is MoreRow {
+  return 'more' in row
+}
+
+const rows = computed<Row[]>(() => {
+  const out: Row[] = []
   const query = keyword.value.trim().toLowerCase()
   const matches = (node: FNode): boolean =>
     !query || node.name.toLowerCase().includes(query) || (node.is_dir && node.children.some(matches))
-  const walk = (nodes: FNode[]) => {
-    for (const node of nodes) {
-      if (!matches(node)) continue
+  const walk = (nodes: FNode[], key: string, depth: number) => {
+    const list = nodes.filter(matches)
+    // A filter shows every match: a cut list could hide the one searched for.
+    const limit = query ? list.length : Math.min(list.length, limitOf(key))
+    for (const node of list.slice(0, limit)) {
       out.push(node)
-      if (node.is_dir && (node.expanded || query) && node.children.length) walk(node.children)
+      if (node.is_dir && (node.expanded || query) && node.children.length) walk(node.children, node.path, node.depth + 1)
     }
+    if (limit < list.length) out.push({ more: true, key, depth, remaining: list.length - limit })
   }
-  walk(roots.value)
+  walk(roots.value, props.sources.length ? '' : props.path, 0)
   return out
 })
+
+const visible = computed<FNode[]>(() => rows.value.filter((row): row is FNode => !isMore(row)))
 
 /* ---------------- selection and batch download ---------------- */
 
@@ -536,25 +576,116 @@ async function download(node: FNode) {
   }
 }
 
+const MB = 1024 * 1024
+
+/** In-memory ZIP limits in bytes (Infinity = none); phones get lower defaults. */
+function zipLimits(): { warn: number; max: number } {
+  const touch = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches
+  const bytes = (value: number | undefined, fallback: number) => {
+    const mb = value ?? fallback
+    return mb > 0 ? mb * MB : Number.POSITIVE_INFINITY
+  }
+  return { warn: bytes(props.zipWarnSize, touch ? 200 : 500), max: bytes(props.zipMaxSize, touch ? 1024 : 2048) }
+}
+
+interface ZipNotice {
+  kind: 'warn' | 'block'
+  size: number
+  limit: number
+  files: FNode[]
+}
+
+const zipNotice = ref<ZipNotice | null>(null)
+/** Only desktop browsers get “use Chrome or Edge”; on iPhone every browser is Safari. */
+const zipTip = computed(() =>
+  typeof window !== 'undefined' && !window.matchMedia?.('(pointer: coarse)').matches ? t('zipStreamTip') : '',
+)
+
+function zipName(): string {
+  return zipFileName(props.title || t('defaultZip'))
+}
+
+/**
+ * Chrome / Edge stream into a file the user picks (no size limit). Other
+ * browsers build the ZIP in memory, so large selections ask first or are refused.
+ */
 async function batchDownload() {
   const files = selectedFiles.value
-  if (!files.length) return
+  if (!files.length || batchBusy.value) return
   if (demo.value) {
     showToast(t('demoBatch', { count: files.length }))
     return
   }
+  if (canStreamToDisk()) {
+    let handle: FileSystemFileHandle | null
+    try {
+      // First await of the click: the picker needs the user gesture.
+      handle = await pickZipFile(zipName())
+    } catch (error) {
+      showToast(t('batchFailed', { message: errorText(error) }))
+      return
+    }
+    if (handle) await runZip(files, (options) => zipToFile(handle, files, options), handle.name)
+    return
+  }
+  const size = totalSize(files)
+  const { warn, max } = zipLimits()
+  if (size > max) zipNotice.value = { kind: 'block', size, limit: max, files }
+  else if (size > warn) zipNotice.value = { kind: 'warn', size, limit: warn, files }
+  else await zipInMemory(files)
+}
+
+async function zipInMemory(files: FNode[]) {
+  const name = zipName()
+  await runZip(
+    files,
+    async (options) => saveBlob(await zipToBlob(files, options), name),
+    name,
+  )
+}
+
+function confirmZip() {
+  const notice = zipNotice.value
+  zipNotice.value = null
+  if (notice?.kind === 'warn') void zipInMemory(notice.files)
+}
+
+async function runZip(
+  files: FNode[],
+  run: (options: Parameters<typeof zipToBlob<FNode>>[1]) => Promise<void>,
+  name: string,
+) {
+  const controller = new AbortController()
+  zipAbort = controller
   batchBusy.value = true
-  batchProgress.value = 0
+  zipProgress.value = null
   try {
-    const blob = await zipFiles(files, fileUrlOf, (percent) => (batchProgress.value = percent))
-    saveBlob(blob, zipFileName(props.title || t('defaultZip')))
+    await run({ urlOf: fileUrlOf, signal: controller.signal, onProgress: (progress) => (zipProgress.value = progress) })
+    showToast(t('batchDone', { name, count: files.length, size: formatSize(totalSize(files)) }))
     selected.value = new Set()
   } catch (error) {
-    showToast(t('batchFailed', { message: errorText(error) }))
+    showToast(controller.signal.aborted ? t('batchCanceled') : t('batchFailed', { message: errorText(error) }))
   } finally {
+    zipAbort = null
     batchBusy.value = false
+    zipProgress.value = null
   }
 }
+
+function cancelZip() {
+  zipAbort?.abort()
+}
+
+const zipPercent = computed(() => {
+  const progress = zipProgress.value
+  if (!progress) return 0
+  const ratio = progress.totalBytes
+    ? progress.bytes / progress.totalBytes
+    : progress.totalFiles
+      ? progress.files / progress.totalFiles
+      : 0
+  return Math.min(100, Math.floor(ratio * 100))
+})
 
 /* ---------------- preview (dialog, no navigation) ---------------- */
 
@@ -650,6 +781,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  zipAbort?.abort()
   window.removeEventListener('resize', measureStickyTop)
   clearTimeout(toastTimer)
 })
@@ -664,7 +796,19 @@ onBeforeUnmount(() => {
     :aria-busy="refreshing || loadingRoot"
   >
     <div class="fl-bar">
-      <div v-if="selected.size" class="fl-selection" role="status">
+      <div v-if="batchBusy" class="fl-selection" role="status">
+        <span class="fl-selection-count">{{ t('batching', { percent: zipPercent }) }}</span>
+        <span v-if="zipProgress" class="fl-selection-size">{{
+          t('batchProgress', {
+            done: formatSize(zipProgress.bytes),
+            total: formatSize(zipProgress.totalBytes),
+            files: zipProgress.files,
+            count: zipProgress.totalFiles,
+          })
+        }}</span>
+        <span class="fl-zip-bar" :style="{ width: `${zipPercent}%` }" aria-hidden="true"></span>
+      </div>
+      <div v-else-if="selected.size" class="fl-selection" role="status">
         <span class="fl-selection-count">{{ t('selected', { count: selected.size }) }}</span>
         <span class="fl-selection-size">{{ t('totalSize', { size: formatSize(totalSize(selectedFiles)) }) }}</span>
       </div>
@@ -673,7 +817,7 @@ onBeforeUnmount(() => {
         <span v-if="demo" class="fl-demo-badge">{{ t('demoBadge') }}</span>
       </div>
       <button
-        v-if="selected.size"
+        v-if="selected.size && !batchBusy"
         class="fl-clear"
         type="button"
         :aria-label="t('clearSelection')"
@@ -700,9 +844,10 @@ onBeforeUnmount(() => {
           <Icon name="refresh" :size="15" />
         </button>
       </div>
-      <button v-if="selected.size" class="fl-btn fl-btn-primary" type="button" :disabled="batchBusy" @click="batchDownload">
+      <button v-if="batchBusy" class="fl-btn fl-zip-cancel" type="button" @click="cancelZip">{{ t('cancel') }}</button>
+      <button v-else-if="selected.size" class="fl-btn fl-btn-primary" type="button" @click="batchDownload">
         <Icon name="download" :size="15" />
-        {{ batchBusy ? t('batching', { percent: batchProgress }) : t('batch') }}
+        {{ t('batch') }}
       </button>
     </div>
 
@@ -712,6 +857,7 @@ onBeforeUnmount(() => {
         <input
           type="checkbox"
           :aria-label="t('selectAll')"
+          :disabled="batchBusy"
           :checked="allChecked"
           :indeterminate.prop="someChecked"
           @change="toggleCheckAll"
@@ -784,9 +930,29 @@ onBeforeUnmount(() => {
     </div>
     <div v-else-if="visible.length === 0" class="fl-status">{{ t('empty') }}</div>
 
+    <template v-for="(node, index) in rows" :key="isMore(node) ? `more:${node.key}` : node.path">
     <div
-      v-for="(node, index) in visible"
-      :key="node.path"
+      v-if="isMore(node)"
+      class="fl-row fl-more"
+      :style="{ '--fl-depth': node.depth }"
+    >
+      <span class="fl-cell fl-cell-check"></span>
+      <span class="fl-cell fl-more-cell">
+        <span class="fl-indent" aria-hidden="true"></span>
+        <span class="fl-more-count">{{ t('moreRemaining', { count: node.remaining }) }}</span>
+        <template v-if="node.remaining > (pageSize || 0)">
+          <button class="fl-more-btn" type="button" @click="showMore(node, false)">
+            {{ t('showMore') }}<span class="fl-more-page">{{ ` ${t('folderItems', { count: pageSize })}` }}</span>
+          </button>
+          <button class="fl-more-btn fl-more-all" type="button" @click="showMore(node, true)">{{ t('showAll') }}</button>
+        </template>
+        <button v-else class="fl-more-btn" type="button" @click="showMore(node, true)">
+          {{ t('showRest', { count: node.remaining }) }}
+        </button>
+      </span>
+    </div>
+    <div
+      v-else
       class="fl-row"
       :class="{
         'fl-row-dir': node.is_dir,
@@ -801,7 +967,7 @@ onBeforeUnmount(() => {
       <label class="fl-cell fl-cell-check">
         <input
           type="checkbox"
-          :disabled="!!node.lock"
+          :disabled="!!node.lock || batchBusy"
           :aria-label="t('selectItem', { name: node.name })"
           :checked="isChecked(node)"
           :indeterminate.prop="isIndeterminate(node)"
@@ -940,12 +1106,24 @@ onBeforeUnmount(() => {
         </span>
       </template>
     </div>
+    </template>
 
     <div class="fl-foot">
       <span>{{ t('loaded', { count: allFiles.length }) }} · {{ t('totalSize', { size: formatSize(totalSize(allFiles)) }) }}</span>
     </div>
 
     <div v-if="toast" class="fl-toast" role="status">{{ toast }}</div>
+
+    <ConfirmDialog
+      :open="!!zipNotice"
+      :title="zipNotice ? t(zipNotice.kind === 'warn' ? 'zipWarnTitle' : 'zipBlockTitle', { size: formatSize(zipNotice.size) }) : ''"
+      :text="zipNotice ? t(zipNotice.kind === 'warn' ? 'zipWarnText' : 'zipBlockText', { limit: formatSize(zipNotice.limit) }) : ''"
+      :tip="zipTip"
+      :confirm-label="zipNotice?.kind === 'warn' ? t('zipContinue') : undefined"
+      :cancel-label="zipNotice?.kind === 'warn' ? t('cancel') : t('gotIt')"
+      @confirm="confirmZip"
+      @close="zipNotice = null"
+    />
 
     <PreviewDialog
       :open="!!previewNode"

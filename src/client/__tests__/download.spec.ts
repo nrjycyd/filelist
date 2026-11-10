@@ -22,3 +22,17 @@ describe('download helpers', () => {
     expect(zipFileName('a/b:c?')).toBe('a_b_c_.zip')
   })
 })
+
+describe('zipToBlob', () => {
+  it('stops and rejects when aborted', async () => {
+    vi.doMock('client-zip', () => ({
+      makeZip: () => new ReadableStream<Uint8Array>({ start(controller) { controller.enqueue(new Uint8Array([1])) } }),
+    }))
+    const { zipToBlob } = await import('../download')
+    const controller = new AbortController()
+    const promise = zipToBlob([], { urlOf: async () => '', signal: controller.signal, onProgress: () => {} })
+    controller.abort()
+    await expect(promise).rejects.toBeTruthy()
+    vi.doUnmock('client-zip')
+  })
+})

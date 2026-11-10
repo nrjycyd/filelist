@@ -91,6 +91,7 @@
 /* ---------------- toolbar ---------------- */
 
 .fl-bar {
+  position: relative;
   display: flex;
   gap: 8px;
   align-items: center;
@@ -803,6 +804,110 @@
   transform: translateX(-50%);
 }
 
+/* ---------------- batch ZIP progress ---------------- */
+
+.fl-zip-bar {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  height: 3px;
+  background: var(--vp-c-brand-1);
+  transition: width 0.2s ease;
+}
+
+.fl-zip-cancel {
+  margin-left: auto;
+  color: var(--vp-c-brand-1);
+}
+
+/* ---------------- long folders ---------------- */
+
+.fl-more {
+  background: var(--vp-c-bg-soft);
+}
+
+.fl-more-cell {
+  grid-column: 2 / -1;
+  gap: 12px;
+  align-self: stretch;
+}
+
+.fl-more-cell .fl-indent {
+  /* line the row up with the folder's files (arrow + icon columns) */
+  margin-right: 36px;
+}
+
+.fl-more-count {
+  font-size: 13px;
+  color: var(--vp-c-text-2);
+  white-space: nowrap;
+}
+
+.fl-more-btn {
+  height: 28px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--vp-c-brand-1);
+  white-space: nowrap;
+  cursor: pointer;
+  background: var(--vp-c-bg);
+  border: 1px solid var(--vp-c-brand-soft);
+  border-radius: 7px;
+}
+
+.fl-more-btn:hover {
+  border-color: var(--vp-c-brand-1);
+}
+
+.fl-more-all {
+  font-weight: 400;
+  background: transparent;
+  border-color: transparent;
+}
+
+/* ---------------- confirm dialog ---------------- */
+
+.fl-confirm {
+  position: fixed;
+  inset: 0;
+  box-sizing: border-box;
+  width: min(440px, calc(100vw - 32px));
+  max-width: none;
+  height: fit-content;
+  padding: 20px 22px;
+  margin: auto;
+  color: var(--vp-c-text-1);
+  background: var(--vp-c-bg);
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgb(0 0 0 / 28%);
+}
+
+.fl-confirm::backdrop {
+  background: rgb(0 0 0 / 45%);
+}
+
+.fl-confirm-title {
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.fl-confirm-text {
+  margin: 0 0 10px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--vp-c-text-2);
+}
+
+.fl-confirm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
 /* ---------------- narrow containers ---------------- */
 
 @container fl (max-width: 559px) {
@@ -894,6 +999,35 @@
     padding: 0 14px;
     font-size: 14px;
     border-radius: 10px;
+  }
+
+  .fl-zip-cancel {
+    height: 44px;
+    padding: 0 16px;
+    border-radius: 10px;
+  }
+
+  .fl-more-cell {
+    gap: 4px;
+  }
+
+  .fl-more-cell .fl-indent {
+    margin-right: 10px;
+  }
+
+  .fl-more-count {
+    flex: 1 1 auto;
+  }
+
+  .fl-more-btn {
+    height: 44px;
+    padding: 0 12px;
+    font-size: 14px;
+    border-radius: 10px;
+  }
+
+  .fl-more-page {
+    display: none;
   }
 
   /* rows (container queries cannot restyle .fl-root itself) */
@@ -1297,6 +1431,25 @@
 }
 
 @media (max-width: 640px) {
+  .fl-confirm {
+    width: 100vw;
+    margin: auto 0 0;
+    padding: 20px 20px calc(24px + env(safe-area-inset-bottom));
+    border: 0;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .fl-confirm-actions {
+    flex-direction: column-reverse;
+  }
+
+  .fl-confirm-actions .fl-btn {
+    justify-content: center;
+    height: 48px;
+    font-size: 16px;
+    border-radius: 12px;
+  }
+
   .fl-preview {
     width: 100vw;
     height: 100dvh;
