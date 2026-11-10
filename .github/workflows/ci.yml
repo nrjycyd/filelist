@@ -35,13 +35,10 @@ jobs:
           - name: chromium
             browser: chromium
             projects: --project=chromium --project=mobile
-          # Safari's engine: not required until it has passed on CI.
           - name: webkit
             browser: webkit
             projects: --project=webkit
-            optional: true
     name: e2e (${{ matrix.name }})
-    continue-on-error: ${{ matrix.optional == true }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
