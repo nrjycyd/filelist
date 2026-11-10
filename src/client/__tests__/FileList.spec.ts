@@ -181,7 +181,7 @@ describe('FileList folder selection', () => {
 
     const listed = calls.filter((call) => call.path === '/api/fs/list').map((call) => call.body?.path)
     expect(listed).toEqual(expect.arrayContaining(['/A', '/A/B', '/A/B/C']))
-    expect(wrapper.find('.fl-foot').text()).toContain('已选 2 项')
+    expect(wrapper.find('.fl-selection').text()).toContain('已选 2 项')
 
     const entries = await zipSelected(wrapper)
     expect(Object.keys(entries).sort()).toEqual(['A/B/C/c1.txt', 'A/a1.txt'])
@@ -196,7 +196,7 @@ describe('FileList folder selection', () => {
     const listCount = calls.filter((call) => call.path === '/api/fs/list').length
     await check(wrapper, 'A')
 
-    expect(wrapper.find('.fl-foot').text()).toContain('已选 0 项')
+    expect(wrapper.find('.fl-selection').exists()).toBe(false)
     expect(calls.filter((call) => call.path === '/api/fs/list')).toHaveLength(listCount)
   })
 })
@@ -251,5 +251,82 @@ describe('FileList passwords with sources', () => {
         expect.objectContaining({ path: '/y', password: 'py' }),
       ]),
     )
+  })
+})
+
+describe('FileList toolbar and rows', () => {
+  it('turns the toolbar into a selection bar and back', async () => {
+    mockOpenList({ '/': [file('a.pdf'), file('b.docx')] })
+    const wrapper = mountList({ path: '/', title: '资料' })
+    await flushPromises()
+
+    expect(wrapper.find('.fl-title').text()).toContain('资料')
+    expect(wrapper.find('.fl-btn-primary').exists()).toBe(false)
+
+    await check(wrapper, 'a.pdf')
+    await check(wrapper, 'b.docx')
+    expect(wrapper.find('.fl-root').classes()).toContain('fl-selecting')
+    expect(wrapper.find('.fl-title').exists()).toBe(false)
+    expect(wrapper.find('.fl-selection-count').text()).toBe('已选 2 项')
+    // sizes from the mock: each file's size is the length of its parent path ('/')
+    expect(wrapper.find('.fl-selection-size').text()).toBe('共 2 B')
+    expect(wrapper.find('.fl-btn-primary').text()).toContain('下载 ZIP')
+
+    await wrapper.find('.fl-clear').trigger('click')
+    expect(wrapper.find('.fl-root').classes()).not.toContain('fl-selecting')
+    expect(wrapper.find('.fl-title').exists()).toBe(true)
+    expect(wrapper.findAll('.fl-row-selected')).toHaveLength(0)
+  })
+
+  it('colours type badges by file family and labels them with the extension', async () => {
+    mockOpenList({ '/': [file('a.pdf'), file('b.xlsx'), file('c.pptx'), file('d.bin')] })
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+
+    const badge = (name: string) => row(wrapper, name).find('.fl-type')
+    expect(badge('a.pdf').attributes('data-kind')).toBe('pdf')
+    expect(badge('b.xlsx').attributes('data-kind')).toBe('sheet')
+    expect(badge('c.pptx').attributes('data-kind')).toBe('slide')
+    expect(badge('d.bin').attributes('data-kind')).toBe('other')
+    expect(badge('b.xlsx').text()).toBe('XLSX')
+  })
+
+  it('shows a file count for loaded folders and keeps names free of extra text', async () => {
+    mockOpenList({ '/': [dir('A')], '/A': [file('x.txt'), file('y.txt')] })
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+
+    expect(row(wrapper, 'A').find('.fl-count').exists()).toBe(false)
+    await row(wrapper, 'A').find('.fl-arrow').trigger('click')
+    await flushPromises()
+
+    expect(row(wrapper, 'A').find('.fl-count').text()).toBe('2 项')
+    expect(row(wrapper, 'A').find('.fl-name').text()).toBe('A')
+    expect(row(wrapper, 'x.txt').find('.fl-meta').text()).toContain('2 B')
+    expect(row(wrapper, 'A').find('.fl-arrow').attributes('aria-expanded')).toBe('true')
+  })
+
+  it('sorts from the compact sort select', async () => {
+    mockOpenList({ '/': [file('b.txt'), file('a.txt'), file('c.txt')] })
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+
+    const names = () => wrapper.findAll('.fl-row:not(.fl-head) .fl-name').map((item) => item.text())
+    expect(names()).toEqual(['a.txt', 'b.txt', 'c.txt'])
+
+    await wrapper.find('.fl-sort-select select').setValue('name:desc')
+    expect(names()).toEqual(['c.txt', 'b.txt', 'a.txt'])
+    expect(wrapper.find('.fl-head .fl-cell-name .fl-sort').text()).toBe('▼')
+  })
+
+  it('indents rows by depth', async () => {
+    mockOpenList({ '/': [dir('A')], '/A': [file('x.txt')] })
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+    await row(wrapper, 'A').find('.fl-arrow').trigger('click')
+    await flushPromises()
+
+    expect(row(wrapper, 'A').attributes('style')).toContain('--fl-depth: 0')
+    expect(row(wrapper, 'x.txt').attributes('style')).toContain('--fl-depth: 1')
   })
 })
