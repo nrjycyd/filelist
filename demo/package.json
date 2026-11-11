@@ -11,7 +11,10 @@
   },
   "dependencies": {
     "vitepress": "^2.0.0-alpha.21",
+    "vitepress-plugin-field": "^0.12.2",
     "vitepress-plugin-filelist": "file:..",
+    "vitepress-plugin-npm-to": "^0.12.2",
+    "vitepress-plugin-steps": "^0.12.2",
     "vitepress-tuck": "^0.12.2",
     "vue": "^3.5.0"
   }

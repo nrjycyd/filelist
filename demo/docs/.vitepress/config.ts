@@ -1,5 +1,8 @@
 import { defineConfig } from 'vitepress-tuck'
+import field from 'vitepress-plugin-field'
 import fileList from 'vitepress-plugin-filelist'
+import npmTo from 'vitepress-plugin-npm-to'
+import steps from 'vitepress-plugin-steps'
 import pkg from '../../../package.json'
 
 const repo = 'https://github.com/nrjycyd/vitepress-plugin-filelist'
@@ -24,7 +27,15 @@ export default defineConfig({
     ['meta', { property: 'og:image', content: `${site}social-preview.png` }],
     ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
   ],
-  plugins: [fileList()],
+  // Markdown extensions from the vitepress-tuck family: install tabs (::: npm-to),
+  // steps and prop fields.
+  plugins: [fileList(), npmTo(['npm', 'pnpm', 'yarn', 'bun']), steps(), field()],
+  // Chinese at the root (existing links keep working), English under /en/;
+  // the English nav, sidebar and labels are in en/config.ts.
+  locales: {
+    root: { label: '简体中文', lang: 'zh-CN' },
+    en: { label: 'English', lang: 'en-US', link: '/en/' },
+  },
   vite: {
     // The version shown on the home page, read from the repository at build time.
     define: { __FL_VERSION__: JSON.stringify(pkg.version) },
@@ -78,15 +89,26 @@ export default defineConfig({
     search: {
       provider: 'local',
       options: {
-        translations: {
-          button: { buttonText: '搜索文档', buttonAriaLabel: '搜索文档' },
-          modal: { noResultsText: '没有找到结果', footer: { selectText: '选择', navigateText: '切换', closeText: '关闭' } },
+        locales: {
+          root: {
+            translations: {
+              button: { buttonText: '搜索文档', buttonAriaLabel: '搜索文档' },
+              modal: { noResultsText: '没有找到结果', footer: { selectText: '选择', navigateText: '切换', closeText: '关闭' } },
+            },
+          },
+          en: {
+            translations: {
+              button: { buttonText: 'Search', buttonAriaLabel: 'Search' },
+              modal: { noResultsText: 'No results', footer: { selectText: 'Select', navigateText: 'Navigate', closeText: 'Close' } },
+            },
+          },
         },
       },
     },
     outline: { level: [2, 3], label: '本页目录' },
     docFooter: { prev: '上一页', next: '下一页' },
     darkModeSwitchLabel: '外观',
+    langMenuLabel: '语言',
     sidebarMenuLabel: '菜单',
     returnToTopLabel: '回到顶部',
     footer: { message: 'MIT License', copyright: `vitepress-plugin-filelist v${pkg.version}` },

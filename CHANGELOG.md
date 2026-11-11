@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Docs
+
+- English docs at `/en/` (home, getting started, connect OpenList, security, component props) with a language switch; Chinese stays at the root, so existing links keep working. The home page demo follows the page language
+- `README.md` is now in English (shown on npm), with the Chinese version in `README.zh-CN.md`
+- Docs use vitepress-tuck's Markdown extensions: `::: npm-to` install tabs, `:::: steps`, and `::: field` for every prop
+
 ### Internal
 
 - Size budget test (`size.spec.ts`): the built browser bundle, styles and Node entry must stay within their gzip budgets, and markdown-it, DOMPurify and client-zip must stay lazily loaded; CI and the release workflow fail otherwise

@@ -11,32 +11,36 @@
   <a href="https://github.com/nrjycyd/vitepress-plugin-filelist/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/vitepress-plugin-filelist" alt="license"></a>
 </p>
 
-<p align="center">面向 VitePress 的 OpenList 文件浏览组件：在文档页里浏览、预览、批量下载 OpenList 上的文件。</p>
+<p align="center">English · <a href="https://github.com/nrjycyd/vitepress-plugin-filelist/blob/main/README.zh-CN.md">简体中文</a></p>
+
+<p align="center">An OpenList file browser for VitePress: browse, preview, search and batch-download OpenList files right in a docs page.</p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/nrjycyd/vitepress-plugin-filelist/main/demo/docs/public/screenshot.png" alt="文件列表截图" width="640">
+  <img src="https://raw.githubusercontent.com/nrjycyd/vitepress-plugin-filelist/main/demo/docs/public/screenshot.png" alt="File list screenshot" width="640">
 </p>
 
-## 功能
+## Features
 
-- 树形目录、按需加载；勾选文件或文件夹批量打包 ZIP
-- 弹窗预览：图片、音视频、文本、PDF、Markdown / HTML
-- 目录密码、筛选与深度搜索、大目录分页
-- 跟随 VitePress 亮 / 暗主题，手机自动切换布局
+- Folder tree loaded on demand; tick files or folders and download them as one ZIP
+- Preview in a dialog: images, audio, video, text, PDF, Markdown / HTML
+- Folder passwords, filter and deep search, paging for long folders
+- Follows the VitePress light / dark theme; a compact layout on phones
 
-## 文档与在线演示
+## Docs and live demo
 
-👉 **[nrjycyd.github.io/vitepress-plugin-filelist](https://nrjycyd.github.io/vitepress-plugin-filelist/)**：安装、配置、全部属性，每个功能都有可操作的示例。
+👉 **[nrjycyd.github.io/vitepress-plugin-filelist/en/](https://nrjycyd.github.io/vitepress-plugin-filelist/en/)**: install, setup, every prop, and live examples.
 
 ```bash
-pnpm add -D vitepress-plugin-filelist
+npm install -D vitepress-plugin-filelist
 ```
 
-## 后端
+Works with VitePress 1.6+ (register with `enhanceAppWithFileList`) and VitePress 2 (also as a [vitepress-tuck](https://github.com/pengzhanbo/vitepress-tuck) plugin).
 
-- 接口：[OpenList](https://github.com/OpenListTeam/OpenList)
-- 实测部署：[OpenList-Worker](https://github.com/OpenListTeam/OpenList-Worker)
+## Backend
 
-## 更多
+- API: [OpenList](https://github.com/OpenListTeam/OpenList)
+- Tested on: [OpenList-Worker](https://github.com/OpenListTeam/OpenList-Worker)
 
-[更新日志](./CHANGELOG.md) · [参与开发](./CONTRIBUTING.md) · [MIT License](./LICENSE)
+## More
+
+[Changelog](https://github.com/nrjycyd/vitepress-plugin-filelist/blob/main/CHANGELOG.md) · [Contributing (Chinese)](https://github.com/nrjycyd/vitepress-plugin-filelist/blob/main/CONTRIBUTING.md) · [MIT License](https://github.com/nrjycyd/vitepress-plugin-filelist/blob/main/LICENSE)
