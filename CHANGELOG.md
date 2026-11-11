@@ -6,8 +6,8 @@
 
 - Demo data (no `base`) now has a “示例文件” folder of small real files (Markdown, HTML, SVG, PDF, text): they preview, download and zip for real, served as blob: URLs; other demo files still only describe what would happen. Also a 260-file folder for trying “show more”
 
-- Long folders can go back: once more than the first page is shown, the last row offers “Show less” (收起), and stays after “Show all” instead of disappearing. If the folder's row has scrolled off screen, it is brought back into view. Closing a folder with its arrow also resets it to the first page
-- The last row of a long folder shows progress and actions: a progress ring sits in the file-type column and the count (“已显示 30 / 260 项”) starts where file names start, at any depth; the actions read “显示更多 · 全部显示 │ 收起” at the right edge. “收起” keeps its place even while hidden, so the other buttons never move under the pointer, and after “全部显示” the spot just clicked is left empty. On phones the ring and “30 / 260” share one line, and the buttons look 32px tall with short labels (“更多 / 全部 / 收起”) while still taking taps 44px tall. New labels `showLess`, `allShown`, `moreShown`, `showMoreShort`, `showAllShort`; `moreRemaining` is no longer shown
+- Long folders: while a folder's files are cut at `pageSize`, the last row reads as one more row of the folder (“⋯” in the file-type column, “还有 245 项” where names start) with quiet “再显示 15 项” and “全部显示” links (“+15 / 全部” on phones, still 44px-tall targets); once everything is shown the list simply ends
+- Long folders can go back: once more than the first page is shown, scrolling through the folder pins its row at the top (below the theme's bars and the phone selection bar) with “已显示 30 / 260 项 · 收起”; “收起” returns to the first page and to the folder's row. Closing a folder with its arrow also resets it to the first page. New labels `showLess`, `allShown`, `moreShown`, `showNext`, `showNextShort`, `showAllShort`; `showMore` is no longer shown
 
 ### Changes
 

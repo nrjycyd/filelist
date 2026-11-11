@@ -136,21 +136,24 @@ export interface FileListLabels {
   /** `{limit}` */
   zipBlockText: string
   gotIt: string
-  /** Last row of a long folder. `{count}` (no longer shown; kept for existing overrides) */
+  /** Last row of a long folder: how many are not shown yet. `{count}` */
   moreRemaining: string
-  /** Last row of a long folder: `{shown}` of `{total}`. */
+  /** Pinned folder row: `{shown}` of `{total}`. */
   moreShown: string
   /** “Show all”, short form for narrow lists. */
   showAllShort: string
-  /** “Show more”, short form for narrow lists. */
-  showMoreShort: string
+  /** Show the next page. `{count}` */
+  showNext: string
+  /** Show the next page, short form for narrow lists. `{count}` */
+  showNextShort: string
+  /** No longer shown (“Show next” replaces it); kept for existing overrides. */
   showMore: string
   showAll: string
   /** Fewer than a page left. `{count}` */
   showRest: string
-  /** Back to the first page. */
+  /** Pinned folder row: back to the first page. */
   showLess: string
-  /** Last row once everything is shown. `{count}` */
+  /** Pinned folder row once everything is shown. `{count}` */
   allShown: string
 }
 

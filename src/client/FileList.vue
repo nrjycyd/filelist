@@ -465,23 +465,30 @@ const sortValue = computed<string>({
 
 /* ---------------- long folders ---------------- */
 
-/**
- * The row closing a long folder: “show more” while children are cut at
- * `pageSize`, and “show less” once more than the first page is shown.
- */
+/** The row closing a long folder while its children are cut at `pageSize`. */
 interface MoreRow {
   more: true
   /** Folder path (the listed folder's path for top-level rows). */
   key: string
   depth: number
   remaining: number
-  total: number
-  shown: number
-  /** More than the first page is shown. */
-  canLess: boolean
 }
 
 type Row = FNode | MoreRow
+
+/**
+ * A folder showing more than its first page: while the reader scrolls through
+ * it, its row is pinned at the top with “show less”.
+ */
+interface LongFolder {
+  key: string
+  /** Depth of the folder's own row (-1 for the top level of a single path). */
+  depth: number
+  shown: number
+  total: number
+  /** Path of the last row in the folder, so we know when we are past it. */
+  last: string
+}
 
 /** Rows shown per folder, beyond the first page; kept across refreshes. */
 const shown = reactive(new Map<string, number>())
@@ -501,13 +508,13 @@ function showMore(row: MoreRow, all: boolean) {
 }
 
 /** Back to the first page; the folder's row (or the list's top) comes back into view. */
-async function showLess(row: MoreRow) {
-  shown.delete(row.key)
+async function showLess(key: string) {
+  shown.delete(key)
+  pinned.value = null
   await nextTick()
   const root = rootEl.value
   if (!root) return
-  const folder = [...root.querySelectorAll<HTMLElement>('[data-path]')].find((el) => el.dataset.path === row.key)
-  const target = folder ?? root
+  const target = rowElement(key) ?? root
   // Rows keep `scroll-margin-top` clear of the sticky bars.
   if (target.getBoundingClientRect().top < stickyTop.value) target.scrollIntoView({ block: 'start' })
 }
@@ -516,9 +523,11 @@ function isMore(row: Row): row is MoreRow {
   return 'more' in row
 }
 
-const rows = computed<Row[]>(() => {
+const layout = computed(() => {
   const out: Row[] = []
+  const long: LongFolder[] = []
   const query = keyword.value.trim().toLowerCase()
+  const size = pageSizeOf()
   // In deep search mode a locked folder may hide matches: show it so it can be unlocked.
   const matches = (node: FNode): boolean =>
     !query ||
@@ -527,20 +536,79 @@ const rows = computed<Row[]>(() => {
   const walk = (nodes: FNode[], key: string, depth: number) => {
     const list = nodes.filter(matches)
     // A filter shows every match: a cut list could hide the one searched for.
-    const size = pageSizeOf()
     const limit = query ? list.length : Math.min(list.length, limitOf(key))
     for (const node of list.slice(0, limit)) {
       out.push(node)
       if (node.is_dir && (node.expanded || query) && node.children.length) walk(node.children, node.path, node.depth + 1)
     }
-    const canLess = !query && size > 0 && limit > size
-    if (limit < list.length || canLess) {
-      out.push({ more: true, key, depth, remaining: list.length - limit, total: list.length, shown: limit, canLess })
+    if (limit < list.length) out.push({ more: true, key, depth, remaining: list.length - limit })
+    let end = out.length - 1
+    while (end >= 0 && isMore(out[end])) end -= 1
+    const last = out[end]
+    if (!query && size > 0 && limit > size && last && !isMore(last)) {
+      long.push({ key, depth: depth - 1, shown: limit, total: list.length, last: last.path })
     }
   }
   walk(roots.value, props.sources.length ? '' : props.path, 0)
-  return out
+  return { rows: out, long }
 })
+
+const rows = computed(() => layout.value.rows)
+
+/* ---------------- pinned folder row ---------------- */
+
+const pinned = ref<LongFolder | null>(null)
+/** Height of the sticky selection bar above the pinned row (narrow lists only). */
+const pinOffset = ref(0)
+
+function rowElement(path: string): HTMLElement | undefined {
+  return [...(rootEl.value?.querySelectorAll<HTMLElement>('[data-path]') ?? [])].find((el) => el.dataset.path === path)
+}
+
+/** The pinned folder's name: its own, or for a single path's top level, the list's title. */
+const pinnedName = computed(() => {
+  const folder = pinned.value
+  if (!folder) return ''
+  if (folder.depth < 0) return props.title || folder.key.split('/').filter(Boolean).pop() || '/'
+  const find = (nodes: FNode[]): FNode | undefined => {
+    for (const node of nodes) {
+      if (node.path === folder.key) return node
+      const inner = isWithin(folder.key, node.path) ? find(node.children) : undefined
+      if (inner) return inner
+    }
+  }
+  return find(roots.value)?.name ?? ''
+})
+
+/** Pin the innermost long folder whose own row has scrolled away while its files are still on screen. */
+function updatePin() {
+  const root = rootEl.value
+  if (!root) return
+  const bar = root.querySelector<HTMLElement>('.fl-bar')
+  pinOffset.value = bar && getComputedStyle(bar).position === 'sticky' ? bar.offsetHeight : 0
+  const top = stickyTop.value + pinOffset.value
+  const rowHeight = root.querySelector<HTMLElement>('.fl-head')?.offsetHeight ?? 40
+  let found: LongFolder | null = null
+  for (const folder of layout.value.long) {
+    const head = folder.depth < 0 ? root.querySelector<HTMLElement>('.fl-head') : rowElement(folder.key)
+    const last = rowElement(folder.last)
+    if (!head || !last) continue
+    const inside = head.getBoundingClientRect().bottom <= top && last.getBoundingClientRect().bottom > top + rowHeight
+    if (inside && (!found || folder.depth > found.depth)) found = folder
+  }
+  pinned.value = found
+}
+
+let pinFrame = 0
+function schedulePin() {
+  if (pinFrame) return
+  pinFrame = requestAnimationFrame(() => {
+    pinFrame = 0
+    updatePin()
+  })
+}
+
+watch(layout, () => void nextTick(schedulePin))
 
 const visible = computed<FNode[]>(() => rows.value.filter((row): row is FNode => !isMore(row)))
 
@@ -1022,11 +1090,16 @@ onMounted(() => {
   void loadSettings()
   measureStickyTop()
   window.addEventListener('resize', measureStickyTop, { passive: true })
+  window.addEventListener('scroll', schedulePin, { passive: true })
+  window.addEventListener('resize', schedulePin, { passive: true })
 })
 
 onBeforeUnmount(() => {
   zipAbort?.abort()
   window.removeEventListener('resize', measureStickyTop)
+  window.removeEventListener('scroll', schedulePin)
+  window.removeEventListener('resize', schedulePin)
+  cancelAnimationFrame(pinFrame)
   clearTimeout(toastTimer)
 })
 </script>
@@ -1147,6 +1220,27 @@ onBeforeUnmount(() => {
       </span>
     </div>
 
+    <!-- While scrolling through a long folder, its row stays at the top with “show less”. -->
+    <div class="fl-pin-anchor" :style="{ '--fl-pin-offset': `${pinOffset}px` }">
+      <div v-if="pinned" class="fl-pin" :style="{ '--fl-depth': Math.max(pinned.depth, 0) }">
+        <span class="fl-cell fl-cell-check"></span>
+        <span class="fl-cell fl-cell-name">
+          <span v-if="pinned.depth >= 0" class="fl-indent" aria-hidden="true"></span>
+          <span v-if="pinned.depth >= 0" class="fl-pin-arrow" aria-hidden="true"><Icon name="next" :size="14" /></span>
+          <svg class="fl-folder-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg>
+          <span class="fl-pin-name">{{ pinnedName }}</span>
+          <span class="fl-pin-count">
+            {{ pinned.shown < pinned.total
+              ? t('moreShown', { shown: pinned.shown, total: pinned.total })
+              : t('allShown', { count: pinned.total }) }}
+          </span>
+        </span>
+        <button class="fl-pin-less" type="button" @click="showLess(pinned.key)">
+          {{ t('showLess') }}<Icon name="up" :size="12" />
+        </button>
+      </div>
+    </div>
+
     <div v-if="loadingRoot" class="fl-status">{{ t('loading') }}</div>
     <form
       v-else-if="rootLock"
@@ -1196,63 +1290,29 @@ onBeforeUnmount(() => {
     >
       <span class="fl-cell fl-cell-check"></span>
       <span class="fl-cell fl-more-cell">
-        <!--
-          Left, lined up with the folder's files: a ring in the file-type column, the count where
-          names start. Right: more, all, then less, whose place is kept even while hidden so
-          the other buttons never move under the pointer.
-        -->
+        <!-- Reads as one more row of the folder: “⋯” in the type column, the count where names start. -->
         <span class="fl-indent" aria-hidden="true"></span>
         <span class="fl-arrow-placeholder" aria-hidden="true"></span>
-        <span class="fl-more-ring" aria-hidden="true">
-          <svg viewBox="0 0 16 16" width="16" height="16">
-            <circle class="fl-more-ring-track" cx="8" cy="8" r="6.75" pathLength="100" />
-            <circle
-              class="fl-more-ring-fill"
-              cx="8"
-              cy="8"
-              r="6.75"
-              pathLength="100"
-              :stroke-dasharray="`${(node.shown / node.total) * 100} 100`"
-            />
-          </svg>
-        </span>
-        <span class="fl-more-count">
-          <template v-if="node.remaining">
-            <span class="fl-more-long">{{ t('moreShown', { shown: node.shown, total: node.total }) }}</span>
-            <span class="fl-more-short" aria-hidden="true"><strong>{{ node.shown }}</strong> / {{ node.total }}</span>
-          </template>
-          <template v-else>
-            <span class="fl-more-long">{{ t('allShown', { count: node.total }) }}</span>
-            <span class="fl-more-short" aria-hidden="true"><strong>{{ node.total }}</strong> / {{ node.total }}</span>
-          </template>
-        </span>
+        <span class="fl-more-tag" aria-hidden="true">⋯</span>
+        <span class="fl-more-count">{{ t('moreRemaining', { count: node.remaining }) }}</span>
         <span class="fl-more-actions">
           <template v-if="node.remaining > (pageSize || 0)">
-            <button class="fl-more-btn" type="button" :aria-label="`${t('showMore')} ${t('folderItems', { count: pageSize })}`"
-              @click="showMore(node, false)">
-              <span class="fl-more-long">{{ t('showMore') }}{{ ` ${t('folderItems', { count: pageSize })}` }}</span>
-              <span class="fl-more-short" aria-hidden="true">{{ t('showMoreShort') }}</span>
-              <Icon name="down" :size="12" />
+            <button
+              class="fl-more-link"
+              type="button"
+              :aria-label="t('showNext', { count: pageSize })"
+              @click="showMore(node, false)"
+            >
+              <span class="fl-more-long">{{ t('showNext', { count: pageSize }) }}</span>
+              <span class="fl-more-short" aria-hidden="true">{{ t('showNextShort', { count: pageSize }) }}</span>
             </button>
-            <button class="fl-more-btn fl-more-all" type="button" :aria-label="t('showAll')" @click="showMore(node, true)">
+            <button class="fl-more-link fl-more-all" type="button" :aria-label="t('showAll')" @click="showMore(node, true)">
               <span class="fl-more-long">{{ t('showAll') }}</span>
               <span class="fl-more-short" aria-hidden="true">{{ t('showAllShort') }}</span>
             </button>
           </template>
-          <button v-else-if="node.remaining" class="fl-more-btn" type="button" @click="showMore(node, true)">
-            {{ t('showRest', { count: node.remaining }) }}<Icon name="down" :size="12" />
-          </button>
-          <span v-if="node.remaining" class="fl-more-sep" :class="{ 'fl-more-reserved': !node.canLess }" aria-hidden="true"></span>
-          <button
-            class="fl-more-btn fl-more-less"
-            :class="{ 'fl-more-reserved': !node.canLess }"
-            type="button"
-            :disabled="!node.canLess"
-            :aria-hidden="!node.canLess || undefined"
-            :tabindex="node.canLess ? undefined : -1"
-            @click="showLess(node)"
-          >
-            {{ t('showLess') }}<Icon name="up" :size="12" />
+          <button v-else class="fl-more-link fl-more-all" type="button" @click="showMore(node, true)">
+            {{ t('showRest', { count: node.remaining }) }}
           </button>
         </span>
       </span>
