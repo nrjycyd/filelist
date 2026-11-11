@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- The deep search status line was almost twice as tall as a row: VitePress' page styles gave it 16px paragraph margins above and below, overriding the component's own. It is now one row high on wide lists (40px) and 48px on phones, growing only when the text wraps
+- The same margins padded the confirm dialog's title and text, the hints under a loading error and the notes in the preview; the component's text no longer uses tags that VitePress' page styles reach, and a unit test guards the templates
+
 ## 0.7.1 (2026-11-11)
 
 ### Fixes

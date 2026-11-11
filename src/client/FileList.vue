@@ -1153,8 +1153,8 @@ onBeforeUnmount(() => {
     </form>
     <div v-else-if="errorMsg" class="fl-status fl-error">
       {{ t('loadFailed', { message: errorMsg }) }}
-      <p v-if="/guest/i.test(errorMsg)" class="fl-hint">{{ t('guestHint') }}</p>
-      <p v-if="isNetworkError(errorMsg)" class="fl-hint">{{ t('corsHint') }}</p>
+      <div v-if="/guest/i.test(errorMsg)" class="fl-hint">{{ t('guestHint') }}</div>
+      <div v-if="isNetworkError(errorMsg)" class="fl-hint">{{ t('corsHint') }}</div>
       <button class="fl-btn" type="button" @click="loadRoot">{{ t('retry') }}</button>
     </div>
     <div v-else-if="visible.length === 0" class="fl-status">{{ t('empty') }}</div>
@@ -1340,7 +1340,7 @@ onBeforeUnmount(() => {
     </template>
 
     <div v-if="deepRow" class="fl-deep" role="status">
-      <p class="fl-deep-text">
+      <div class="fl-deep-text">
         <template v-if="deepRow === 'running'">
           {{ t('deepRunning', { count: folderCounts.checked }) }} ·
           <button class="fl-deep-link" type="button" @click="pauseDeepSearch">{{ t('deepStop') }}</button>
@@ -1353,7 +1353,7 @@ onBeforeUnmount(() => {
           <button class="fl-deep-link" type="button" @click="deepSearch">{{ t('deepContinue') }}</button>
         </template>
         <template v-else>{{ deepSummary }}</template>
-      </p>
+      </div>
       <span v-if="deepRow === 'running'" class="fl-deep-bar" aria-hidden="true"></span>
     </div>
 

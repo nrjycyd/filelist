@@ -227,6 +227,8 @@ test('a failed ZIP explains why in a dialog on screen', async ({ page }, info) =
   const dialog = page.locator('dialog.fl-confirm')
   await expect(dialog.locator('.fl-confirm-title')).toHaveText('打包失败')
   await expect(dialog.locator('.fl-confirm-text').first()).toHaveText('broken.bin：HTTP 500')
+  // VitePress' paragraph margins stay out of the component.
+  expect(await dialog.locator('.fl-confirm-title').evaluate((el) => getComputedStyle(el).margin)).toBe('0px 0px 10px')
   await expectOnScreen(page, dialog)
   await dialog.locator('.fl-btn-primary').click()
   await expect(list(page).locator('.fl-selection-count')).toHaveText('已选 2 项')
@@ -273,11 +275,14 @@ test('HTML renders in a script-less sandbox', async ({ page }) => {
   expect(await page.evaluate(() => (window as unknown as { __pwned?: number }).__pwned)).toBeUndefined()
 })
 
-test('deep search finds files in folders that were never opened, in place', async ({ page }) => {
+test('deep search finds files in folders that were never opened, in place', async ({ page }, info) => {
   await open(page)
   await list(page).locator('.fl-search input').fill('needle')
   const status = list(page).locator('.fl-deep')
   await expect(status).toHaveText('只筛选了已加载的内容，尝试深度搜索')
+  // One line high: a file row on wide lists, a little lower than one on phones.
+  expect(Math.round((await box(status)).height)).toBe(info.project.name === 'mobile' ? 48 : rowHeight(info))
+  if (info.project.name === 'mobile') expect((await box(status.locator('.fl-deep-link'))).height).toBeGreaterThanOrEqual(44)
   await status.locator('.fl-deep-link').click()
 
   await expect(row(page, 'needle-report.pdf')).toBeVisible()

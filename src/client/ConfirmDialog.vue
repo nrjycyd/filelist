@@ -49,9 +49,9 @@ function onBackdrop(event: MouseEvent) {
 <template>
   <dialog ref="dialog" class="fl-confirm" :aria-label="title" @close="onNativeClose" @click="onBackdrop">
     <div v-if="open" class="fl-confirm-panel">
-      <p class="fl-confirm-title">{{ title }}</p>
-      <p class="fl-confirm-text">{{ text }}</p>
-      <p v-if="tip" class="fl-confirm-text">{{ tip }}</p>
+      <div class="fl-confirm-title">{{ title }}</div>
+      <div class="fl-confirm-text">{{ text }}</div>
+      <div v-if="tip" class="fl-confirm-text">{{ tip }}</div>
       <div class="fl-confirm-actions">
         <button v-if="confirmLabel" class="fl-btn" type="button" @click="emit('close')">{{ cancelLabel }}</button>
         <button
