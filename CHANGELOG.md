@@ -6,7 +6,8 @@
 
 - Demo data (no `base`) now has a “示例文件” folder of small real files (Markdown, HTML, SVG, PDF, text): they preview, download and zip for real, served as blob: URLs; other demo files still only describe what would happen. Also a 260-file folder for trying “show more”
 
-- Long folders can go back: once more than the first page is shown, the last row offers “Show less” (收起), and stays as “{count} items · Show less” after “Show all” instead of disappearing. If the folder's row has scrolled off screen, it is brought back into view. Closing a folder with its arrow also resets it to the first page. New labels `showLess`, `allShown`
+- Long folders can go back: once more than the first page is shown, the last row offers “Show less” (收起), and stays after “Show all” instead of disappearing. If the folder's row has scrolled off screen, it is brought back into view. Closing a folder with its arrow also resets it to the first page
+- The last row of a long folder is laid out anew: progress on the left (a thin bar and “Showing 30 of 260”, “30 / 260” on phones), actions on the right. “Show less” is set apart in a neutral colour on the left of the actions, so “Show more” stays under the pointer; a “Show less” click right after the list grew is ignored as a double click. New labels `showLess`, `allShown`, `moreShown`, `showAllShort`; `moreRemaining` is no longer shown
 
 ### Changes
 

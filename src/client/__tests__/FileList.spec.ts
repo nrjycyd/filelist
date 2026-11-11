@@ -938,29 +938,43 @@ describe('FileList long folders', () => {
   const many = (count: number) => Array.from({ length: count }, (_, index) => file(`f${String(index + 1).padStart(2, '0')}.txt`))
   const names = (wrapper: VueWrapper) =>
     wrapper.findAll('.fl-row:not(.fl-head):not(.fl-more)').map((item) => item.find('.fl-name').text())
+  const buttons = (wrapper: Pick<VueWrapper, 'findAll'>) =>
+    wrapper.findAll('.fl-more-btn').map((button) => button.attributes('aria-label') ?? button.text())
+  const count = (wrapper: Pick<VueWrapper, 'find'>) => wrapper.find('.fl-more-count .fl-more-long').text()
+  /** “Show less” right after the list grew is taken for a double click; step past it. */
+  const later = () => vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 1000)
 
   it('shows a page per folder, then more, then the rest', async () => {
     mockOpenList({ '/': many(8) })
     const wrapper = mountList({ path: '/', pageSize: 3 })
     await flushPromises()
     expect(names(wrapper)).toEqual(['f01.txt', 'f02.txt', 'f03.txt'])
-    expect(wrapper.find('.fl-more-count').text()).toBe('还有 5 项')
-    expect(wrapper.findAll('.fl-more-btn').map((button) => button.text())).toEqual(['显示更多 3 项', '全部显示'])
+    expect(count(wrapper)).toBe('已显示 3 / 8 项')
+    expect(buttons(wrapper)).toEqual(['显示更多 3 项', '全部显示'])
 
     await wrapper.findAll('.fl-more-btn')[0].trigger('click')
     expect(names(wrapper)).toHaveLength(6)
-    expect(wrapper.findAll('.fl-more-btn').map((button) => button.text())).toEqual(['显示剩余 2 项', '收起'])
+    expect(buttons(wrapper)).toEqual(['收起', '显示剩余 2 项'])
+    expect(count(wrapper)).toBe('已显示 6 / 8 项')
+    expect(wrapper.find('.fl-more-bar span').attributes('style')).toContain('width: 75%')
 
-    await wrapper.find('.fl-more-btn').trigger('click')
+    await wrapper.find('.fl-more-btn:not(.fl-more-less)').trigger('click')
     expect(names(wrapper)).toHaveLength(8)
     // The row stays, so the list can go back to its first page.
-    expect(wrapper.find('.fl-more-count').text()).toBe('共 8 项')
-    expect(wrapper.findAll('.fl-more-btn').map((button) => button.text())).toEqual(['收起'])
+    expect(count(wrapper)).toBe('已显示全部 8 项')
+    expect(buttons(wrapper)).toEqual(['收起'])
+    expect(wrapper.find('.fl-more-sep').exists()).toBe(false)
 
+    // A double click on “show all” lands on “show less”: ignored.
+    await wrapper.find('.fl-more-less').trigger('click')
+    await flushPromises()
+    expect(names(wrapper)).toHaveLength(8)
+
+    later()
     await wrapper.find('.fl-more-less').trigger('click')
     await flushPromises()
     expect(names(wrapper)).toEqual(['f01.txt', 'f02.txt', 'f03.txt'])
-    expect(wrapper.findAll('.fl-more-btn').map((button) => button.text())).toEqual(['显示更多 3 项', '全部显示'])
+    expect(buttons(wrapper)).toEqual(['显示更多 3 项', '全部显示'])
   })
 
   it('starts a folder from its first page again once it is closed', async () => {
@@ -976,7 +990,7 @@ describe('FileList long folders', () => {
     await row(wrapper, 'A').find('.fl-arrow').trigger('click')
     await flushPromises()
     expect(names(wrapper)).toHaveLength(1 + 2)
-    expect(wrapper.find('.fl-more-count').text()).toBe('还有 3 项')
+    expect(count(wrapper)).toBe('已显示 2 / 5 项')
   })
 
   it('limits each folder on its own and keeps the count across a refresh', async () => {
@@ -990,7 +1004,7 @@ describe('FileList long folders', () => {
     const more = wrapper.findAll('.fl-more')
     expect(more).toHaveLength(2)
     expect(more[0].attributes('style')).toContain('--fl-depth: 1')
-    expect(more[1].find('.fl-more-count').text()).toBe('共 5 项')
+    expect(count(more[1])).toBe('已显示全部 5 项')
 
     await wrapper.find('.fl-refresh').trigger('click')
     await flushPromises()

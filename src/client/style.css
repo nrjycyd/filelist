@@ -840,13 +840,70 @@
   margin-right: 36px;
 }
 
+.fl-more-progress {
+  display: flex;
+  flex: 1 1 auto;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+}
+
+.fl-more-bar {
+  position: relative;
+  flex: none;
+  width: 56px;
+  height: 4px;
+  overflow: hidden;
+  background: var(--vp-c-divider);
+  border-radius: 2px;
+}
+
+.fl-more-bar > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--vp-c-brand-1);
+  border-radius: inherit;
+  transition: width 0.2s ease;
+}
+
 .fl-more-count {
+  min-width: 0;
+  overflow: hidden;
   font-size: 13px;
   color: var(--vp-c-text-2);
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.fl-more-count strong {
+  font-weight: 600;
+  color: var(--vp-c-text-1);
+}
+
+/* the short forms are for narrow lists */
+.fl-more-short {
+  display: none;
+}
+
+.fl-more-actions {
+  display: flex;
+  flex: none;
+  gap: 4px;
+  align-items: center;
+  margin-left: auto;
+}
+
+.fl-more-sep {
+  width: 1px;
+  height: 16px;
+  margin: 0 4px;
+  background: var(--vp-c-divider);
+}
+
 .fl-more-btn {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
   height: 28px;
   padding: 0 12px;
   font-size: 13px;
@@ -859,8 +916,21 @@
   border-radius: 7px;
 }
 
-.fl-more-btn:hover {
-  border-color: var(--vp-c-brand-1);
+/* hover only where there is a pointer, so a tap does not leave a frame behind */
+@media (hover: hover) {
+  .fl-more-btn:hover {
+    border-color: var(--vp-c-brand-1);
+  }
+
+  .fl-more-all:hover,
+  .fl-more-less:hover {
+    background: var(--vp-c-default-soft);
+    border-color: transparent;
+  }
+}
+
+.fl-more-less {
+  color: var(--vp-c-text-2);
 }
 
 .fl-more-all,
@@ -1136,11 +1206,31 @@
     margin-right: 10px;
   }
 
+  /* count above a short bar, so the three buttons keep their room */
+  .fl-more-progress {
+    flex-direction: column-reverse;
+    gap: 5px;
+    align-items: flex-start;
+  }
+
+  .fl-more-bar {
+    width: 40px;
+  }
+
   .fl-more-count {
-    flex: 1 1 auto;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-size: 12px;
+  }
+
+  .fl-more-long {
+    display: none;
+  }
+
+  .fl-more-short {
+    display: inline;
+  }
+
+  .fl-more-sep {
+    margin: 0 2px;
   }
 
   .fl-more-btn {
