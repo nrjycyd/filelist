@@ -1,8 +1,8 @@
-import { defineConfig } from 'vitepress-tuck'
 import field from 'vitepress-plugin-field'
 import fileList from 'vitepress-plugin-filelist'
 import npmTo from 'vitepress-plugin-npm-to'
 import steps from 'vitepress-plugin-steps'
+import { defineConfig } from 'vitepress-tuck'
 import pkg from '../../../package.json'
 
 const repo = 'https://github.com/nrjycyd/vitepress-plugin-filelist'

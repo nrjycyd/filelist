@@ -1,1 +1,1 @@
-export { fileList, fileList as default } from './plugin.js'
+export { fileList as default, fileList } from './plugin.js'

@@ -1,10 +1,10 @@
 // @vitest-environment happy-dom
 import type { VueWrapper } from '@vue/test-utils'
+import type { FileListProps } from '../types'
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h } from 'vue'
 import FileList from '../FileList.vue'
-import type { FileListProps } from '../types'
 
 const zipMock = vi.hoisted(() => ({ entries: null as Record<string, Uint8Array> | null }))
 
