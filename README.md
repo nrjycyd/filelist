@@ -13,7 +13,9 @@
 
 <p align="center">面向 VitePress 的 OpenList 文件浏览组件：在文档页里浏览、预览、批量下载 OpenList 上的文件。</p>
 
-![文件列表截图](https://raw.githubusercontent.com/nrjycyd/vitepress-plugin-filelist/main/demo/docs/public/screenshot.png)
+<p align="center">
+  <img src="https://raw.githubusercontent.com/nrjycyd/vitepress-plugin-filelist/main/demo/docs/public/screenshot.png" alt="文件列表截图" width="640">
+</p>
 
 ## 功能
 
