@@ -15,7 +15,7 @@ A docs site is a public static page: readers see OpenList as its **guest** user.
 - Turn off guest's write permissions (upload, rename, move, copy, delete, offline download, WebDAV / FTP management)
 
 ::: tip Browsing, preview and download cannot be switched off
-OpenList's permission switches cover writing, skipping passwords, seeing hidden files and so on. As long as guest is enabled, it can list, preview and download everything under its base path, exactly like a signed-out visitor of the OpenList web UI. Protect sub-folders with [folder passwords](/features/passwords), hide files with OpenList's meta rules.
+OpenList's permission switches cover writing, skipping passwords, seeing hidden files and so on. As long as guest is enabled, it can list, preview and download everything under its base path, exactly like a signed-out visitor of the OpenList web UI. Protect sub-folders with [folder passwords](../features/passwords), hide files with OpenList's meta rules.
 :::
 
 ## 2. Allow cross-origin requests (CORS)

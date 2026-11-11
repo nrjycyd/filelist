@@ -69,15 +69,13 @@ Folders deep search reads per run before offering “continue”
 ::: field zipWarnSize
 @type number
 @default 500 (200 on touch devices)
-@unit MB
-Browsers that zip in memory (Firefox, Safari) ask first above this size; `0` never asks
+In MB. Browsers that zip in memory (Firefox, Safari) ask first above this size; `0` never asks
 :::
 
 ::: field zipMaxSize
 @type number
 @default 2048 (1024 on touch devices)
-@unit MB
-…and refuse above this size; `0` means no limit. Chrome and Edge stream to disk and skip both checks
+In MB. Above this size, those browsers refuse to zip; `0` means no limit. Chrome and Edge stream to disk and skip both checks
 :::
 
 ::: field locale

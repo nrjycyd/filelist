@@ -67,7 +67,7 @@
   <FileList locale="en-US" title="Course materials (demo)" />
   ```
 
-  The files in “示例文件” (sample files) are real: preview, download and zip them. The other demo files only tell you what would happen with a real OpenList.
+  The files in “Sample files” are real: preview, download and zip them. The other demo files only tell you what would happen with a real OpenList.
 
 ::::
 

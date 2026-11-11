@@ -60,7 +60,7 @@ function t(key: keyof FileListLabels, values?: Record<string, string | number>):
 /** Prefix for element ids, unique per component instance. */
 const uid = useId()
 const demo = computed(() => !props.base)
-const api = computed(() => (demo.value ? createDemoApi() : createOpenListApi(props.base, props.token)))
+const api = computed(() => (demo.value ? createDemoApi(220, props.locale) : createOpenListApi(props.base, props.token)))
 
 const canRemember = computed(() => props.rememberPassword !== false)
 const passwords = usePasswords({

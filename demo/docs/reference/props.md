@@ -69,15 +69,13 @@ OpenList 站点地址；为空时进入演示模式
 ::: field zipWarnSize
 @type number
 @default 500（触屏 200）
-@unit MB
-需在内存中打包的浏览器（Firefox、Safari）超过该大小先确认；`0` 不提示
+单位 MB。需在内存中打包的浏览器（Firefox、Safari）超过该大小先确认；`0` 不提示
 :::
 
 ::: field zipMaxSize
 @type number
 @default 2048（触屏 1024）
-@unit MB
-同上，超过该大小不打包；`0` 不限制
+单位 MB。同上，超过该大小不打包；`0` 不限制
 :::
 
 ::: field locale
