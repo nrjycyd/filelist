@@ -5,6 +5,7 @@
 //   pnpm test:compat                      # 1.6.4 and 2.0.0-alpha.21
 //   COMPAT_VITEPRESS=1.6.4 pnpm test:compat
 //   COMPAT_VITEPRESS=latest,next pnpm test:compat   # npm dist-tags work too
+//   COMPAT_SKIP_BUILD=1 node scripts/compat.mjs     # use the existing dist/
 //
 // Each site is built and previewed (render, expand, preview, ZIP, no console
 // warning), then started with `vitepress dev` (the public-token warning shows).
@@ -125,7 +126,10 @@ async function devWarning(browser, url) {
 }
 
 console.log(`Packing the plugin (${work})`)
-run('pnpm', ['run', 'build'], root)
+// COMPAT_SKIP_BUILD=1 packs the existing dist/: CI builds with the dev Node,
+// then runs the sites on an older one.
+if (!process.env.COMPAT_SKIP_BUILD)
+  run('pnpm', ['run', 'build'], root)
 run(npm, ['pack', '--silent', '--pack-destination', work], root)
 const tarball = join(work, readdirSync(work).find(f => f.endsWith('.tgz')))
 

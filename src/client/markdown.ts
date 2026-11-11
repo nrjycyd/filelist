@@ -24,7 +24,7 @@ export async function renderMarkdown(source: string, imageLabel: (alt: string) =
 
   for (const link of fragment.querySelectorAll('a')) {
     const href = link.getAttribute('href') ?? ''
-    if (/^(https?:|mailto:)/i.test(href)) {
+    if (/^(?:https?:|mailto:)/i.test(href)) {
       link.setAttribute('target', '_blank')
       link.setAttribute('rel', 'noopener noreferrer')
     } else {
@@ -33,7 +33,7 @@ export async function renderMarkdown(source: string, imageLabel: (alt: string) =
   }
   for (const image of fragment.querySelectorAll('img')) {
     const src = image.getAttribute('src') ?? ''
-    if (/^(https?:|data:image\/)/i.test(src)) continue
+    if (/^(?:https?:|data:image\/)/i.test(src)) continue
     const placeholder = document.createElement('span')
     placeholder.className = 'fl-md-image'
     placeholder.textContent = imageLabel(image.getAttribute('alt') || src.split('/').pop() || '')

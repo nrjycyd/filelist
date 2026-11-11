@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- File links are reused for 10 minutes, then asked for again: many storage drivers hand out direct links that expire, so a page left open for hours could preview or download from a dead link until it was refreshed
+- An OpenList request that does not answer within 30 s fails (the list shows “retry”) instead of loading forever
+- Only `http(s):` and `blob:` file links are opened, previewed or zipped; anything else from the server (such as `javascript:`) falls back to OpenList's signed `/d/` link
+
+### Internal
+
+- ESLint (`@antfu/eslint-config`, correctness rules only; the code keeps its formatting) with `pnpm lint`; TypeScript `noUnusedLocals` / `noUnusedParameters`
+- `scripts/compat.mjs` can skip the build (`COMPAT_SKIP_BUILD=1`), so CI can build with Node 22 and run the test sites on Node 20.19, the oldest Node in `engines` (checked: VitePress 1.6.4 and 2.0.0-alpha.21 pass)
+- Removed leftovers: an unused binding in `FileList.vue`, `fflate` from the build externals; the package description matches the docs
+
 ## 0.9.2 (2026-11-11)
 
 ### Fixes

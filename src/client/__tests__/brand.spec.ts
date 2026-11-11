@@ -28,7 +28,7 @@ describe('README', () => {
   // in no particular order, so README.md must be the only one. The Chinese
   // README is README-zh-CN.md for that reason.
   it('README.md is the only root file npm can take as the package README', () => {
-    const readmes = readdirSync(root).filter((name) => /^readme(\..*)?$/i.test(name))
+    const readmes = readdirSync(root).filter((name) => /^readme(?:\..*)?$/i.test(name))
     expect(readmes).toEqual(['README.md'])
   })
 })

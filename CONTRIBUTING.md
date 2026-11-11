@@ -6,6 +6,7 @@
 pnpm install
 pnpm run build       # 生成 dist/node、dist/client/ssr、dist/client/browser、style.css
 pnpm run typecheck   # vue-tsc，包含 .vue 模板与测试
+pnpm run lint        # ESLint：只查正确性，不改格式；pnpm run lint:fix 可自动修复部分问题
 pnpm test            # Vitest：工具函数、密码、下载、FileList 组件
 pnpm run pack:check
 ```
@@ -25,6 +26,7 @@ CI 每次推送和 PR 都会运行，三种环境均为必过项。
 pnpm test:compat
 COMPAT_VITEPRESS=1.6.4 pnpm test:compat   # 只测指定版本，逗号分隔
 COMPAT_VITEPRESS=latest,next pnpm test:compat   # 也可以用 npm dist-tag
+COMPAT_SKIP_BUILD=1 node scripts/compat.mjs     # 用现有 dist/，CI 用它在 Node 20.19 上跑站点
 ```
 
 跟进 VitePress 新版本：

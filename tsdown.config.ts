@@ -27,7 +27,7 @@ export function build(): UserConfig[] {
       target: 'baseline-widely-available',
       dts: { vue: true },
       plugins: [vue({ isProduction: true, ssr: true })],
-      external: ['vue', 'vitepress', 'fflate'],
+      external: ['vue', 'vitepress'],
     }),
     // Browser build: injects the shared CSS file
     mergeConfig({}, baseConfig, {
@@ -37,7 +37,7 @@ export function build(): UserConfig[] {
       target: 'baseline-widely-available',
       dts: { vue: true },
       plugins: [vue({ isProduction: true, ssr: false })],
-      external: ['vue', 'vitepress', 'fflate'],
+      external: ['vue', 'vitepress'],
       outputOptions: {
         banner: 'import "../style.css"',
       },

@@ -56,20 +56,49 @@ export function isNetworkError(error: unknown): boolean {
   return /failed to fetch|networkerror|load failed|network request failed/i.test(errorText(error))
 }
 
-export function createOpenListApi(base: string, token: string): OpenListApi {
+/** An API call that has not answered after this long fails (the list offers “retry”). */
+export const REQUEST_TIMEOUT = 30_000
+/**
+ * Many storage drivers hand out direct links that expire; reuse a file's link
+ * for this long, then ask OpenList again.
+ */
+export const FILE_URL_TTL = 10 * 60_000
+
+/** Only these may be opened, previewed or zipped; anything else (`javascript:`) is dropped. */
+const SAFE_URL = /^(?:https?:|blob:)/i
+
+export function createOpenListApi(
+  base: string,
+  token: string,
+  // Tests only.
+  options: { now?: () => number; timeout?: number } = {},
+): OpenListApi {
   const root = base.replace(/\/+$/, '')
-  const urls = new Map<string, string>()
+  const now = options.now ?? Date.now
+  const timeout = options.timeout ?? REQUEST_TIMEOUT
+  const urls = new Map<string, { url: string; at: number }>()
 
   async function request<T>(apiPath: string, body?: unknown): Promise<T> {
-    const response = await fetch(`${root}${apiPath}`, {
-      method: body === undefined ? 'GET' : 'POST',
-      // JSON content type only with a body: a bare GET then needs no CORS preflight.
-      headers: {
-        ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
-        ...(token ? { Authorization: token } : {}),
-      },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    })
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), timeout)
+    let response: Response
+    try {
+      response = await fetch(`${root}${apiPath}`, {
+        method: body === undefined ? 'GET' : 'POST',
+        // JSON content type only with a body: a bare GET then needs no CORS preflight.
+        headers: {
+          ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+          ...(token ? { Authorization: token } : {}),
+        },
+        body: body === undefined ? undefined : JSON.stringify(body),
+        signal: controller.signal,
+      })
+    } catch (error) {
+      if (controller.signal.aborted) throw new ApiError(`No answer from OpenList after ${timeout / 1000} s`, 408)
+      throw error
+    } finally {
+      clearTimeout(timer)
+    }
     const payload = (await response.json().catch(() => null)) as
       | { code?: number; message?: string; data?: T }
       | null
@@ -80,14 +109,17 @@ export function createOpenListApi(base: string, token: string): OpenListApi {
     return payload.data as T
   }
 
+  /** An absolute http(s) / blob URL, or `''` for anything else. */
   function absoluteUrl(raw: string): string {
     if (!raw) return ''
-    if (/^[a-z][a-z0-9+.-]*:\/\//i.test(raw)) return raw
+    // Absolute links are kept exactly as given (signed links can be picky).
+    if (/^[a-z][a-z0-9+.-]*:/i.test(raw)) return SAFE_URL.test(raw) ? raw : ''
     const origin = root || (typeof window !== 'undefined' ? window.location.origin : '')
     try {
-      return new URL(raw, `${origin}/`).href
+      const url = new URL(raw, `${origin}/`).href
+      return SAFE_URL.test(url) ? url : ''
     } catch {
-      return raw
+      return ''
     }
   }
 
@@ -117,9 +149,10 @@ export function createOpenListApi(base: string, token: string): OpenListApi {
       }
     },
     async fileUrl(file, password) {
-      if (file.raw_url) return absoluteUrl(file.raw_url)
+      const given = file.raw_url ? absoluteUrl(file.raw_url) : ''
+      if (given) return given
       const cached = urls.get(file.path)
-      if (cached) return cached
+      if (cached && now() - cached.at < FILE_URL_TTL) return cached.url
       let url = ''
       try {
         url = absoluteUrl((await request<{ raw_url?: string }>('/api/fs/get', { path: file.path, password }))?.raw_url ?? '')
@@ -127,7 +160,7 @@ export function createOpenListApi(base: string, token: string): OpenListApi {
         // Fall back to the signed download link below.
       }
       url ||= directUrl(file)
-      urls.set(file.path, url)
+      urls.set(file.path, { url, at: now() })
       return url
     },
     directUrl,

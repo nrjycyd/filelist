@@ -62,10 +62,13 @@ export function useDeepSearch(
     const runStart = deep.searched
     Object.assign(deep, { running: true, capped: false, done: false })
     let wave = unloadedFolders()
+    // `deepSeq` changes in stopDeepSearch() while the awaits below run.
+    // eslint-disable-next-line no-unmodified-loop-condition
     while (wave.length && seq === deepSeq) {
       const next: FNode[] = []
       const queue = [...wave]
       const worker = async () => {
+        // eslint-disable-next-line no-unmodified-loop-condition
         for (let node = queue.shift(); node && seq === deepSeq; node = queue.shift()) {
           if (deep.searched - runStart >= limit) return
           deep.searched += 1

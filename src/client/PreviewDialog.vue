@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { FileListLabels } from './types'
+import type { PreviewKind } from './utils'
 /**
  * File preview in a native <dialog>, without leaving the page.
  *
@@ -10,11 +12,9 @@
  * included), failures, oversized PDFs and demo mode: file info + download.
  */
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import type { FileListLabels } from './types'
 import Icon from './Icon.vue'
-import { renderMarkdown } from './markdown'
 import { formatLabel } from './locales'
-import type { PreviewKind } from './utils'
+import { renderMarkdown } from './markdown'
 import { extOf, fileKind, formatDate, formatSize, previewKind } from './utils'
 
 export interface PreviewFile {
@@ -84,7 +84,7 @@ let loadSeq = 0
 /** Text files that can also be rendered. */
 const renderAs = computed<'markdown' | 'html' | null>(() => {
   const name = props.file?.name ?? ''
-  if (/\.(md|markdown)$/i.test(name)) return 'markdown'
+  if (/\.(?:md|markdown)$/i.test(name)) return 'markdown'
   if (/\.html?$/i.test(name)) return 'html'
   return null
 })
@@ -258,7 +258,7 @@ function onBackdrop(event: MouseEvent) {
 function onKeydown(event: KeyboardEvent) {
   if (props.total < 2) return
   const target = event.target as HTMLElement | null
-  if (target && /^(INPUT|TEXTAREA|SELECT|VIDEO|AUDIO)$/.test(target.tagName)) return
+  if (target && /^(?:INPUT|TEXTAREA|SELECT|VIDEO|AUDIO)$/.test(target.tagName)) return
   if (event.key === 'ArrowLeft') {
     event.preventDefault()
     emit('prev')

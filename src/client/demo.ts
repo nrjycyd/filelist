@@ -1,6 +1,6 @@
 import type { OLItem, OpenListApi } from './api'
 import { ApiError } from './api'
-import { SAMPLE_FOLDER, SAMPLE_NAMES, isSample, sampleSize, sampleUrl } from './demoSamples'
+import { isSample, SAMPLE_FOLDER, SAMPLE_NAMES, sampleSize, sampleUrl } from './demoSamples'
 import { isWithin } from './utils'
 
 /** Built-in sample data, used when no `base` is given. */

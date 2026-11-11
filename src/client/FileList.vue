@@ -123,7 +123,6 @@ const {
 
 const {
   keyword,
-  deep,
   deepMode,
   deepRow,
   deepSearch,
