@@ -13,6 +13,7 @@ import type { FNode, FolderStats, LockState, UnlockError } from './tree'
 import type { SortKey } from './utils'
 import { createOpenListApi, errorText, isNetworkError, isPasswordError } from './api'
 import { createDemoApi, isDemoFile } from './demo'
+import { warnPublicSecrets } from './devWarnings'
 import ConfirmDialog from './ConfirmDialog.vue'
 import { canStreamToDisk, openUrl, pickZipFile, saveBlob, zipFileName, zipToBlob, zipToFile } from './download'
 import Icon from './Icon.vue'
@@ -1085,6 +1086,7 @@ function measureStickyTop() {
 }
 
 onMounted(() => {
+  warnPublicSecrets(props, props.locale)
   passwords.sync()
   void loadRoot()
   void loadSettings()

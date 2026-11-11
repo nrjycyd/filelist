@@ -2,8 +2,26 @@
 
 ## Unreleased
 
+This release freezes the API for 1.0: props are unchanged; unused labels and internal helpers are no longer public. See “升级到 0.9” in the docs.
+
+### Breaking
+
+- `vitepress-tuck` is now an optional peer dependency (`>=0.12.2`, no upper bound) instead of a dependency. Sites that register the plugin with vitepress-tuck install it themselves (`pnpm add -D vitepress-tuck`; most already do, since their config imports `defineConfig` from it); plain VitePress sites no longer install it, so VitePress 1.x no longer warns about its peer range
+- Supported versions: `vitepress` `^1.6.0 || >=2.0.0-alpha.18` (was `^1.0.0 || ^2.0.0-alpha.0`; 1.5 and older were never tested, and from 2.0.0-alpha.18 on there is no upper bound, so new VitePress majors need no release), Node `^20.19.0 || >=22.12.0` (new `engines`). vitepress-tuck needs VitePress 2; on VitePress 1.6 use `enhanceAppWithFileList`
+- Removed the labels `batchCount`, `unloaded`, `previewFailed`, `networkHint` and `showMore`; none was shown any more
+- `vitepress-plugin-filelist/client` no longer exports internal helpers (`compareNodes`, `encodePath`, `extOf`, `fileKind`, `fillPreviewUrl`, `formatDate`, `formatSize`, `iframePreviewsFor`, `joinPath`, `previewKind`, `totalSize`, `uniqueEntryName`, `zipEntryName`, `zipSegment`) or the types `FileKind`, `IframePreview`, `PreviewKind`, `SortableNode`, `SortKey`, `OpenListEntry`. The public API is the components, `enhanceAppWithFileList`, `fileListLocales` / `formatLabel` / `resolveLabels` and the `FileList*` types
+
+### Features
+
+- Under `vitepress dev`, a page whose `<FileList>` sets `token` or `password` logs one console warning that these are copied into the built site for every visitor to read. Production builds stay silent
+
 ### Docs
 
+- New “安全与权限” page: what a static site makes public (`token`, `password`), guest with a base path as the recommended setup, what the component stores in the browser. The token notes moved there from “接入 OpenList”; the `password` prop docs now warn that it is public
+- New “升级到 0.9” page; “导出与兼容性” lists the public API and the tested VitePress / Node versions
+- `pnpm test:compat` installs the packed plugin into fresh VitePress 1.6 and 2.x sites (plain registration), builds them and checks them in Chromium; `COMPAT_VITEPRESS=latest,next` tests the newest releases
+- Dependabot keeps the docs site (daily) and dev setup (weekly) on the newest vitepress / vitepress-tuck / vue through pull requests
+- Home page: title “文档页里的 OpenList 文件浏览器”, a tagline listing what it does, “FileList” in the plugin's rose, and lines that break between words only
 - Project logo: a ring in the colours of OpenList, VitePress and Cloudflare, with the plugin's own rose list card in the middle and four dots for what comes next. The README opens with the logo and name (light and dark versions); the docs site shows it in the nav and on the home page, and has a favicon, an iOS home-screen icon and a link preview image (`demo/docs/public`)
 
 ## 0.8.0 (2026-11-11)

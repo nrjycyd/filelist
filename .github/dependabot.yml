@@ -1,0 +1,36 @@
+# Keep the docs site and the dev setup on the newest VitePress. Each update is
+# a pull request, so CI (build, unit tests, e2e, compat) runs before it lands;
+# merging it redeploys the docs site with the new version.
+version: 2
+updates:
+  # Docs site (demo/): VitePress, vitepress-tuck and Vue, checked daily.
+  - package-ecosystem: npm
+    directory: /demo
+    schedule:
+      interval: daily
+    allow:
+      - dependency-name: vitepress
+      - dependency-name: vitepress-tuck
+      - dependency-name: vue
+    groups:
+      vitepress:
+        patterns: [vitepress, vitepress-tuck, vue]
+    commit-message:
+      prefix: "chore(demo)"
+    labels: [dependencies]
+
+  # Plugin dev dependencies used by typecheck and tests, checked weekly.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    allow:
+      - dependency-name: vitepress
+      - dependency-name: vitepress-tuck
+      - dependency-name: vue
+    groups:
+      vitepress:
+        patterns: [vitepress, vitepress-tuck, vue]
+    commit-message:
+      prefix: "chore(deps-dev)"
+    labels: [dependencies]

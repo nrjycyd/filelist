@@ -29,13 +29,9 @@ OpenList 的权限开关管理的是写入、跳过密码、查看隐藏文件�
 
 HTTPS 页面不能请求 HTTP 的 OpenList（浏览器会拦截混合内容）。
 
-## 关于 token
+## 关于 token 和密码
 
-可以传入 `token`，但静态站点里的一切对访客都是可见的：token 会出现在打包后的脚本和每个请求头里。即使用 GitHub Actions Secrets 在构建时注入，也只是不出现在仓库源码中。
-
-- 只放可撤销、只读、限定目录的普通用户 token，绝不使用管理员 token
-- OpenList 登录 token 默认 48 小时过期（`token_expires_in`），过期后列表无法加载
-- 大多数情况下，按上面第 1 步设置好 guest 更简单、也同样安全
+可以传入 `token` 或 `password`，但它们会原样进入构建后的网页，所有访客都能看到。什么时候可以用、怎么用更安全，见[安全与权限](./security)。
 
 ## 组件调用的接口
 

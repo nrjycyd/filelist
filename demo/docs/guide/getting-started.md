@@ -9,6 +9,12 @@ pnpm add -D vitepress-plugin-filelist
 
 ## 在 vitepress-tuck 中使用
 
+需要 VitePress 2，并自行安装 [vitepress-tuck](https://github.com/pengzhanbo/vitepress-tuck)（它是本插件的可选依赖）：
+
+```bash
+pnpm add -D vitepress-tuck
+```
+
 ```ts
 // .vitepress/config.ts
 import { defineConfig } from 'vitepress-tuck'
@@ -34,6 +40,8 @@ export default {
 ```
 
 ## 在普通 VitePress 中使用
+
+支持 VitePress 1.6 及以上（含 VitePress 2），不需要 vitepress-tuck：
 
 ```ts
 // .vitepress/theme/index.ts

@@ -6,8 +6,8 @@
 | `path` | `string` | `'/'` | 初始目录 |
 | `sources` | `FileListSource[]` | `[]` | 多根挂载；设置后忽略 `path` |
 | `expanded` | `boolean` | `false` | 目录根是否默认展开 |
-| `token` | `string` | `''` | 可选只读 token；不传则以游客身份请求 |
-| `password` | `string` | `''` | 目录密码，也可以在运行时输入 |
+| `token` | `string` | `''` | 可选只读 token；不传则以游客身份请求。**对访客公开**，见[安全与权限](../guide/security) |
+| `password` | `string` | `''` | 目录密码，也可以在运行时输入。**对访客公开**，见[安全与权限](../guide/security) |
 | `rememberPassword` | `boolean` | `true` | 输入密码时是否提供“在此标签页中记住”开关；`false` 时不写入 sessionStorage |
 | `pageSize` | `number` | `15` | 每个文件夹先显示的条数，之后显示“显示更多 / 全部显示 / 收起”；`0` 全部显示 |
 | `deepSearchLimit` | `number` | `500` | 深度搜索每次最多读取的文件夹数，之后可“继续” |

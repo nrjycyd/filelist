@@ -13,7 +13,7 @@ importers:
         version: 2.0.0-alpha.21(postcss@8.5.32)
       vitepress-plugin-filelist:
         specifier: file:..
-        version: file:..(rolldown@1.2.16)(vite@8.3.6)(vitepress@2.0.0-alpha.21(postcss@8.5.32))(vue@3.5.45)
+        version: file:..(vitepress-tuck@0.12.2(rolldown@1.2.16)(vite@8.3.6)(vitepress@2.0.0-alpha.21(postcss@8.5.32))(vue@3.5.45))(vitepress@2.0.0-alpha.21(postcss@8.5.32))(vue@3.5.45)
       vitepress-tuck:
         specifier: ^0.12.2
         version: 0.12.2(rolldown@1.2.16)(vite@8.3.6)(vitepress@2.0.0-alpha.21(postcss@8.5.32))(vue@3.5.45)
@@ -766,9 +766,14 @@ packages:
 
   vitepress-plugin-filelist@file:..:
     resolution: {directory: .., type: directory}
+    engines: {node: ^20.19.0 || >=22.12.0}
     peerDependencies:
-      vitepress: ^1.0.0 || ^2.0.0-alpha.0
+      vitepress: ^1.6.0 || >=2.0.0-alpha.18
+      vitepress-tuck: '>=0.12.2'
       vue: ^3.5.0
+    peerDependenciesMeta:
+      vitepress-tuck:
+        optional: true
 
   vitepress-tuck@0.12.2:
     resolution: {integrity: sha512-r9nmTzCAkZGa+IWbd2cCWQ4RtdDPzIm+gwAD777E5Ge7a3dpLouDdbOBVIs/7gYlauyNYCg3nZF4HHvgueg9kw==}
@@ -1448,26 +1453,15 @@ snapshots:
     optionalDependencies:
       fsevents: 2.3.3
 
-  vitepress-plugin-filelist@file:..(rolldown@1.2.16)(vite@8.3.6)(vitepress@2.0.0-alpha.21(postcss@8.5.32))(vue@3.5.45):
+  vitepress-plugin-filelist@file:..(vitepress-tuck@0.12.2(rolldown@1.2.16)(vite@8.3.6)(vitepress@2.0.0-alpha.21(postcss@8.5.32))(vue@3.5.45))(vitepress@2.0.0-alpha.21(postcss@8.5.32))(vue@3.5.45):
     dependencies:
       client-zip: 2.5.1
       dompurify: 3.4.17
       markdown-it: 14.3.3
       vitepress: 2.0.0-alpha.21(postcss@8.5.32)
-      vitepress-tuck: 0.12.2(rolldown@1.2.16)(vite@8.3.6)(vitepress@2.0.0-alpha.21(postcss@8.5.32))(vue@3.5.45)
       vue: 3.5.45
-    transitivePeerDependencies:
-      - '@farmfe/core'
-      - '@nuxt/kit'
-      - '@rsbuild/core'
-      - '@rspack/core'
-      - bun-types-no-globals
-      - esbuild
-      - rolldown
-      - rollup
-      - unloader
-      - vite
-      - webpack
+    optionalDependencies:
+      vitepress-tuck: 0.12.2(rolldown@1.2.16)(vite@8.3.6)(vitepress@2.0.0-alpha.21(postcss@8.5.32))(vue@3.5.45)
 
   vitepress-tuck@0.12.2(rolldown@1.2.16)(vite@8.3.6)(vitepress@2.0.0-alpha.21(postcss@8.5.32))(vue@3.5.45):
     dependencies:
