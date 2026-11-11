@@ -18,8 +18,11 @@
   }
 }
 
-/* Home hero: a soft glow behind the logo in the ring's colours. */
+/* Home hero: the name in the plugin's own colour (the logo's list card) and a
+   soft glow behind the logo in the ring's colours. */
 :root {
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(135deg, #f472b6 10%, #db2777 90%);
   --vp-home-hero-image-background-image: conic-gradient(
     from 0deg,
     #5eead4,
@@ -36,6 +39,14 @@
 
 .dark {
   --vp-home-hero-image-filter: blur(64px) opacity(0.28);
+}
+
+/* Hero copy: break only between words and after punctuation, in balanced
+   lines, so no word is split and no single character ends up alone. */
+.VPHero .text,
+.VPHero .tagline {
+  text-wrap: balance;
+  word-break: keep-all;
 }
 
 /* Phones: a smaller hero logo so the live demo starts sooner. */
