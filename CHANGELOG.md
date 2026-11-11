@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Internal
+
+- `FileList.vue` split into `useTree`, `useDeepSearch`, `useRows`, `useSelection`, `useDownloads` and `usePreview` (1,107 → 200 lines of script); behaviour unchanged
+
 ## 0.9.0 (2026-11-11)
 
 This release freezes the API for 1.0: props are unchanged; unused labels and internal helpers are no longer public. See “升级到 0.9” in the docs.

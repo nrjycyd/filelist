@@ -1,37 +1,40 @@
 <script setup lang="ts">
 /**
  * OpenList file browser: folder tree, batch ZIP, folder passwords and an
- * in-page preview. OpenList access is in api.ts (demo.ts when `base` is empty),
- * password choice in usePasswords.ts, tree helpers in tree.ts and downloads in
- * download.ts; this component wires them to the UI.
+ * in-page preview. This component holds what every part shares (props,
+ * labels, toast, the OpenList client, passwords) and wires the parts to the
+ * template:
+ *
+ * - useTree.ts: loading and refreshing the tree, opening folders, folder passwords, sorting
+ * - useDeepSearch.ts: the filter and deep search
+ * - useRows.ts: rows on screen, long folders (“more” row, pinned folder row), sticky offsets
+ * - useSelection.ts: check boxes and “select all”
+ * - useDownloads.ts: single downloads and the batch ZIP
+ * - usePreview.ts: the preview dialog
+ *
+ * OpenList access is in api.ts (demo.ts when `base` is empty), password choice
+ * in usePasswords.ts, tree helpers in tree.ts and ZIP building in download.ts.
  */
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, useId, watch } from 'vue'
-import type { OLItem } from './api'
+import type { ListContext } from './context'
+import type { FNode } from './tree'
 import type { FileListLabels, FileListProps, FileListSource } from './types'
-import type { ZipProgress } from './download'
-import type { FNode, FolderStats, LockState, UnlockError } from './tree'
 import type { SortKey } from './utils'
-import { createOpenListApi, errorText, isNetworkError, isPasswordError } from './api'
+import { computed, onBeforeUnmount, onMounted, ref, useId } from 'vue'
+import { createOpenListApi, errorText, isNetworkError } from './api'
+import ConfirmDialog from './ConfirmDialog.vue'
 import { createDemoApi, isDemoFile } from './demo'
 import { warnPublicSecrets } from './devWarnings'
-import ConfirmDialog from './ConfirmDialog.vue'
-import { canStreamToDisk, openUrl, pickZipFile, saveBlob, zipFileName, zipToBlob, zipToFile } from './download'
 import Icon from './Icon.vue'
 import { formatLabel, resolveLabels } from './locales'
 import PreviewDialog from './PreviewDialog.vue'
-import { descendantFiles, expandedPathsOf, folderStats, loadedPathsOf, newLock, sortTree, sourceName, toNodes } from './tree'
+import { useDeepSearch } from './useDeepSearch'
+import { useDownloads } from './useDownloads'
 import { usePasswords } from './usePasswords'
-import {
-  extOf,
-  fileKind,
-  fillPreviewUrl,
-  formatDate,
-  formatSize,
-  iframePreviewsFor,
-  isWithin,
-  previewKind,
-  totalSize,
-} from './utils'
+import { canPreview, usePreview } from './usePreview'
+import { isMore, useRows } from './useRows'
+import { useSelection } from './useSelection'
+import { useTree } from './useTree'
+import { extOf, fileKind, formatDate, formatSize, totalSize } from './utils'
 
 const props = withDefaults(defineProps<FileListProps>(), {
   base: '',
@@ -68,27 +71,8 @@ const passwords = usePasswords({
 const remembered = passwords.remembered
 
 const rootEl = ref<HTMLElement>()
-const roots = ref<FNode[]>([])
-const loadingRoot = ref(false)
-const errorMsg = ref('')
-const refreshing = ref(false)
-let refreshSeq = 0
-/** Single-path mode: the listed folder itself needs a password. */
-const rootLock = ref<LockState | null>(null)
-const keyword = ref('')
-const selected = ref<Set<string>>(new Set())
 const toast = ref('')
-const sortKey = ref<SortKey>('name')
-const sortAsc = ref(true)
-const siteTitle = ref('')
-const iframePreviews = ref('')
-const batchBusy = ref(false)
-const zipProgress = ref<ZipProgress | null>(null)
-let zipAbort: AbortController | null = null
 let toastTimer: ReturnType<typeof setTimeout> | undefined
-
-/** The folder listed in single-path mode, as the parent of the top rows. */
-const listedFolder = computed(() => ({ path: props.path, depth: -1, zipPath: [] as string[] }))
 
 function showToast(message: string) {
   toast.value = message
@@ -102,963 +86,96 @@ function failureMessage(key: keyof FileListLabels, error: unknown): string {
   return isNetworkError(error) ? `${message} ${t('corsHint')}` : message
 }
 
-function sortNodes(nodes: FNode[]) {
-  sortTree(nodes, sortKey.value, sortAsc.value, props.locale)
-}
+const ctx: ListContext = { props, t, showToast, failureMessage, api, demo, passwords, rootEl }
 
-/* ---------------- folder passwords ---------------- */
+/** Selected file paths, shared by the tree (which trims them) and the check boxes. */
+const selected = ref<Set<string>>(new Set())
 
-function focusUnlock(path: string) {
-  void nextTick(() => {
-    rootEl.value?.querySelector<HTMLInputElement>(`input[data-unlock="${CSS.escape(path)}"]`)?.focus()
-  })
-}
-
-/** Show a folder's same-row input; focus only on user actions, never on page load. */
-function startPrompt(node: FNode, focus: boolean) {
-  node.lock ??= newLock()
-  node.lock.prompting = true
-  if (focus) focusUnlock(node.path)
-}
-
-function cancelUnlock(lock: LockState) {
-  Object.assign(lock, { prompting: false, input: '', error: '' })
-}
-
-function unlockErrorText(error: UnlockError | undefined): string {
-  if (error === 'wrong') return t('passwordWrong')
-  if (error === 'stale') return t('passwordStale')
-  return ''
-}
-
-/**
- * Try the typed password with `open`. On success keep it (and remember it in
- * this tab when asked); on a wrong one clear the input and refocus it.
- */
-async function tryUnlock(
-  lock: LockState,
-  path: string,
-  open: (password: string) => Promise<void>,
-  failure: keyof FileListLabels,
-): Promise<boolean> {
-  const password = lock.input
-  if (!password || lock.busy) return false
-  lock.busy = true
-  try {
-    await open(password)
-    passwords.accept(path, password, lock.remember)
-    return true
-  } catch (error) {
-    if (isPasswordError(error)) {
-      Object.assign(lock, { error: 'wrong', input: '' })
-      focusUnlock(path)
-    } else {
-      showToast(failureMessage(failure, error))
-    }
-    return false
-  } finally {
-    lock.busy = false
-  }
-}
-
-async function submitUnlock(node: FNode) {
-  if (!node.lock) return
-  const ok = await tryUnlock(
-    node.lock,
-    node.path,
-    async (password) => {
-      if (node.unresolved) {
-        const data = await api.value.get(node.path, password)
-        const name = node.name
-        Object.assign(node, data, { name, unresolved: false })
-        node.zipPath = [node.is_dir ? name : data.name || node.zipPath[0]]
-      }
-      if (node.is_dir) {
-        await fetchChildren(node, password)
-        node.expanded = true
-      }
-    },
-    'folderFailed',
-  )
-  if (ok) node.lock = undefined
-}
-
-async function submitRootUnlock() {
-  if (!rootLock.value) return
-  let nodes: FNode[] = []
-  const ok = await tryUnlock(
-    rootLock.value,
-    props.path,
-    async (password) => {
-      nodes = await listRoot(password)
-    },
-    'loadFailed',
-  )
-  if (!ok) return
-  roots.value = nodes
-  rootLock.value = null
-  selected.value = new Set()
-  api.value.clearCache()
-}
-
-/** Forget a remembered password: the folder folds up and asks again next time. */
-function forgetPassword(node: FNode) {
-  passwords.forget(node.path)
-  Object.assign(node, { expanded: false, loaded: false, children: [], lock: undefined })
-  selected.value = new Set([...selected.value].filter((path) => !isWithin(path, node.path)))
-  api.value.clearCache(node.path)
-}
-
-/* ---------------- loading the tree ---------------- */
-
-async function fetchChildren(node: FNode, password: string) {
-  const items = await api.value.list(node.path, password)
-  node.children = toNodes(items, node, password)
-  sortNodes(node.children)
-  node.loaded = true
-}
-
-async function listRoot(password: string): Promise<FNode[]> {
-  const nodes = toNodes(await api.value.list(props.path, password), listedFolder.value, password)
-  sortNodes(nodes)
-  return nodes
-}
-
-/**
- * Load a folder's children. A password error locks the folder instead of
- * toasting; `prompt` also shows its same-row input (and focuses it).
- */
-async function loadChildren(
-  node: FNode,
-  prompt: false | 'show' | 'focus' = false,
-  quiet = false,
-): Promise<boolean> {
-  if (node.loaded) return true
-  if (node.lock) {
-    if (prompt) startPrompt(node, prompt === 'focus')
-    return false
-  }
-  node.loading = true
-  const { password, rememberedAt } = passwords.resolve(node.path, node.password)
-  try {
-    await fetchChildren(node, password)
-    return true
-  } catch (error) {
-    if (isPasswordError(error)) {
-      node.expanded = false
-      node.lock = newLock(false, passwords.dropStale(rememberedAt) ? 'stale' : '')
-      if (prompt) startPrompt(node, prompt === 'focus')
-    } else if (!quiet) {
-      showToast(failureMessage('folderFailed', error))
-    }
-    return false
-  } finally {
-    node.loading = false
-  }
-}
-
-/** When OpenList cannot tell us, guess from the name: a known file extension means a file. */
-function looksLikeFile(path: string): boolean {
-  const name = sourceName(path)
-  return fileKind(name) !== 'other' || previewKind(name) !== 'none'
-}
-
-async function loadSourceRoot(source: FileListSource, expanded: boolean): Promise<FNode> {
-  const path = source.path
-  const own = source.password ?? ''
-  let item: OLItem = { name: sourceName(path), size: 0, is_dir: !looksLikeFile(path), modified: '' }
-  let lock: LockState | undefined
-  const { password, rememberedAt } = passwords.resolve(path, own)
-  try {
-    item = { ...item, ...(await api.value.get(path, password)) }
-  } catch (error) {
-    // Other errors keep the guess; expanding surfaces the real error.
-    if (isPasswordError(error)) lock = newLock(expanded, passwords.dropStale(rememberedAt) ? 'stale' : '')
-  }
-  const name = source.title || item.name || sourceName(path)
-  return {
-    ...item,
-    name,
-    path,
-    depth: 0,
-    expanded: expanded && !lock,
-    loaded: false,
-    loading: false,
-    children: [],
-    password: own,
-    isRoot: true,
-    lock,
-    unresolved: !!lock,
-    // A file root keeps its real file name (and extension) inside the ZIP.
-    zipPath: [item.is_dir ? name : item.name || sourceName(path)],
-  }
-}
-
-/** Run at most `size` tasks at once. */
-function concurrency(size: number) {
-  let active = 0
-  const waiting: Array<() => void> = []
-  return async <T>(task: () => Promise<T>): Promise<T> => {
-    if (active >= size) await new Promise<void>((resolve) => waiting.push(resolve))
-    active += 1
-    try {
-      return await task()
-    } finally {
-      active -= 1
-      waiting.shift()?.()
-    }
-  }
-}
-
-class RootLockedError extends Error {
-  rememberedAt?: string
-
-  constructor(rememberedAt?: string) {
-    super('root locked')
-    this.rememberedAt = rememberedAt
-  }
-}
-
-/**
- * Build a fresh tree. `expandedPaths` re-opens those folders (refresh keeps
- * what was open); without it the configured `expanded` defaults apply.
- */
-async function buildTree(expandedPaths?: Set<string>, loadedPaths?: Set<string>): Promise<FNode[]> {
-  let nodes: FNode[]
-  if (props.sources.length) {
-    nodes = await Promise.all(
-      props.sources.map((source) =>
-        loadSourceRoot(source, expandedPaths ? expandedPaths.has(source.path) : (source.expanded ?? props.expanded)),
-      ),
-    )
-  } else {
-    const { password, rememberedAt } = passwords.resolve(props.path)
-    try {
-      nodes = await listRoot(password)
-    } catch (error) {
-      throw isPasswordError(error) ? new RootLockedError(rememberedAt) : error
-    }
-  }
-  // Open folders are re-opened; folders a deep search had read are re-read
-  // without opening them. Four requests at a time across the whole tree.
-  const limit = concurrency(4)
-  const open = async (list: FNode[]): Promise<void> => {
-    await Promise.all(
-      list.map(async (node) => {
-        const wanted = !!(node.expanded || expandedPaths?.has(node.path))
-        const keep = !!loadedPaths?.has(node.path)
-        if (!node.is_dir || node.lock || !(wanted || keep)) return
-        const ok = await limit(() => loadChildren(node, wanted ? 'show' : false, !wanted))
-        node.expanded = wanted && ok
-        if (ok && (expandedPaths || loadedPaths)) await open(node.children)
-      }),
-    )
-  }
-  await open(nodes)
-  return nodes
-}
-
-function lockRoot(error: RootLockedError, fallback: UnlockError) {
-  roots.value = []
-  selected.value = new Set()
-  rootLock.value = newLock(true, passwords.dropStale(error.rememberedAt) ? 'stale' : fallback)
-}
-
-/** First load, or a retry after an error: shows the loading state. */
-async function loadRoot() {
-  stopDeepSearch()
-  refreshSeq += 1
-  refreshing.value = false
-  loadingRoot.value = true
-  errorMsg.value = ''
-  try {
-    roots.value = await buildTree()
-    shown.clear()
-    rootLock.value = null
-    selected.value = new Set()
-    api.value.clearCache()
-  } catch (error) {
-    if (error instanceof RootLockedError) lockRoot(error, '')
-    else errorMsg.value = errorText(error)
-  } finally {
-    loadingRoot.value = false
-  }
-}
-
-/**
- * Refresh keeps the old rows in place (dimmed) until the new tree is ready, then
- * swaps it in. Open folders stay open; selected files that still exist stay selected.
- */
-async function refresh() {
-  if (refreshing.value || loadingRoot.value) return
-  stopDeepSearch()
-  if (!roots.value.length || errorMsg.value || rootLock.value) {
-    await loadRoot()
-    return
-  }
-  const seq = ++refreshSeq
-  refreshing.value = true
-  try {
-    // In deep search mode, folders it had read are read again, so results stay.
-    const fresh = await buildTree(expandedPathsOf(roots.value), deepMode.value ? loadedPathsOf(roots.value) : undefined)
-    if (seq !== refreshSeq) return
-    roots.value = fresh
-    const existing = new Set(fresh.flatMap(descendantFiles).map((file) => file.path))
-    selected.value = new Set([...selected.value].filter((path) => existing.has(path)))
-    api.value.clearCache()
-  } catch (error) {
-    if (seq !== refreshSeq) return
-    // The listed folder's password changed: ask again.
-    if (error instanceof RootLockedError) lockRoot(error, 'wrong')
-    else showToast(failureMessage('refreshFailed', error))
-  } finally {
-    if (seq === refreshSeq) refreshing.value = false
-  }
-}
-
-async function toggleExpand(node: FNode) {
-  if (node.lock) {
-    startPrompt(node, true)
-    return
-  }
-  if (!node.is_dir) return
-  if (node.expanded) {
-    node.expanded = false
-    // Opened again, a long folder starts from its first page.
-    for (const key of [...shown.keys()]) if (isWithin(key, node.path)) shown.delete(key)
-    return
-  }
-  node.expanded = await loadChildren(node, 'focus')
-}
-
-/* ---------------- sorting and filtering ---------------- */
-
-function applySort(key: SortKey, ascending: boolean) {
-  sortKey.value = key
-  sortAsc.value = ascending
-  // Source roots keep the order of `sources`; only their contents are sorted.
-  if (props.sources.length) roots.value.forEach((root) => sortNodes(root.children))
-  else sortNodes(roots.value)
-}
-
-function setSort(key: SortKey) {
-  applySort(key, sortKey.value === key ? !sortAsc.value : true)
-}
-
-/** Compact sort control for narrow containers, where header cells are hidden. */
-const sortOptions = computed(() =>
-  (['name', 'size', 'modified'] as SortKey[]).flatMap((key) => {
-    const label = t(key === 'name' ? 'columnName' : key === 'size' ? 'columnSize' : 'columnDate')
-    return [
-      { value: `${key}:asc`, label: `${label} ↑` },
-      { value: `${key}:desc`, label: `${label} ↓` },
-    ]
-  }),
-)
-
-const sortValue = computed<string>({
-  get: () => `${sortKey.value}:${sortAsc.value ? 'asc' : 'desc'}`,
-  set: (value) => {
-    const [key, direction] = value.split(':') as [SortKey, string]
-    applySort(key, direction !== 'desc')
-  },
+// The parts need each other's state; the arrows below are only called after
+// setup, once every part exists.
+const {
+  roots,
+  loadingRoot,
+  errorMsg,
+  refreshing,
+  rootLock,
+  sortKey,
+  sortAsc,
+  startPrompt,
+  cancelUnlock,
+  unlockErrorText,
+  submitUnlock,
+  submitRootUnlock,
+  forgetPassword,
+  loadChildren,
+  loadRoot,
+  refresh,
+  toggleExpand,
+  setSort,
+  sortOptions,
+  sortValue,
+} = useTree(ctx, {
+  selected,
+  stopDeepSearch: () => stopDeepSearch(),
+  deepMode: () => deepMode.value,
+  resetShown: (folder) => resetShown(folder),
 })
 
-/* ---------------- long folders ---------------- */
+const {
+  keyword,
+  deep,
+  deepMode,
+  deepRow,
+  deepSearch,
+  stopDeepSearch,
+  pauseDeepSearch,
+  clearFilter,
+  folderCounts,
+  lockedInSearch,
+  deepSummary,
+  nameParts,
+} = useDeepSearch(ctx, { roots, refreshing, loadChildren })
 
-/** The row closing a long folder while its children are cut at `pageSize`. */
-interface MoreRow {
-  more: true
-  /** Folder path (the listed folder's path for top-level rows). */
-  key: string
-  depth: number
-  remaining: number
-}
+const rowsPart = useRows(ctx, { roots, keyword, deepMode })
+const { showMore, showLess, resetShown, rows, visible, pinned, pinOffset, pinnedName, stickyTop } = rowsPart
 
-type Row = FNode | MoreRow
-
-/**
- * A folder showing more than its first page: while the reader scrolls through
- * it, its row is pinned at the top with “show less”.
- */
-interface LongFolder {
-  key: string
-  /** Depth of the folder's own row (-1 for the top level of a single path). */
-  depth: number
-  shown: number
-  total: number
-  /** Path of the last row in the folder, so we know when we are past it. */
-  last: string
-}
-
-/** Rows shown per folder, beyond the first page; kept across refreshes. */
-const shown = reactive(new Map<string, number>())
-
-function pageSizeOf(): number {
-  return Math.max(0, Math.floor(props.pageSize ?? 15))
-}
-
-function limitOf(key: string): number {
-  const size = pageSizeOf()
-  return size ? (shown.get(key) ?? size) : Number.POSITIVE_INFINITY
-}
-
-function showMore(row: MoreRow, all: boolean) {
-  const size = Math.max(1, pageSizeOf())
-  shown.set(row.key, all ? Number.POSITIVE_INFINITY : limitOf(row.key) + size)
-}
-
-/** Back to the first page; the folder's row (or the list's top) comes back into view. */
-async function showLess(key: string) {
-  shown.delete(key)
-  pinned.value = null
-  await nextTick()
-  const root = rootEl.value
-  if (!root) return
-  const target = rowElement(key) ?? root
-  // Rows keep `scroll-margin-top` clear of the sticky bars.
-  if (target.getBoundingClientRect().top < stickyTop.value) target.scrollIntoView({ block: 'start' })
-}
-
-function isMore(row: Row): row is MoreRow {
-  return 'more' in row
-}
-
-const layout = computed(() => {
-  const out: Row[] = []
-  const long: LongFolder[] = []
-  const query = keyword.value.trim().toLowerCase()
-  const size = pageSizeOf()
-  // In deep search mode a locked folder may hide matches: show it so it can be unlocked.
-  const matches = (node: FNode): boolean =>
-    !query ||
-    node.name.toLowerCase().includes(query) ||
-    (node.is_dir && (node.children.some(matches) || (deepMode.value && !!node.lock)))
-  const walk = (nodes: FNode[], key: string, depth: number) => {
-    const list = nodes.filter(matches)
-    // A filter shows every match: a cut list could hide the one searched for.
-    const limit = query ? list.length : Math.min(list.length, limitOf(key))
-    for (const node of list.slice(0, limit)) {
-      out.push(node)
-      if (node.is_dir && (node.expanded || query) && node.children.length) walk(node.children, node.path, node.depth + 1)
-    }
-    if (limit < list.length) out.push({ more: true, key, depth, remaining: list.length - limit })
-    let end = out.length - 1
-    while (end >= 0 && isMore(out[end])) end -= 1
-    const last = out[end]
-    if (!query && size > 0 && limit > size && last && !isMore(last)) {
-      long.push({ key, depth: depth - 1, shown: limit, total: list.length, last: last.path })
-    }
-  }
-  walk(roots.value, props.sources.length ? '' : props.path, 0)
-  return { rows: out, long }
-})
-
-const rows = computed(() => layout.value.rows)
-
-/* ---------------- pinned folder row ---------------- */
-
-const pinned = ref<LongFolder | null>(null)
-/** Height of the sticky selection bar above the pinned row (narrow lists only). */
-const pinOffset = ref(0)
-
-function rowElement(path: string): HTMLElement | undefined {
-  return [...(rootEl.value?.querySelectorAll<HTMLElement>('[data-path]') ?? [])].find((el) => el.dataset.path === path)
-}
-
-/** The pinned folder's name: its own, or for a single path's top level, the list's title. */
-const pinnedName = computed(() => {
-  const folder = pinned.value
-  if (!folder) return ''
-  if (folder.depth < 0) return props.title || folder.key.split('/').filter(Boolean).pop() || '/'
-  const find = (nodes: FNode[]): FNode | undefined => {
-    for (const node of nodes) {
-      if (node.path === folder.key) return node
-      const inner = isWithin(folder.key, node.path) ? find(node.children) : undefined
-      if (inner) return inner
-    }
-  }
-  return find(roots.value)?.name ?? ''
-})
-
-/** Pin the innermost long folder whose own row has scrolled away while its files are still on screen. */
-function updatePin() {
-  const root = rootEl.value
-  if (!root) return
-  const bar = root.querySelector<HTMLElement>('.fl-bar')
-  pinOffset.value = bar && getComputedStyle(bar).position === 'sticky' ? bar.offsetHeight : 0
-  const top = stickyTop.value + pinOffset.value
-  const rowHeight = root.querySelector<HTMLElement>('.fl-head')?.offsetHeight ?? 40
-  let found: LongFolder | null = null
-  for (const folder of layout.value.long) {
-    const head = folder.depth < 0 ? root.querySelector<HTMLElement>('.fl-head') : rowElement(folder.key)
-    const last = rowElement(folder.last)
-    if (!head || !last) continue
-    const inside = head.getBoundingClientRect().bottom <= top && last.getBoundingClientRect().bottom > top + rowHeight
-    if (inside && (!found || folder.depth > found.depth)) found = folder
-  }
-  pinned.value = found
-}
-
-let pinFrame = 0
-function schedulePin() {
-  if (pinFrame) return
-  pinFrame = requestAnimationFrame(() => {
-    pinFrame = 0
-    updatePin()
-  })
-}
-
-watch(layout, () => void nextTick(schedulePin))
-
-const visible = computed<FNode[]>(() => rows.value.filter((row): row is FNode => !isMore(row)))
-
-/** A name split around the filter keyword, for highlighting. */
-function nameParts(name: string): Array<{ text: string; hit: boolean }> {
-  const query = keyword.value.trim().toLowerCase()
-  if (!query) return [{ text: name, hit: false }]
-  const parts: Array<{ text: string; hit: boolean }> = []
-  const lower = name.toLowerCase()
-  let from = 0
-  for (let at = lower.indexOf(query); at !== -1; at = lower.indexOf(query, from)) {
-    if (at > from) parts.push({ text: name.slice(from, at), hit: false })
-    parts.push({ text: name.slice(at, at + query.length), hit: true })
-    from = at + query.length
-  }
-  if (from < name.length) parts.push({ text: name.slice(from), hit: false })
-  return parts
-}
-
-/* ---------------- deep search ---------------- */
-
-/**
- * The filter only sees loaded folders. Deep search loads the rest under the
- * mounted paths (four at a time, `deepSearchLimit` per run) so matches appear
- * in place, in their folders, like any other row. Locked folders are skipped.
- */
-const deep = reactive({ running: false, searched: 0, failed: 0, capped: false, done: false })
-/**
- * Deep search mode: entered by “Try deep search” (or at once with
- * `deep-search="auto"`), left by clearing the filter. While on, new keywords,
- * refreshes and newly unlocked folders are searched without asking again.
- */
-const deepMode = ref(false)
-let deepSeq = 0
-
-/** Folders that are known but not loaded yet (locked ones excluded). */
-function unloadedFolders(): FNode[] {
-  const out: FNode[] = []
-  const walk = (nodes: FNode[]) => {
-    for (const node of nodes) {
-      if (!node.is_dir || node.lock) continue
-      if (!node.loaded) out.push(node)
-      else walk(node.children)
-    }
-  }
-  walk(roots.value)
-  return out
-}
-
-const hasUnloaded = computed(() => unloadedFolders().length > 0)
-const deepRow = computed(() => {
-  if (!keyword.value.trim()) return null
-  if (deep.running) return 'running'
-  if (deep.capped) return 'capped'
-  if (!deepMode.value) return hasUnloaded.value ? 'idle' : null
-  return deep.done ? 'done' : null
-})
-
-/** “Try deep search”, “Continue”, and the automatic runs of deep search mode. */
-async function deepSearch() {
-  deepMode.value = true
-  const seq = ++deepSeq
-  const limit = Math.max(1, Math.floor(props.deepSearchLimit ?? 500))
-  const runStart = deep.searched
-  Object.assign(deep, { running: true, capped: false, done: false })
-  let wave = unloadedFolders()
-  while (wave.length && seq === deepSeq) {
-    const next: FNode[] = []
-    const queue = [...wave]
-    const worker = async () => {
-      for (let node = queue.shift(); node && seq === deepSeq; node = queue.shift()) {
-        if (deep.searched - runStart >= limit) return
-        deep.searched += 1
-        if (!(await loadChildren(node, false, true))) {
-          if (!node.lock) deep.failed += 1
-          continue
-        }
-        for (const child of node.children) if (child.is_dir && !child.loaded && !child.lock) next.push(child)
-      }
-    }
-    await Promise.all(Array.from({ length: Math.min(4, queue.length) }, worker))
-    if (deep.searched - runStart >= limit) break
-    wave = next
-  }
-  if (seq !== deepSeq) return
-  deep.running = false
-  deep.capped = hasUnloaded.value && deep.searched - runStart >= limit
-  deep.done = !deep.capped
-}
-
-/** Pause a run (internal: refresh, reload). */
-function stopDeepSearch() {
-  deepSeq += 1
-  deep.running = false
-}
-
-/** The user's Stop: keep the mode, offer “Continue”, do not restart by itself. */
-function pauseDeepSearch() {
-  const wasRunning = deep.running
-  stopDeepSearch()
-  if (wasRunning && hasUnloaded.value) deep.capped = true
-}
-
-function clearFilter() {
-  keyword.value = ''
-}
-
-// Clearing the filter leaves deep search mode; loaded folders stay loaded.
-watch(keyword, (value) => {
-  if (value.trim()) {
-    if (props.deepSearch === 'auto') deepMode.value = true
-    return
-  }
-  stopDeepSearch()
-  deepMode.value = false
-  Object.assign(deep, { searched: 0, failed: 0, capped: false, done: false })
-})
-
-// In deep search mode, folders that become readable (a new keyword, a refresh,
-// an unlocked folder) are searched at once, unless the user stopped or the
-// limit was reached ("Continue" then).
-watch(
-  () => deepMode.value && hasUnloaded.value && !deep.running && !deep.capped && !refreshing.value,
-  (ready) => {
-    if (ready) void deepSearch()
-  },
-)
-
-/**
- * Counted from the tree, so a refresh that re-reads the same folders shows the
- * same numbers: folders read (or found locked), and the locked ones.
- */
-const folderCounts = computed(() => {
-  const counts = { checked: 0, locked: 0 }
-  const walk = (nodes: FNode[]) => {
-    for (const node of nodes) {
-      if (!node.is_dir) continue
-      if (node.lock) {
-        counts.checked += 1
-        counts.locked += 1
-      } else if (node.loaded) {
-        counts.checked += 1
-        walk(node.children)
-      }
-    }
-  }
-  walk(roots.value)
-  return counts
-})
-const lockedFolders = computed(() => folderCounts.value.locked)
-
-function lockedInSearch(node: FNode): boolean {
-  return deepMode.value && !!node.lock && !!keyword.value.trim()
-}
-
-const deepSummary = computed(() =>
-  [
-    t(deepRow.value === 'capped' ? 'deepCapped' : 'deepDone', { count: folderCounts.value.checked }),
-    lockedFolders.value ? t('deepSkipped', { count: lockedFolders.value }) : '',
-    deep.failed ? t('deepFailed', { count: deep.failed }) : '',
-  ]
-    .filter(Boolean)
-    .join(' · '),
-)
-
-/* ---------------- selection and batch download ---------------- */
-
-const stats = computed(() => folderStats(roots.value, selected.value))
-const noStats: FolderStats = { files: 0, bytes: 0, selected: 0 }
-
-function statsOf(node: FNode): FolderStats {
-  return stats.value.get(node.path) ?? noStats
-}
-
-function isChecked(node: FNode): boolean {
-  if (!node.is_dir) return selected.value.has(node.path)
-  const { files, selected: hit } = statsOf(node)
-  return files > 0 && hit === files
-}
-
-function isIndeterminate(node: FNode): boolean {
-  if (!node.is_dir) return false
-  const { files, selected: hit } = statsOf(node)
-  return hit > 0 && hit < files
-}
-
-/**
- * Load a directory and all of its sub-directories. Stops at the first folder
- * that needs a password and returns it, so nothing is silently left out.
- */
-async function loadTree(node: FNode): Promise<{ ok: boolean; locked?: FNode }> {
-  if (!node.is_dir) return { ok: true }
-  if (!(await loadChildren(node))) return node.lock ? { ok: false, locked: node } : { ok: false }
-  for (const child of node.children) {
-    if (!child.is_dir) continue
-    const result = await loadTree(child)
-    if (!result.ok) {
-      // Keep the path to the locked folder open so its input is visible.
-      node.expanded = true
-      return result
-    }
-  }
-  return { ok: true }
-}
-
-async function toggleCheck(node: FNode, event?: Event) {
-  const input = event?.target as HTMLInputElement | null
-  // Selecting a folder includes every nested file, so load the whole subtree first.
-  if (node.is_dir && !isChecked(node)) {
-    const result = await loadTree(node)
-    if (!result.ok) {
-      if (result.locked) startPrompt(result.locked, true)
-      if (input) input.checked = isChecked(node)
-      return
-    }
-    node.expanded = true
-  }
-  const files = descendantFiles(node)
-  if (!files.length) {
-    if (input) input.checked = false
-    return
-  }
-  const next = new Set(selected.value)
-  const adding = files.some((file) => !next.has(file.path))
-  for (const file of files) {
-    if (adding) next.add(file.path)
-    else next.delete(file.path)
-  }
-  selected.value = next
-}
-
-const allFiles = computed(() => roots.value.flatMap(descendantFiles))
-const selectedFiles = computed(() => allFiles.value.filter((file) => selected.value.has(file.path)))
-const allChecked = computed(() => allFiles.value.length > 0 && selectedFiles.value.length === allFiles.value.length)
-const someChecked = computed(() => !allChecked.value && selectedFiles.value.length > 0)
-
-function toggleCheckAll() {
-  selected.value = allChecked.value ? new Set() : new Set(allFiles.value.map((file) => file.path))
-}
-
-function clearSelection() {
-  selected.value = new Set()
-}
+const {
+  statsOf,
+  isChecked,
+  isIndeterminate,
+  toggleCheck,
+  allFiles,
+  selectedFiles,
+  allChecked,
+  someChecked,
+  toggleCheckAll,
+  clearSelection,
+} = useSelection({ roots, selected, loadChildren, startPrompt })
 
 function fileUrlOf(node: FNode): Promise<string> {
   return api.value.fileUrl(node, passwords.resolve(node.path, node.password).password)
 }
 
-async function download(node: FNode) {
-  if (node.is_dir) return
-  if (demo.value && !isDemoFile(node.path)) {
-    showToast(t('demoDownload', { name: node.name }))
-    return
-  }
-  try {
-    const url = await fileUrlOf(node)
-    openUrl(url, { sameTab: api.value.isAttachmentUrl(url), name: node.name })
-    showToast(t('downloadStarted', { name: node.name }))
-  } catch (error) {
-    showToast(t('downloadFailed', { message: errorText(error) }))
-  }
-}
-
-const MB = 1024 * 1024
-
-/** In-memory ZIP limits in bytes (Infinity = none); phones get lower defaults. */
-function zipLimits(): { warn: number; max: number } {
-  const touch = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches
-  const bytes = (value: number | undefined, fallback: number) => {
-    const mb = value ?? fallback
-    return mb > 0 ? mb * MB : Number.POSITIVE_INFINITY
-  }
-  return { warn: bytes(props.zipWarnSize, touch ? 200 : 500), max: bytes(props.zipMaxSize, touch ? 1024 : 2048) }
-}
-
-/** A ZIP question or notice: over the warning size, over the limit, or failed. */
-type ZipNotice =
-  | { kind: 'warn' | 'block'; size: number; limit: number; files: FNode[] }
-  | { kind: 'failed'; message: string }
-
-const zipNotice = ref<ZipNotice | null>(null)
-/** Only desktop browsers get “use Chrome or Edge”; on iPhone every browser is Safari. */
-const zipTip = computed(() =>
-  typeof window !== 'undefined' && !window.matchMedia?.('(pointer: coarse)').matches ? t('zipStreamTip') : '',
-)
-
-const zipDialog = computed(() => {
-  const notice = zipNotice.value
-  if (!notice) return null
-  if (notice.kind === 'failed') {
-    return { title: t('batchFailedTitle'), text: notice.message, tip: t('batchFailedHint'), cancel: t('gotIt') }
-  }
-  const warn = notice.kind === 'warn'
-  return {
-    title: t(warn ? 'zipWarnTitle' : 'zipBlockTitle', { size: formatSize(notice.size) }),
-    text: t(warn ? 'zipWarnText' : 'zipBlockText', { limit: formatSize(notice.limit) }),
-    tip: zipTip.value,
-    confirm: warn ? t('zipContinue') : undefined,
-    cancel: warn ? t('cancel') : t('gotIt'),
-  }
-})
-
-function zipName(): string {
-  return zipFileName(props.title || t('defaultZip'))
-}
-
-/**
- * Chrome / Edge stream into a file the user picks (no size limit). Other
- * browsers build the ZIP in memory, so large selections ask first or are refused.
- */
-async function batchDownload() {
-  const files = selectedFiles.value
-  if (!files.length || batchBusy.value) return
-  if (demo.value && !files.every((file) => isDemoFile(file.path))) {
-    showToast(t('demoBatch', { count: files.length }))
-    return
-  }
-  if (canStreamToDisk()) {
-    let handle: FileSystemFileHandle | null
-    try {
-      // First await of the click: the picker needs the user gesture.
-      handle = await pickZipFile(zipName())
-    } catch (error) {
-      showToast(t('batchFailed', { message: errorText(error) }))
-      return
-    }
-    if (handle) await runZip(files, (options) => zipToFile(handle, files, options), handle.name)
-    return
-  }
-  const size = totalSize(files)
-  const { warn, max } = zipLimits()
-  if (size > max) zipNotice.value = { kind: 'block', size, limit: max, files }
-  else if (size > warn) zipNotice.value = { kind: 'warn', size, limit: warn, files }
-  else await zipInMemory(files)
-}
-
-async function zipInMemory(files: FNode[]) {
-  const name = zipName()
-  await runZip(
-    files,
-    async (options) => saveBlob(await zipToBlob(files, options), name),
-    name,
-  )
-}
-
-function confirmZip() {
-  const notice = zipNotice.value
-  zipNotice.value = null
-  if (notice?.kind === 'warn') void zipInMemory(notice.files)
-}
-
-async function runZip(
-  files: FNode[],
-  run: (options: Parameters<typeof zipToBlob<FNode>>[1]) => Promise<void>,
-  name: string,
-) {
-  const controller = new AbortController()
-  zipAbort = controller
-  batchBusy.value = true
-  zipProgress.value = null
-  try {
-    await run({ urlOf: fileUrlOf, signal: controller.signal, onProgress: (progress) => (zipProgress.value = progress) })
-    showToast(t('batchDone', { name, count: files.length, size: formatSize(totalSize(files)) }))
-    selected.value = new Set()
-  } catch (error) {
-    // A failure is worth a dialog: a toast is easy to miss after a long wait.
-    if (controller.signal.aborted) showToast(t('batchCanceled'))
-    else zipNotice.value = { kind: 'failed', message: errorText(error) }
-  } finally {
-    zipAbort = null
-    batchBusy.value = false
-    zipProgress.value = null
-  }
-}
-
-function cancelZip() {
-  zipAbort?.abort()
-}
-
-const zipPercent = computed(() => {
-  const progress = zipProgress.value
-  if (!progress) return 0
-  const ratio = progress.totalBytes
-    ? progress.bytes / progress.totalBytes
-    : progress.totalFiles
-      ? progress.files / progress.totalFiles
-      : 0
-  return Math.min(100, Math.floor(ratio * 100))
-})
-
-/* ---------------- preview (dialog, no navigation) ---------------- */
-
-/** Only types the dialog can actually render get a preview button. */
-function canPreview(node: FNode): boolean {
-  return !node.is_dir && previewKind(node.name) !== 'none'
-}
-
-const previewNode = ref<FNode | null>(null)
-const previewSrc = ref('')
-const previewViewer = ref('')
-const previewResolving = ref(false)
-const previewError = ref('')
-let previewSeq = 0
-
-/** Previewable files in the order they are listed, for ← / →. */
-const previewList = computed(() => visible.value.filter(canPreview))
-const previewPosition = computed(() => (previewNode.value ? previewList.value.indexOf(previewNode.value) + 1 : 0))
-
-async function preview(node: FNode) {
-  const seq = ++previewSeq
-  previewNode.value = node
-  previewSrc.value = ''
-  previewViewer.value = ''
-  previewError.value = ''
-  previewResolving.value = false
-  if ((demo.value && !isDemoFile(node.path)) || !canPreview(node)) return
-  previewResolving.value = true
-  try {
-    const url = await fileUrlOf(node)
-    if (seq !== previewSeq) return
-    previewSrc.value = url
-    const viewer = previewKind(node.name) === 'pdf' ? iframePreviewsFor(node.name, iframePreviews.value)[0] : undefined
-    if (viewer) {
-      previewViewer.value = fillPreviewUrl(viewer.scheme, {
-        name: node.name,
-        rawUrl: url,
-        downloadUrl: api.value.directUrl(node),
-      })
-    }
-  } catch (error) {
-    if (seq === previewSeq) previewError.value = errorText(error)
-  } finally {
-    if (seq === previewSeq) previewResolving.value = false
-  }
-}
-
-function stepPreview(delta: number) {
-  const list = previewList.value
-  if (!list.length) return
-  const index = previewNode.value ? list.indexOf(previewNode.value) : -1
-  void preview(list[(index + delta + list.length) % list.length])
-}
-
-function closePreview() {
-  previewSeq += 1
-  previewNode.value = null
-}
+const { download, batchBusy, zipProgress, zipNotice, zipDialog, batchDownload, confirmZip, cancelZip, zipPercent } =
+  useDownloads(ctx, { selected, selectedFiles, fileUrlOf })
 
 /* ---------------- page chrome ---------------- */
+
+const siteTitle = ref('')
+const iframePreviews = ref('')
+
+const {
+  previewNode,
+  previewSrc,
+  previewViewer,
+  previewResolving,
+  previewError,
+  previewList,
+  previewPosition,
+  preview,
+  stepPreview,
+  closePreview,
+} = usePreview(ctx, { visible, fileUrlOf, iframePreviews })
 
 const displayTitle = computed(() => props.title || siteTitle.value || (props.path === '/' ? t('allFiles') : props.path))
 
@@ -1068,40 +185,17 @@ async function loadSettings() {
   iframePreviews.value = settings.iframePreviews
 }
 
-/*
- * In narrow containers the selection bar sticks below the theme's fixed bars.
- * VitePress 1 and 2 pin different bars at different widths, so measure them.
- * `--fl-sticky-top` on the component overrides the measured value.
- */
-const stickyTop = ref(0)
-
-function measureStickyTop() {
-  let top = 0
-  for (const el of document.querySelectorAll<HTMLElement>('.VPNav, .VPLocalNav')) {
-    const style = getComputedStyle(el)
-    if (style.display === 'none' || (style.position !== 'fixed' && style.position !== 'sticky')) continue
-    top = Math.max(top, (Number.parseFloat(style.top) || 0) + el.offsetHeight)
-  }
-  stickyTop.value = top
-}
-
 onMounted(() => {
   warnPublicSecrets(props, props.locale)
   passwords.sync()
   void loadRoot()
   void loadSettings()
-  measureStickyTop()
-  window.addEventListener('resize', measureStickyTop, { passive: true })
-  window.addEventListener('scroll', schedulePin, { passive: true })
-  window.addEventListener('resize', schedulePin, { passive: true })
+  rowsPart.mount()
 })
 
 onBeforeUnmount(() => {
-  zipAbort?.abort()
-  window.removeEventListener('resize', measureStickyTop)
-  window.removeEventListener('scroll', schedulePin)
-  window.removeEventListener('resize', schedulePin)
-  cancelAnimationFrame(pinFrame)
+  cancelZip()
+  rowsPart.unmount()
   clearTimeout(toastTimer)
 })
 </script>
