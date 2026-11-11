@@ -1,10 +1,17 @@
-# vitepress-plugin-filelist
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/nrjycyd/vitepress-plugin-filelist/main/demo/docs/public/wordmark-dark.svg?sanitize=true">
+    <img src="https://raw.githubusercontent.com/nrjycyd/vitepress-plugin-filelist/main/demo/docs/public/wordmark.svg?sanitize=true" alt="vitepress-plugin-filelist" width="420">
+  </picture>
+</h1>
 
-[![npm](https://img.shields.io/npm/v/vitepress-plugin-filelist)](https://www.npmjs.com/package/vitepress-plugin-filelist)
-[![CI](https://github.com/nrjycyd/vitepress-plugin-filelist/actions/workflows/ci.yml/badge.svg)](https://github.com/nrjycyd/vitepress-plugin-filelist/actions/workflows/ci.yml)
-[![license](https://img.shields.io/npm/l/vitepress-plugin-filelist)](./LICENSE)
+<p align="center">
+  <a href="https://www.npmjs.com/package/vitepress-plugin-filelist"><img src="https://img.shields.io/npm/v/vitepress-plugin-filelist" alt="npm"></a>
+  <a href="https://github.com/nrjycyd/vitepress-plugin-filelist/actions/workflows/ci.yml"><img src="https://github.com/nrjycyd/vitepress-plugin-filelist/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/nrjycyd/vitepress-plugin-filelist/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/vitepress-plugin-filelist" alt="license"></a>
+</p>
 
-面向 VitePress 的 OpenList 文件浏览组件：在文档页里浏览、预览、批量下载 OpenList 上的文件。
+<p align="center">面向 VitePress 的 OpenList 文件浏览组件：在文档页里浏览、预览、批量下载 OpenList 上的文件。</p>
 
 ![文件列表截图](https://raw.githubusercontent.com/nrjycyd/vitepress-plugin-filelist/main/demo/docs/public/screenshot.png)
 
