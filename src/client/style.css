@@ -771,6 +771,7 @@
 .fl-hint {
   margin: 6px 0 0;
   font-size: 12px;
+  line-height: 1.5;
   color: var(--vp-c-text-2);
 }
 
@@ -899,14 +900,18 @@
 /* the status line closing a filtered list: centred, wraps, never overflows */
 .fl-deep {
   position: relative;
-  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 40px;
+  padding: 8px 16px;
   text-align: center;
   background: var(--vp-c-bg-soft);
   border-bottom: 1px solid var(--vp-c-divider);
 }
 
 .fl-deep-text {
-  margin: 0;
   font-size: 13px;
   line-height: 1.6;
   color: var(--vp-c-text-2);
@@ -981,6 +986,7 @@
 .fl-confirm-title {
   margin: 0 0 10px;
   font-size: 16px;
+  line-height: 1.5;
   font-weight: 600;
 }
 
@@ -1029,7 +1035,7 @@
   }
 
   .fl-deep {
-    padding: 12px 16px;
+    min-height: 48px;
   }
 
   .fl-deep-text {
@@ -1038,8 +1044,8 @@
 
   /* a taller tap target without changing the line */
   .fl-deep-link {
-    padding: 10px 2px;
-    margin: -10px 0;
+    padding: 11px 2px;
+    margin: -11px 0;
   }
 
   .fl-locked-hint {
@@ -1556,6 +1562,7 @@
   margin: 0;
   padding: 8px 20px;
   font-size: 12px;
+  line-height: 1.5;
   color: var(--vp-c-text-2);
   background: var(--vp-c-bg-soft);
   border-bottom: 1px solid var(--vp-c-divider);

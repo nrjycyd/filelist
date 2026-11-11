@@ -357,14 +357,14 @@ function markFailed() {
         ></video>
         <audio v-else-if="mode === 'audio'" class="fl-preview-audio" :src="src" controls preload="metadata" @error="markFailed"></audio>
         <div v-else-if="mode === 'text'" class="fl-preview-text" :class="{ 'fl-preview-rendered': renderAs && view === 'rendered' }">
-          <p v-if="truncated" class="fl-preview-note">{{ t('textTruncated', { size: formatSize(maxTextBytes) }) }}</p>
+          <div v-if="truncated" class="fl-preview-note">{{ t('textTruncated', { size: formatSize(maxTextBytes) }) }}</div>
           <template v-if="renderAs === 'markdown' && view === 'rendered'">
             <!-- sanitised by renderMarkdown (DOMPurify) -->
             <div v-if="renderedHtml" class="vp-doc fl-md" v-html="renderedHtml"></div>
             <div v-else class="fl-preview-status" role="status">{{ t('loading') }}</div>
           </template>
           <template v-else-if="renderAs === 'html' && view === 'rendered'">
-            <p class="fl-preview-note">{{ t('htmlSandboxNote') }}</p>
+            <div class="fl-preview-note">{{ t('htmlSandboxNote') }}</div>
             <!-- empty sandbox: no scripts, no forms, no popups, an opaque origin -->
             <iframe class="fl-preview-html" sandbox="" referrerpolicy="no-referrer" :srcdoc="textContent" :title="file.name"></iframe>
           </template>
@@ -373,7 +373,7 @@ function markFailed() {
         <iframe v-else-if="mode === 'pdf'" class="fl-preview-frame" :src="viewer || blobUrl" :title="file.name"></iframe>
         <div v-else class="fl-preview-info">
           <span class="fl-type fl-preview-badge" :data-kind="fileKind(file.name)" aria-hidden="true">{{ extOf(file.name) || 'FILE' }}</span>
-          <p class="fl-preview-message">{{ infoMessage }}</p>
+          <div class="fl-preview-message">{{ infoMessage }}</div>
           <button v-if="!demo" class="fl-btn fl-btn-primary" type="button" @click="emit('download')">
             <Icon name="download" :size="15" />
             {{ t('download') }}
