@@ -499,6 +499,21 @@ describe('FileList preview dialog', () => {
     expect(dialog.find('.fl-preview-message').text()).toContain('演示模式')
     expect(dialog.find('.fl-preview-download').exists()).toBe(false)
   })
+
+  it('previews and downloads the demo sample files for real', async () => {
+    const wrapper = mount(FileList, { props: {}, attachTo: document.body })
+    await flushPromises()
+    await vi.waitFor(() => expect(wrapper.findAll('.fl-row:not(.fl-head)').length).toBeGreaterThan(0))
+
+    await row(wrapper, '示例文件').find('.fl-arrow').trigger('click')
+    await vi.waitFor(() => expect(wrapper.text()).toContain('课程表.txt'))
+    await openPreview(wrapper, '课程海报.svg')
+    const dialog = dialogOf(wrapper)
+    await vi.waitFor(() => expect(dialog.find('img').attributes('src')).toMatch(/^blob:/))
+    expect(dialog.text()).not.toContain('演示模式')
+    expect(dialog.find('.fl-preview-download').exists()).toBe(true)
+    wrapper.unmount()
+  })
 })
 
 describe('FileList folder passwords (same row)', () => {

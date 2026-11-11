@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Features
+
+- Demo data (no `base`) now has a “示例文件” folder of small real files (Markdown, HTML, SVG, PDF, text): they preview, download and zip for real, served as blob: URLs; other demo files still only describe what would happen. Also a 260-file folder for trying “show more”
+
+### Docs
+
+- The demo site is now the documentation site, with a sidebar, local search, the version in the nav and a live example on each feature page
+- README trimmed to an overview with links to the docs; development notes moved to CONTRIBUTING.md; `homepage` points to the docs site
+
 ## 0.7.2 (2026-11-11)
 
 ### Fixes
