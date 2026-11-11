@@ -30,7 +30,7 @@ COMPAT_VITEPRESS=latest,next pnpm test:compat   # 也可以用 npm dist-tag
 跟进 VitePress 新版本：
 
 - `.github/dependabot.yml`：每天检查文档站（`demo/`）、每周检查根目录的 vitepress / vitepress-tuck / vue，有新版本就开 PR，CI 全部通过后合并，文档站随之用上新版本
-- `VitePress canary` 工作流：每天用 `latest` 和 `next` 两个 dist-tag 跑一遍 `test:compat`，新版本把插件弄坏时第一时间失败并发邮件
+- `VitePress canary` 工作流：每天查一次 npm 上 `latest`、`next` 两个 dist-tag 对应的 VitePress 和最新 Vue 的版本号；这组版本已经测过就直接结束（几秒，不安装），有新版本才跑 `test:compat`，失败时发邮件。手动运行时勾选 force 可强制重测
 
 公开接口只有组件、`enhanceAppWithFileList`、文案工具与 `FileList*` 类型（`src/client/__tests__/publicApi.spec.ts` 守着这份清单）。新增导出或文案 key 前先想清楚：1.0 之后删除即是主版本。
 

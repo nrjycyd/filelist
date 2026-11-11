@@ -20,7 +20,7 @@
 | VitePress 1.6 + vitepress-tuck | ❌ | vitepress-tuck 本身需要 VitePress 2 |
 | VitePress 1.5 及更早 | ❌ | 未测试，不在 `peerDependencies` 范围内 |
 
-VitePress 2 之后的大版本没有上限，发布时不需要改依赖范围。仓库每天用 npm 上最新的 VitePress（`latest` 与 `next`）跑一遍兼容性测试，文档站也通过 Dependabot 跟进最新版本，新版本出问题时会第一时间发现。
+VitePress 2 之后的大版本没有上限，发布时不需要改依赖范围。仓库每天检查 npm 上最新的 VitePress（`latest` 与 `next`），出了新版本就跑一遍兼容性测试，文档站也通过 Dependabot 跟进最新版本，新版本出问题时会第一时间发现。
 
 `pnpm test:compat` 把打包后的插件装进全新的 VitePress 站点，构建后在浏览器里检查渲染、展开、预览、打包 ZIP，并确认开发时的公开提醒只在 `vitepress dev` 中出现。
 
