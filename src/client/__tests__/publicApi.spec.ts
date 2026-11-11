@@ -24,7 +24,7 @@ describe('public API', () => {
   it('vitepress-tuck is an optional peer, so plain VitePress sites do not install it', () => {
     const pkg = JSON.parse(read('../../../package.json'))
     expect(pkg.dependencies['vitepress-tuck']).toBeUndefined()
-    expect(pkg.peerDependencies['vitepress-tuck']).toBeTruthy()
+    expect(pkg.peerDependencies['vitepress-tuck']).toBe('>=0.12.2')
     expect(pkg.peerDependenciesMeta['vitepress-tuck'].optional).toBe(true)
     expect(pkg.peerDependencies.vitepress).toBe('^1.6.0 || >=2.0.0-alpha.18')
     expect(pkg.engines.node).toBeTruthy()

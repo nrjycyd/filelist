@@ -28,7 +28,7 @@ VitePress 2 之后的大版本没有上限，发布时不需要改依赖范围�
 | --- | --- |
 | `vitepress`（peer） | `^1.6.0 \|\| >=2.0.0-alpha.18`：VitePress 1.6 及以后的 1.x，以及 2.0.0-alpha.18 起的所有版本（含将来的 3.x、4.x 正式版） |
 | `vue`（peer） | `^3.5.0` |
-| `vitepress-tuck`（可选 peer） | `>=0.12.2 <1`；只有用 vitepress-tuck 注册时才需要安装 |
+| `vitepress-tuck`（可选 peer） | `>=0.12.2`（不设上限）；只有用 vitepress-tuck 注册时才需要安装 |
 | Node | `^20.19.0 \|\| >=22.12.0` |
 
 在 Node 22 下针对 VitePress `2.0.0-alpha.21` 本地实测包管理器：
