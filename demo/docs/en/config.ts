@@ -9,6 +9,7 @@ export default {
   themeConfig: {
     nav: [
       { text: 'Guide', link: '/en/guide/getting-started', activeMatch: '/en/guide/' },
+      { text: 'Features', link: '/en/features/sources', activeMatch: '/en/features/' },
       { text: 'Reference', link: '/en/reference/props', activeMatch: '/en/reference/' },
       {
         text: `v${pkg.version}`,
@@ -26,18 +27,27 @@ export default {
             { text: 'Getting started', link: '/en/guide/getting-started' },
             { text: 'Connect OpenList', link: '/en/guide/openlist' },
             { text: 'Security', link: '/en/guide/security' },
+            { text: 'FAQ', link: '/en/guide/faq' },
+            { text: 'Upgrading to 0.9', link: '/en/guide/migration' },
+          ],
+        },
+        {
+          text: 'Features',
+          items: [
+            { text: 'Several roots', link: '/en/features/sources' },
+            { text: 'Batch download (ZIP)', link: '/en/features/zip' },
+            { text: 'Long folders', link: '/en/features/large-folders' },
+            { text: 'Filter and deep search', link: '/en/features/search' },
+            { text: 'Folder passwords and refresh', link: '/en/features/passwords' },
+            { text: 'Preview', link: '/en/features/preview' },
           ],
         },
         {
           text: 'Reference',
-          items: [{ text: 'Component props', link: '/en/reference/props' }],
-        },
-        {
-          text: 'More (Chinese)',
           items: [
-            { text: 'Features and live examples', link: '/features/sources' },
-            { text: 'FAQ', link: '/guide/faq' },
-            { text: 'Exports and compatibility', link: '/reference/exports' },
+            { text: 'Component props', link: '/en/reference/props' },
+            { text: 'Locales and labels', link: '/en/reference/i18n' },
+            { text: 'Exports and compatibility', link: '/en/reference/exports' },
           ],
         },
       ],

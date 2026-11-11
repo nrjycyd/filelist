@@ -27,3 +27,24 @@ describe('demo data', () => {
     expect(await api.list('/照片（260 张）', '')).toHaveLength(260)
   })
 })
+
+describe('English demo data', () => {
+  const api = createDemoApi(0, 'en-US')
+
+  it('uses English names, with the same folders, samples and password', async () => {
+    const top = (await api.list('/', '')).map((item) => item.name)
+    expect(top).toContain('Sample files')
+    expect(top).toContain('Photos (260)')
+    expect(top.join(' ')).not.toMatch(/\p{Script=Han}/u)
+    expect((await api.list('/Sample files', '')).map((item) => item.name)).toEqual(['Read me.md', 'Web page.html', 'Course poster.svg', 'Lecture notes.pdf', 'Timetable.txt'])
+    await expect(api.list('/Locked (password 1234)', '')).rejects.toThrow(/password/)
+    expect(await api.list('/Locked (password 1234)', '1234')).toHaveLength(2)
+  })
+
+  it('serves the English samples for real', async () => {
+    const url = await api.fileUrl({ path: '/Sample files/Timetable.txt' }, '')
+    expect(await (await fetch(url)).text()).toContain('Timetable')
+    expect(isDemoFile('/Sample files/Read me.md')).toBe(true)
+    expect(isDemoFile('/exams/2024 midterm.pdf')).toBe(false)
+  })
+})

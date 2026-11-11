@@ -16,7 +16,7 @@
 <p align="center">An OpenList file browser for VitePress: browse, preview, search and batch-download OpenList files right in a docs page.</p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/nrjycyd/vitepress-plugin-filelist/main/demo/docs/public/screenshot.png" alt="File list screenshot" width="640">
+  <img src="https://raw.githubusercontent.com/nrjycyd/vitepress-plugin-filelist/main/demo/docs/public/screenshot-en.png" alt="File list screenshot" width="640">
 </p>
 
 ## Features

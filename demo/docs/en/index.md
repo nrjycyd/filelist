@@ -21,13 +21,17 @@ features:
   - icon: 📦
     title: Batch download
     details: Tick files or whole folders and get one ZIP. Chrome and Edge write it to disk as it downloads, with no size limit.
+    link: /en/features/zip
   - icon: 👁️
     title: Preview in place
     details: Images, audio, video, text and PDF; Markdown and HTML switch between source and rendered.
+    link: /en/features/preview
   - icon: 🔎
     title: Deep search
     details: Reads folders that were never opened; matches appear in place, ready to tick, preview or download.
+    link: /en/features/search
   - icon: 🔐
     title: Folder passwords
     details: Typed in the row itself, so the list does not jump; can be remembered for the browser tab.
+    link: /en/features/passwords
 ---

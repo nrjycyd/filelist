@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Features
+
+- Demo mode follows `locale`: with `locale="en-US"` the demo folders and files have English names (“Sample files”, “Photos (260)”, “Locked (password 1234)”…), and the sample files themselves are in English
+
+### Docs
+
+- The rest of the docs are in English too: the six feature pages, FAQ, upgrading to 0.9, locales and labels, exports and compatibility; the English sidebar no longer links to Chinese pages
+- `README.md` shows an English screenshot
+- Component props: the ZIP sizes no longer show a stray `@unit MB` (vitepress-plugin-field 0.12.2 does not support it yet; the unit is in the description)
+- Exports and compatibility: building the site on Node 20.19 is listed as checked in CI
+
 ## 0.9.3 (2026-11-11)
 
 ### Fixes
