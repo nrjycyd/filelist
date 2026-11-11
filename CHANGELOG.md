@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- Deep search on phones: after a refresh the status line could push its button off screen. The status line is now one centred sentence that wraps, with the action as an inline link
+- Refresh dropped what deep search had read, so results vanished; in deep search mode a refresh now re-reads those folders before swapping the tree in, and the folder counts stay the same
+- Locked folders skipped by deep search were hidden by the filter; they now show in the results, locked, marked “Not searched (password needed)”, and can be unlocked in place
+
+### Features
+
+- Deep search mode: after the first “Try deep search”, new keywords, refreshes and newly unlocked folders are searched automatically until the filter is cleared; “Stop” pauses until “Continue”
+- `deepSearch` prop: `'auto'` enters deep search mode as soon as a keyword is typed (default `'manual'`)
+- An × in the filter box (and Esc) clears the filter
+- New labels `deepLocked`, `clearFilter`; `deepHint` / `deepSearch` reworded to read as one sentence (“只筛选了已加载的内容，尝试深度搜索”)
+
 ## 0.7.0 (2026-11-10)
 
 ### Features

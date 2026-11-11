@@ -1114,58 +1114,106 @@ describe('FileList deep search', () => {
     '/Locked': [file('target-2.pdf')],
   }
   const names = (wrapper: VueWrapper) =>
-    wrapper.findAll('.fl-row:not(.fl-head):not(.fl-more):not(.fl-deep)').map((item) => item.find('.fl-name').text())
-  const deepRow = (wrapper: VueWrapper) => wrapper.find('.fl-deep')
+    wrapper.findAll('.fl-row:not(.fl-head):not(.fl-more)').map((item) => item.find('.fl-name').text())
+  const status = (wrapper: VueWrapper) => wrapper.find('.fl-deep')
+  const filter = (wrapper: VueWrapper, value: string) => wrapper.find('.fl-search input').setValue(value)
 
-  it('loads the unloaded folders and shows matches in place', async () => {
+  it('offers deep search, then shows matches and locked folders in place', async () => {
     const { calls } = mockOpenList(tree, { '/Locked': 'pw' })
     const wrapper = mountList({ path: '/' })
     await flushPromises()
-    await wrapper.find('.fl-search input').setValue('target')
+    await filter(wrapper, 'target')
     expect(names(wrapper)).toEqual([])
-    expect(deepRow(wrapper).text()).toContain('只筛选了已加载的内容')
+    expect(status(wrapper).text()).toBe('只筛选了已加载的内容，尝试深度搜索')
 
-    await deepRow(wrapper).find('.fl-more-btn').trigger('click')
+    await status(wrapper).find('.fl-deep-link').trigger('click')
     await flushPromises()
-    expect(names(wrapper)).toEqual(['A', 'B', 'C', 'target-1.pdf'])
+    // Matches in their folders, and the locked folder that could hide more.
+    expect(names(wrapper)).toEqual(['A', 'B', 'C', 'target-1.pdf', 'Locked'])
     expect(row(wrapper, 'target-1.pdf').find('.fl-hit').text()).toBe('target')
-    expect(deepRow(wrapper).text()).toBe('已搜索全部 4 个文件夹 · 跳过 1 个加密文件夹')
-    // Locked folder skipped quietly: no toast, no prompt.
+    expect(row(wrapper, 'Locked').classes()).toContain('fl-row-locked')
+    expect(row(wrapper, 'Locked').find('.fl-locked-hint').text()).toBe('未搜索（需要密码）')
+    expect(status(wrapper).text()).toBe('已搜索全部 4 个文件夹 · 跳过 1 个加密文件夹')
     expect(wrapper.find('.fl-toast').exists()).toBe(false)
     expect(wrapper.find('.fl-row-prompting').exists()).toBe(false)
 
-    // A match is a normal row: it can be selected.
     await check(wrapper, 'target-1.pdf')
     expect(wrapper.find('.fl-selection-count').text()).toBe('已选 1 项')
 
-    // Clearing the filter returns to the previous (collapsed) state, data kept.
+    // Clearing the filter returns to the previous state; data kept, mode left.
     const listed = calls.filter((call) => call.path === '/api/fs/list').length
-    await wrapper.find('.fl-search input').setValue('')
+    await filter(wrapper, '')
     expect(names(wrapper)).toEqual(['A', 'Locked', 'readme.txt'])
-    expect(row(wrapper, 'Locked').classes()).toContain('fl-row-locked')
-    expect(deepRow(wrapper).exists()).toBe(false)
-    await wrapper.find('.fl-search input').setValue('target')
+    expect(status(wrapper).exists()).toBe(false)
+    await filter(wrapper, 'target')
     expect(names(wrapper)).toContain('target-1.pdf')
+    expect(names(wrapper)).not.toContain('Locked')
     expect(calls.filter((call) => call.path === '/api/fs/list')).toHaveLength(listed)
+  })
+
+  it('unlocking a folder in the results searches it at once', async () => {
+    mockOpenList(tree, { '/Locked': 'pw' })
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+    await filter(wrapper, 'target')
+    await status(wrapper).find('.fl-deep-link').trigger('click')
+    await flushPromises()
+
+    await row(wrapper, 'Locked').find('.fl-lock').trigger('click')
+    await row(wrapper, 'Locked').find('.fl-unlock-row input').setValue('pw')
+    await row(wrapper, 'Locked').find('.fl-unlock-row').trigger('submit')
+    await flushPromises()
+    expect(names(wrapper)).toContain('target-2.pdf')
+    expect(status(wrapper).text()).toBe('已搜索全部 4 个文件夹')
+  })
+
+  it('keeps deep search results across a refresh, without asking again', async () => {
+    const { calls } = mockOpenList(tree, { '/Locked': 'pw' })
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+    await filter(wrapper, 'target')
+    await status(wrapper).find('.fl-deep-link').trigger('click')
+    await flushPromises()
+
+    const before = calls.length
+    await wrapper.find('.fl-refresh').trigger('click')
+    await flushPromises()
+    expect(calls.length).toBeGreaterThan(before)
+    expect(names(wrapper)).toEqual(['A', 'B', 'C', 'target-1.pdf', 'Locked'])
+    expect(status(wrapper).find('.fl-deep-link').exists()).toBe(false)
+    expect(status(wrapper).text()).toContain('已搜索全部')
+  })
+
+  it('a new keyword in deep search mode needs no second click', async () => {
+    mockOpenList({ ...tree, '/A/B/C': [file('target-1.pdf'), dir('D')], '/A/B/C/D': [file('other-x.txt')] })
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+    await filter(wrapper, 'target')
+    await status(wrapper).find('.fl-deep-link').trigger('click')
+    await flushPromises()
+    await filter(wrapper, 'other')
+    await flushPromises()
+    expect(names(wrapper)).toContain('other-x.txt')
+    expect(status(wrapper).find('.fl-deep-link').exists()).toBe(false)
   })
 
   it('stops at deepSearchLimit and continues on request', async () => {
     mockOpenList(tree, { '/Locked': 'pw' })
     const wrapper = mountList({ path: '/', deepSearchLimit: 2 })
     await flushPromises()
-    await wrapper.find('.fl-search input').setValue('target')
-    await deepRow(wrapper).find('.fl-more-btn').trigger('click')
+    await filter(wrapper, 'target')
+    await status(wrapper).find('.fl-deep-link').trigger('click')
     await flushPromises()
-    expect(deepRow(wrapper).text()).toContain('已查找 2 个文件夹，还有未搜索的子目录')
+    expect(status(wrapper).text()).toBe('已查找 2 个文件夹，还有未搜索的子目录 · 跳过 1 个加密文件夹 · 继续')
     expect(names(wrapper)).not.toContain('target-1.pdf')
 
-    await deepRow(wrapper).find('.fl-more-btn').trigger('click')
+    await status(wrapper).find('.fl-deep-link').trigger('click')
     await flushPromises()
     expect(names(wrapper)).toContain('target-1.pdf')
-    expect(deepRow(wrapper).text()).toContain('已搜索全部 4 个文件夹')
+    expect(status(wrapper).text()).toContain('已搜索全部 4 个文件夹')
   })
 
-  it('can be stopped while running', async () => {
+  it('can be stopped, and then waits for Continue', async () => {
     mockOpenList(tree)
     const original = globalThis.fetch
     vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
@@ -1174,23 +1222,47 @@ describe('FileList deep search', () => {
     }))
     const wrapper = mountList({ path: '/' })
     await vi.waitFor(() => expect(names(wrapper)).toHaveLength(3))
-    await wrapper.find('.fl-search input').setValue('target')
-    await deepRow(wrapper).find('.fl-more-btn').trigger('click')
-    expect(deepRow(wrapper).text()).toContain('正在深度搜索')
+    await filter(wrapper, 'target')
+    await status(wrapper).find('.fl-deep-link').trigger('click')
+    expect(status(wrapper).text()).toContain('正在深度搜索')
 
-    await deepRow(wrapper).find('.fl-more-btn').trigger('click')
-    expect(deepRow(wrapper).text()).toContain('深度搜索')
-    expect(deepRow(wrapper).text()).not.toContain('正在')
+    await status(wrapper).find('.fl-deep-link').trigger('click')
+    expect(status(wrapper).text()).toContain('继续')
     await new Promise((resolve) => setTimeout(resolve, 200))
     await flushPromises()
     expect(names(wrapper)).not.toContain('target-1.pdf')
+    expect(status(wrapper).text()).toContain('继续')
   })
 
-  it('shows no deep row when everything is already loaded', async () => {
+  it('searches deep at once with deep-search="auto"', async () => {
+    mockOpenList(tree)
+    const wrapper = mountList({ path: '/', deepSearch: 'auto' })
+    await flushPromises()
+    await filter(wrapper, 'target')
+    await flushPromises()
+    expect(names(wrapper)).toContain('target-1.pdf')
+  })
+
+  it('shows no status line when everything is already loaded', async () => {
     mockOpenList({ '/': [file('a.txt'), file('b.txt')] })
     const wrapper = mountList({ path: '/' })
     await flushPromises()
-    await wrapper.find('.fl-search input').setValue('a')
-    expect(deepRow(wrapper).exists()).toBe(false)
+    await filter(wrapper, 'a')
+    expect(status(wrapper).exists()).toBe(false)
+  })
+
+  it('clears the filter with the × or Esc', async () => {
+    mockOpenList(tree)
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+    expect(wrapper.find('.fl-search-clear').exists()).toBe(false)
+    await filter(wrapper, 'target')
+    await wrapper.find('.fl-search-clear').trigger('click')
+    expect((wrapper.find('.fl-search input').element as HTMLInputElement).value).toBe('')
+    expect(names(wrapper)).toEqual(['A', 'Locked', 'readme.txt'])
+
+    await filter(wrapper, 'readme')
+    await wrapper.find('.fl-search input').trigger('keydown', { key: 'Escape' })
+    expect((wrapper.find('.fl-search input').element as HTMLInputElement).value).toBe('')
   })
 })

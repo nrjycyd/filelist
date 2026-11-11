@@ -102,6 +102,10 @@ export interface FileListLabels {
   deepContinue: string
   deepSkipped: string
   deepFailed: string
+  /** Beside a locked folder shown in deep search results. */
+  deepLocked: string
+  /** The × in the filter box. */
+  clearFilter: string
   /** Markdown / HTML preview: the source / rendered switch. */
   viewMode: string
   viewSource: string
@@ -181,6 +185,11 @@ export interface FileListProps {
    * Defaults to `500`.
    */
   deepSearchLimit?: number
+  /**
+   * `manual` (default): “Try deep search” starts deep search mode.
+   * `auto`: typing a keyword starts it at once (for small mounts).
+   */
+  deepSearch?: 'manual' | 'auto'
   /**
    * Browsers that must build the ZIP in memory (Firefox, Safari) ask first above
    * this many MB. Defaults to 500 (200 on touch devices); `0` never asks.
