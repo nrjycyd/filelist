@@ -6,9 +6,13 @@
 
 `vitepress-tuck` 从插件的依赖改为**可选的 peerDependency**。你的配置本来就从 `vitepress-tuck` 导入 `defineConfig`，通常已经直接安装了它；如果没有：
 
-```bash
-pnpm add -D vitepress-tuck
+::: npm-to
+
+```sh
+npm install -D vitepress-tuck
 ```
+
+:::
 
 普通 VitePress 站点（用 `enhanceAppWithFileList` 注册）不再安装 vitepress-tuck。
 

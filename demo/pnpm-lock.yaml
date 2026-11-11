@@ -11,9 +11,18 @@ importers:
       vitepress:
         specifier: ^2.0.0-alpha.21
         version: 2.0.0-alpha.21(postcss@8.5.32)
+      vitepress-plugin-field:
+        specifier: ^0.12.2
+        version: 0.12.2(rolldown@1.2.16)(vite@8.3.6)(vitepress@2.0.0-alpha.21(postcss@8.5.32))(vue@3.5.45)
       vitepress-plugin-filelist:
         specifier: file:..
         version: file:..(vitepress-tuck@0.12.2(rolldown@1.2.16)(vite@8.3.6)(vitepress@2.0.0-alpha.21(postcss@8.5.32))(vue@3.5.45))(vitepress@2.0.0-alpha.21(postcss@8.5.32))(vue@3.5.45)
+      vitepress-plugin-npm-to:
+        specifier: ^0.12.2
+        version: 0.12.2(rolldown@1.2.16)(vite@8.3.6)(vitepress@2.0.0-alpha.21(postcss@8.5.32))(vue@3.5.45)
+      vitepress-plugin-steps:
+        specifier: ^0.12.2
+        version: 0.12.2(rolldown@1.2.16)(vite@8.3.6)(vitepress@2.0.0-alpha.21(postcss@8.5.32))(vue@3.5.45)
       vitepress-tuck:
         specifier: ^0.12.2
         version: 0.12.2(rolldown@1.2.16)(vite@8.3.6)(vitepress@2.0.0-alpha.21(postcss@8.5.32))(vue@3.5.45)
@@ -281,6 +290,11 @@ packages:
   '@vue/shared@3.5.45':
     resolution: {integrity: sha512-ue9fgHmVNPlP7iW3+cxoBX/Cnlw53dHlVSw0JKGY6z1lObg8pHoj928M2nzG4/yVsMZ3NaRZ2s2z61uC16NDwQ==}
 
+  '@vueuse/core@14.4.0':
+    resolution: {integrity: sha512-X4WHz1HlCzCBoYXesUkifzzWBAcZgXG8Fi5iNPQg/epdzOB3gu8Fawj3hvuwYR1nGcXGnvxwYYcUC/71++svtQ==}
+    peerDependencies:
+      vue: ^3.5.0
+
   '@vueuse/core@15.0.0':
     resolution: {integrity: sha512-Zv67h5mrk7YHDJsRObx+DXaCBz6RKBUpxqLesJ+3xZNPG6yuQs7ja7kg3veFrrouYLWAqydQ7CwGEbLVxB43Ng==}
     engines: {node: '>=22'}
@@ -330,9 +344,17 @@ packages:
       universal-cookie:
         optional: true
 
+  '@vueuse/metadata@14.4.0':
+    resolution: {integrity: sha512-swx/255R6JyHZFJhx845iz5CRWDZdCfvkZOpACWc5+c5WHcG24mv8gUT1WIdFQaHt6dq79rvILd9QnCWiyVm9g==}
+
   '@vueuse/metadata@15.0.0':
     resolution: {integrity: sha512-sfWE5LADAKJ0KnjtGliMdSN8Ij/L7uP6rXIZlgPloAI4zvvefbw6H5Lt7KJA6RqQOYgVqWF5Guj50HHMIzygBg==}
     engines: {node: '>=22'}
+
+  '@vueuse/shared@14.4.0':
+    resolution: {integrity: sha512-JRgY90Sz8DDtPMsaDflvPMp9xYk69JZAmbuDvAquUVXKr2gEjqtzGNTTthLfckH0BzBqvnu31gb4a8TGLRe79g==}
+    peerDependencies:
+      vue: ^3.5.0
 
   '@vueuse/shared@15.0.0':
     resolution: {integrity: sha512-vbNXhGrbV53xPOMSyOzMHQRvhMgZf7oNDw2RChUetVxwTIEkInQ1joZ9JbT0G3z2n2AJNjvmCWeM9ySYrnvogA==}
@@ -344,6 +366,10 @@ packages:
     resolution: {integrity: sha512-oJlA3XiRm7Cyk6qFD2Jn8ak9B7jSy0qy00ADO3+8dpT0LSjFihQYv4C02LFCSYJV3Q37xYwwRy5m+IpIiUzqWw==}
     engines: {node: '>=0.4.0'}
     hasBin: true
+
+  ansis@4.5.0:
+    resolution: {integrity: sha512-KwIVkfFfJSSzBmZhDGuTmkhWqTdyB5oNVzzznBJbBZ5bZtHiqSrcugRF0RKJKT4Ss3d7ZrcjnlFVDlQNmtWfWw==}
+    engines: {node: '>=14'}
 
   argparse@2.0.1:
     resolution: {integrity: sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q==}
@@ -522,6 +548,9 @@ packages:
 
   mark.js@8.11.1:
     resolution: {integrity: sha512-1I+1qpDt4idfgLQG+BNWmrqku+7/2bi5nLf4YwF8y8zXvmfiTBY3PV3ZibfrjBueCByROpuBjLLFCajqkgYoLQ==}
+
+  markdown-it-container@4.0.0:
+    resolution: {integrity: sha512-HaNccxUH0l7BNGYbFbjmGpf5aLHAMTinqRZQAEQbMr2cdD3z91Q6kIo1oUn1CQndkT03jat6ckrdRYuwwqLlQw==}
 
   markdown-it@14.3.3:
     resolution: {integrity: sha512-L//tDAkjTjJCU6pBUSBTgs3Kg4InVaZuUZog/b6V12UKhcDQ7S78877ibbCanRExwPuYP1CZD7Gd2dxSy1GXRg==}
@@ -764,6 +793,12 @@ packages:
       yaml:
         optional: true
 
+  vitepress-plugin-field@0.12.2:
+    resolution: {integrity: sha512-oBQAPz8tUpqqM9/CiUj6FYn1kzBNRCqwha9aZ5ctPKbBLPC5iMrvT+ygDzKk3wbNnzuhHKYFCNfezQufQykOuA==}
+    peerDependencies:
+      vitepress: ^2.0.0-alpha.18
+      vue: ^3.5.0
+
   vitepress-plugin-filelist@file:..:
     resolution: {directory: .., type: directory}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -774,6 +809,24 @@ packages:
     peerDependenciesMeta:
       vitepress-tuck:
         optional: true
+
+  vitepress-plugin-npm-to@0.12.2:
+    resolution: {integrity: sha512-asoJHPCJYRl1wNijJjS1In/kDFrBSJ903p/7rRxdEerfWXe36PNopRlWBsO18XuD2OydzSZgw545/AuDOFMPCg==}
+    peerDependencies:
+      vitepress: ^2.0.0-alpha.18
+      vue: ^3.5.0
+
+  vitepress-plugin-steps@0.12.2:
+    resolution: {integrity: sha512-Q+iNzbA/nyb073hUBKvpyvGB0DKiPdAVeDd4cd+VLunIYD47SsazS2CW6BBcXZedUAWwer2204h/VydCgAUjzA==}
+    peerDependencies:
+      vitepress: ^2.0.0-alpha.18
+      vue: ^3.5.0
+
+  vitepress-plugin-toolkit@0.12.2:
+    resolution: {integrity: sha512-BW45EdzzPUtur+eF9Z6AkW3JTov773vNh4kDR0mvvNXEBz8FRySgFtU6SVWLXoAlbqd7SjbWC707z5T5D4esxQ==}
+    peerDependencies:
+      vitepress: ^2.0.0-alpha.18
+      vue: ^3.5.0
 
   vitepress-tuck@0.12.2:
     resolution: {integrity: sha512-r9nmTzCAkZGa+IWbd2cCWQ4RtdDPzIm+gwAD777E5Ge7a3dpLouDdbOBVIs/7gYlauyNYCg3nZF4HHvgueg9kw==}
@@ -1047,6 +1100,13 @@ snapshots:
 
   '@vue/shared@3.5.45': {}
 
+  '@vueuse/core@14.4.0(vue@3.5.45)':
+    dependencies:
+      '@types/web-bluetooth': 0.0.21
+      '@vueuse/metadata': 14.4.0
+      '@vueuse/shared': 14.4.0(vue@3.5.45)
+      vue: 3.5.45
+
   '@vueuse/core@15.0.0(vue@3.5.45)':
     dependencies:
       '@types/web-bluetooth': 0.0.21
@@ -1062,13 +1122,21 @@ snapshots:
     optionalDependencies:
       focus-trap: 8.2.4
 
+  '@vueuse/metadata@14.4.0': {}
+
   '@vueuse/metadata@15.0.0': {}
+
+  '@vueuse/shared@14.4.0(vue@3.5.45)':
+    dependencies:
+      vue: 3.5.45
 
   '@vueuse/shared@15.0.0(vue@3.5.45)':
     dependencies:
       vue: 3.5.45
 
   acorn@8.19.0: {}
+
+  ansis@4.5.0: {}
 
   argparse@2.0.1: {}
 
@@ -1211,6 +1279,8 @@ snapshots:
       '@jridgewell/sourcemap-codec': 1.6.0
 
   mark.js@8.11.1: {}
+
+  markdown-it-container@4.0.0: {}
 
   markdown-it@14.3.3:
     dependencies:
@@ -1453,6 +1523,26 @@ snapshots:
     optionalDependencies:
       fsevents: 2.3.3
 
+  vitepress-plugin-field@0.12.2(rolldown@1.2.16)(vite@8.3.6)(vitepress@2.0.0-alpha.21(postcss@8.5.32))(vue@3.5.45):
+    dependencies:
+      '@pengzhanbo/utils': 3.12.0
+      vitepress: 2.0.0-alpha.21(postcss@8.5.32)
+      vitepress-plugin-toolkit: 0.12.2(vitepress@2.0.0-alpha.21(postcss@8.5.32))(vue@3.5.45)
+      vitepress-tuck: 0.12.2(rolldown@1.2.16)(vite@8.3.6)(vitepress@2.0.0-alpha.21(postcss@8.5.32))(vue@3.5.45)
+      vue: 3.5.45
+    transitivePeerDependencies:
+      - '@farmfe/core'
+      - '@nuxt/kit'
+      - '@rsbuild/core'
+      - '@rspack/core'
+      - bun-types-no-globals
+      - esbuild
+      - rolldown
+      - rollup
+      - unloader
+      - vite
+      - webpack
+
   vitepress-plugin-filelist@file:..(vitepress-tuck@0.12.2(rolldown@1.2.16)(vite@8.3.6)(vitepress@2.0.0-alpha.21(postcss@8.5.32))(vue@3.5.45))(vitepress@2.0.0-alpha.21(postcss@8.5.32))(vue@3.5.45):
     dependencies:
       client-zip: 2.5.1
@@ -1462,6 +1552,56 @@ snapshots:
       vue: 3.5.45
     optionalDependencies:
       vitepress-tuck: 0.12.2(rolldown@1.2.16)(vite@8.3.6)(vitepress@2.0.0-alpha.21(postcss@8.5.32))(vue@3.5.45)
+
+  vitepress-plugin-npm-to@0.12.2(rolldown@1.2.16)(vite@8.3.6)(vitepress@2.0.0-alpha.21(postcss@8.5.32))(vue@3.5.45):
+    dependencies:
+      '@pengzhanbo/utils': 3.12.0
+      ansis: 4.5.0
+      vitepress: 2.0.0-alpha.21(postcss@8.5.32)
+      vitepress-plugin-toolkit: 0.12.2(vitepress@2.0.0-alpha.21(postcss@8.5.32))(vue@3.5.45)
+      vitepress-tuck: 0.12.2(rolldown@1.2.16)(vite@8.3.6)(vitepress@2.0.0-alpha.21(postcss@8.5.32))(vue@3.5.45)
+      vue: 3.5.45
+    transitivePeerDependencies:
+      - '@farmfe/core'
+      - '@nuxt/kit'
+      - '@rsbuild/core'
+      - '@rspack/core'
+      - bun-types-no-globals
+      - esbuild
+      - rolldown
+      - rollup
+      - unloader
+      - vite
+      - webpack
+
+  vitepress-plugin-steps@0.12.2(rolldown@1.2.16)(vite@8.3.6)(vitepress@2.0.0-alpha.21(postcss@8.5.32))(vue@3.5.45):
+    dependencies:
+      vitepress: 2.0.0-alpha.21(postcss@8.5.32)
+      vitepress-plugin-toolkit: 0.12.2(vitepress@2.0.0-alpha.21(postcss@8.5.32))(vue@3.5.45)
+      vitepress-tuck: 0.12.2(rolldown@1.2.16)(vite@8.3.6)(vitepress@2.0.0-alpha.21(postcss@8.5.32))(vue@3.5.45)
+      vue: 3.5.45
+    transitivePeerDependencies:
+      - '@farmfe/core'
+      - '@nuxt/kit'
+      - '@rsbuild/core'
+      - '@rspack/core'
+      - bun-types-no-globals
+      - esbuild
+      - rolldown
+      - rollup
+      - unloader
+      - vite
+      - webpack
+
+  vitepress-plugin-toolkit@0.12.2(vitepress@2.0.0-alpha.21(postcss@8.5.32))(vue@3.5.45):
+    dependencies:
+      '@pengzhanbo/utils': 3.12.0
+      '@vueuse/core': 14.4.0(vue@3.5.45)
+      ansis: 4.5.0
+      markdown-it-container: 4.0.0
+      picomatch: 4.0.7
+      vitepress: 2.0.0-alpha.21(postcss@8.5.32)
+      vue: 3.5.45
 
   vitepress-tuck@0.12.2(rolldown@1.2.16)(vite@8.3.6)(vitepress@2.0.0-alpha.21(postcss@8.5.32))(vue@3.5.45):
     dependencies:

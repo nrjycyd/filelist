@@ -2,18 +2,25 @@
 
 ## 安装
 
-```bash
-pnpm add -D vitepress-plugin-filelist
-# 或：npm i -D vitepress-plugin-filelist
+::: npm-to
+
+```sh
+npm install -D vitepress-plugin-filelist
 ```
+
+:::
 
 ## 在 vitepress-tuck 中使用
 
 需要 VitePress 2，并自行安装 [vitepress-tuck](https://github.com/pengzhanbo/vitepress-tuck)（它是本插件的可选依赖）：
 
-```bash
-pnpm add -D vitepress-tuck
+::: npm-to
+
+```sh
+npm install -D vitepress-tuck
 ```
+
+:::
 
 ```ts
 // .vitepress/config.ts

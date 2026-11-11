@@ -68,7 +68,9 @@ pnpm install
 pnpm run build
 ```
 
-文档站在 `demo/docs`，推送到 main 后由 GitHub Actions 部署到 GitHub Pages：
+文档站在 `demo/docs`：中文在根目录，英文在 `demo/docs/en/`（导航、侧栏与界面文字在 `en/config.ts`）。改动中文页面时，有英文版的（快速开始、接入 OpenList、安全与权限、组件属性、首页）一起更新。Markdown 可用 vitepress-tuck 的扩展：`::: npm-to`（安装命令）、`:::: steps`（分步，内部还有容器时外层用四个冒号）、`::: field`（属性）。README 同理：`README.md` 英文、`README.zh-CN.md` 中文。
+
+推送到 main 后由 GitHub Actions 部署到 GitHub Pages：
 
 ```bash
 cd demo
