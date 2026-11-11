@@ -32,6 +32,8 @@ COMPAT_VITEPRESS=latest,next pnpm test:compat   # 也可以用 npm dist-tag
 - `.github/dependabot.yml`：每天检查文档站（`demo/`）、每周检查根目录的 vitepress / vitepress-tuck / vue，有新版本就开 PR，CI 全部通过后合并，文档站随之用上新版本
 - `VitePress canary` 工作流：每天查一次 npm 上 `latest`、`next` 两个 dist-tag 对应的 VitePress 和最新 Vue 的版本号；这组版本已经测过就直接结束（几秒，不安装），有新版本才跑 `test:compat`，失败时发邮件。手动运行时勾选 force 可强制重测
 
+包体积：`src/client/__tests__/size.spec.ts` 检查构建产物的 gzip 大小（浏览器包 42 KB、样式 8 KB、Node 入口 1 KB），并确认 markdown-it、DOMPurify、client-zip 仍是按需加载。CI 和发布流程先构建再测试，所以超出预算会直接失败；本地先 `pnpm run build`，否则这组测试跳过。确需增大预算时，在同一个改动里调整并写明原因。
+
 公开接口只有组件、`enhanceAppWithFileList`、文案工具与 `FileList*` 类型（`src/client/__tests__/publicApi.spec.ts` 守着这份清单）。新增导出或文案 key 前先想清楚：1.0 之后删除即是主版本。
 
 源码结构（`src/client`）：
@@ -72,6 +74,33 @@ pnpm run build
 cd demo
 pnpm run dev         # 本地预览文档站
 ```
+
+## 发版前回归（真实 OpenList）
+
+自动测试连接的是模拟 OpenList（`e2e/mock-openlist.mjs`）和演示数据。下面这些只有真实部署才能验证：签名链接与 `raw_url`、跨域、OpenList 的 iframe 预览设置、真实大文件的 ZIP、iPhone Safari。发 `rc` 和正式版前，在自己的 OpenList-Worker 上走一遍。
+
+准备：
+
+- guest 已启用、基础路径限定在测试目录；目录里有一个带密码的子目录、一个超过 `pageSize` 的长目录、几种可预览的文件（图片、视频、音频、PDF、Markdown、HTML、文本），以及几百 MB 的大文件
+- OpenList-Worker 的 `ALLOW_URLS` 包含 `http://localhost:5173`
+- 在 `demo/docs` 里临时加一页（不要提交）：`<FileList base="https://你的地址" path="/测试目录" />`，以及一个 `sources` 多根挂载的例子；`pnpm --dir demo run dev` 打开
+
+| # | 项目 | 怎么验 |
+| --- | --- | --- |
+| 1 | 加载 | 单路径、多根挂载、单个文件作为根，都能列出；标题回退为站点名 |
+| 2 | 目录密码 | 行内输入，错误提示，勾选“记住”后刷新页面仍有效，“忘记”后重新询问 |
+| 3 | 预览 | 每种类型都能打开；PDF 走 OpenList 的 iframe 预览设置；Markdown 渲染与源码切换；HTML 在沙箱里，脚本不执行；← / → 切换 |
+| 4 | 单文件下载 | 文件名正确，不跳转页面 |
+| 5 | ZIP（Chrome / Edge） | 选择保存位置后边下边写，大文件不占内存；中途取消 |
+| 6 | ZIP（Firefox / Safari） | 超过 `zipWarnSize` 先确认，超过 `zipMaxSize` 拒绝；解压后目录结构与带密码子目录内的文件正确 |
+| 7 | 深度搜索 | 手动开始、继续、停止；加锁目录被跳过并提示；`deep-search="auto"` |
+| 8 | 长目录 | 再显示、全部显示、吸顶行“收起” |
+| 9 | 刷新 | 展开的目录和勾选保留 |
+| 10 | 失败提示 | 临时从 `ALLOW_URLS` 去掉 localhost：出现跨域提示；关闭 guest：出现 guest 提示 |
+| 11 | 手机 | iPhone Safari：窄布局、吸附操作条、预览、下载、ZIP |
+| 12 | 暗色 | 切换 VitePress 暗色主题，各状态颜色正常 |
+
+结果记在发版记录里（日期、OpenList-Worker 版本、浏览器版本、未通过的项）。
 
 ## 发布
 
