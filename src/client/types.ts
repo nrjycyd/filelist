@@ -142,6 +142,10 @@ export interface FileListLabels {
   showAll: string
   /** Fewer than a page left. `{count}` */
   showRest: string
+  /** Back to the first page. */
+  showLess: string
+  /** Last row once everything is shown. `{count}` */
+  allShown: string
 }
 
 export interface FileListSource {
@@ -176,7 +180,7 @@ export interface FileListProps {
    */
   rememberPassword?: boolean
   /**
-   * Rows shown per folder before “Show more”. Defaults to `200`; `0` shows
+   * Rows shown per folder before “Show more”. Defaults to `15`; `0` shows
    * everything. Data is still loaded in full; only rendering is limited.
    */
   pageSize?: number

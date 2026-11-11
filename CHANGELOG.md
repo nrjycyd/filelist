@@ -6,6 +6,12 @@
 
 - Demo data (no `base`) now has a “示例文件” folder of small real files (Markdown, HTML, SVG, PDF, text): they preview, download and zip for real, served as blob: URLs; other demo files still only describe what would happen. Also a 260-file folder for trying “show more”
 
+- Long folders can go back: once more than the first page is shown, the last row offers “Show less” (收起), and stays as “{count} items · Show less” after “Show all” instead of disappearing. If the folder's row has scrolled off screen, it is brought back into view. Closing a folder with its arrow also resets it to the first page. New labels `showLess`, `allShown`
+
+### Changes
+
+- `pageSize` now defaults to 15 (was 200), so lists in articles stay short; set `:page-size="200"` for the old behaviour
+
 ### Docs
 
 - The demo site is now the documentation site, with a sidebar, local search, the version in the nav and a live example on each feature page

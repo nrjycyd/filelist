@@ -949,11 +949,34 @@ describe('FileList long folders', () => {
 
     await wrapper.findAll('.fl-more-btn')[0].trigger('click')
     expect(names(wrapper)).toHaveLength(6)
-    expect(wrapper.findAll('.fl-more-btn').map((button) => button.text())).toEqual(['显示剩余 2 项'])
+    expect(wrapper.findAll('.fl-more-btn').map((button) => button.text())).toEqual(['显示剩余 2 项', '收起'])
 
     await wrapper.find('.fl-more-btn').trigger('click')
     expect(names(wrapper)).toHaveLength(8)
-    expect(wrapper.find('.fl-more').exists()).toBe(false)
+    // The row stays, so the list can go back to its first page.
+    expect(wrapper.find('.fl-more-count').text()).toBe('共 8 项')
+    expect(wrapper.findAll('.fl-more-btn').map((button) => button.text())).toEqual(['收起'])
+
+    await wrapper.find('.fl-more-less').trigger('click')
+    await flushPromises()
+    expect(names(wrapper)).toEqual(['f01.txt', 'f02.txt', 'f03.txt'])
+    expect(wrapper.findAll('.fl-more-btn').map((button) => button.text())).toEqual(['显示更多 3 项', '全部显示'])
+  })
+
+  it('starts a folder from its first page again once it is closed', async () => {
+    mockOpenList({ '/': [dir('A')], '/A': many(5) })
+    const wrapper = mountList({ path: '/', pageSize: 2 })
+    await flushPromises()
+    await row(wrapper, 'A').find('.fl-arrow').trigger('click')
+    await flushPromises()
+    await wrapper.find('.fl-more-all').trigger('click')
+    expect(names(wrapper)).toHaveLength(1 + 5)
+
+    await row(wrapper, 'A').find('.fl-arrow').trigger('click')
+    await row(wrapper, 'A').find('.fl-arrow').trigger('click')
+    await flushPromises()
+    expect(names(wrapper)).toHaveLength(1 + 2)
+    expect(wrapper.find('.fl-more-count').text()).toBe('还有 3 项')
   })
 
   it('limits each folder on its own and keeps the count across a refresh', async () => {
@@ -963,8 +986,11 @@ describe('FileList long folders', () => {
     await wrapper.findAll('.fl-more-btn')[1].trigger('click')
     await row(wrapper, 'A').find('.fl-arrow').trigger('click')
     await flushPromises()
-    expect(wrapper.findAll('.fl-more')).toHaveLength(1)
-    expect(wrapper.find('.fl-more').attributes('style')).toContain('--fl-depth: 1')
+    // A's own row, and the top level's (all shown, so only “show less”).
+    const more = wrapper.findAll('.fl-more')
+    expect(more).toHaveLength(2)
+    expect(more[0].attributes('style')).toContain('--fl-depth: 1')
+    expect(more[1].find('.fl-more-count').text()).toBe('共 5 项')
 
     await wrapper.find('.fl-refresh').trigger('click')
     await flushPromises()

@@ -112,22 +112,38 @@ test('refresh keeps the rows and open folders', async ({ page }) => {
   await expect(list(page).locator('.fl-more')).toBeVisible()
 })
 
-test('long folders show a page, then more, then the rest', async ({ page }, info) => {
+test('long folders show a page, then more, then the rest, and go back', async ({ page }, info) => {
   await open(page)
   await opener(row(page, 'photos')).click()
   const files = list(page).locator('.fl-row:not(.fl-head):not(.fl-more):not(.fl-row-dir)')
   const more = list(page).locator('.fl-more')
-  await expect(more).toContainText('还有 250 项')
+  await expect(more).toContainText('还有 435 项')
   expect((await box(more)).height).toBe(rowHeight(info))
   const fileCount = async () => (await files.count()) - 4 // big-a, big-b, broken, notes
-  expect(await fileCount()).toBe(200)
+  expect(await fileCount()).toBe(15)
 
   await more.locator('.fl-more-btn').first().click()
-  expect(await fileCount()).toBe(400)
-  await expect(more.locator('.fl-more-btn')).toHaveText(['显示剩余 50 项'])
-  await more.locator('.fl-more-btn').click()
+  expect(await fileCount()).toBe(30)
+  await expect(more.locator('.fl-more-btn')).toHaveCount(3)
+  // Three buttons still fit in the row on a phone.
+  const card = await box(list(page))
+  const widest = await more.evaluate((el) => Math.max(...[...el.querySelectorAll('button')].map((b) => b.getBoundingClientRect().right)))
+  expect(widest).toBeLessThanOrEqual(card.x + card.width + 1)
+  expect((await box(more)).height).toBe(rowHeight(info))
+
+  await more.locator('.fl-more-all').first().click()
   expect(await fileCount()).toBe(450)
-  await expect(more).toHaveCount(0)
+  await expect(more.locator('.fl-more-count')).toHaveText('共 450 项')
+  await expect(more.locator('.fl-more-btn')).toHaveText(['收起'])
+
+  // From the bottom of the long list, “show less” brings the folder back into view.
+  await more.scrollIntoViewIfNeeded()
+  await more.locator('.fl-more-less').click()
+  expect(await fileCount()).toBe(15)
+  await expect(more).toContainText('还有 435 项')
+  const folder = await box(row(page, 'photos'))
+  expect(folder.y).toBeGreaterThanOrEqual(0)
+  expect(folder.y + folder.height).toBeLessThanOrEqual(page.viewportSize()!.height)
 })
 
 test('a single download stays on the page and the toast is on screen', async ({ page, context }) => {

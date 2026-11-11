@@ -9,7 +9,7 @@
 | `token` | `string` | `''` | 可选只读 token；不传则以游客身份请求 |
 | `password` | `string` | `''` | 目录密码，也可以在运行时输入 |
 | `rememberPassword` | `boolean` | `true` | 输入密码时是否提供“在此标签页中记住”开关；`false` 时不写入 sessionStorage |
-| `pageSize` | `number` | `200` | 每个文件夹先显示的条数，之后显示“显示更多 / 全部显示”；`0` 全部显示 |
+| `pageSize` | `number` | `15` | 每个文件夹先显示的条数，之后显示“显示更多 / 全部显示 / 收起”；`0` 全部显示 |
 | `deepSearchLimit` | `number` | `500` | 深度搜索每次最多读取的文件夹数，之后可“继续” |
 | `deepSearch` | `'manual' \| 'auto'` | `'manual'` | `auto`：输入关键词即自动深度搜索（适合挂载目录不大的站点） |
 | `zipWarnSize` | `number` | `500`（触屏 `200`） | 需在内存中打包的浏览器（Firefox、Safari）超过该大小（MB）先确认；`0` 不提示 |
