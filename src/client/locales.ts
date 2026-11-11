@@ -97,7 +97,9 @@ export const fileListLocales: Record<FileListLocale, FileListLabels> = {
     showAll: '全部显示',
     showRest: '显示剩余 {count} 项',
     showLess: '收起',
-    allShown: '共 {count} 项',
+    allShown: '已显示全部 {count} 项',
+    moreShown: '已显示 {shown} / {total} 项',
+    showAllShort: '全部',
   },
   'en-US': {
     allFiles: 'All files',
@@ -195,7 +197,9 @@ export const fileListLocales: Record<FileListLocale, FileListLabels> = {
     showAll: 'Show all',
     showRest: 'Show the remaining {count}',
     showLess: 'Show less',
-    allShown: '{count} items',
+    allShown: 'All {count} shown',
+    moreShown: 'Showing {shown} of {total}',
+    showAllShort: 'All',
   },
 }
 

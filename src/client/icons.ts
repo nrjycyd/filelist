@@ -9,6 +9,8 @@ export const ICONS = {
   search: { stroke: 2, paths: ['M4 11a7 7 0 1 0 14 0a7 7 0 1 0-14 0', 'm20 20-3.5-3.5'] },
   next: { stroke: 2.2, paths: ['m9 6 6 6-6 6'] },
   previous: { stroke: 2.2, paths: ['m15 6-6 6 6 6'] },
+  down: { stroke: 2.4, paths: ['m6 9 6 6 6-6'] },
+  up: { stroke: 2.4, paths: ['m18 15-6-6-6 6'] },
   zoomIn: { stroke: 2, paths: ['M4 11a7 7 0 1 0 14 0a7 7 0 1 0-14 0', 'm20 20-3.5-3.5', 'M11 8v6M8 11h6'] },
   zoomOut: { stroke: 2, paths: ['M4 11a7 7 0 1 0 14 0a7 7 0 1 0-14 0', 'm20 20-3.5-3.5', 'M8 11h6'] },
 } as const

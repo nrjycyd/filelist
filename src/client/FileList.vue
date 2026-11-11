@@ -476,6 +476,7 @@ interface MoreRow {
   depth: number
   remaining: number
   total: number
+  shown: number
   /** More than the first page is shown. */
   canLess: boolean
 }
@@ -494,13 +495,18 @@ function limitOf(key: string): number {
   return size ? (shown.get(key) ?? size) : Number.POSITIVE_INFINITY
 }
 
+/** When the list last grew: “show less” lands where “show all” was, so a double click must not undo it. */
+let grewAt = 0
+
 function showMore(row: MoreRow, all: boolean) {
   const size = Math.max(1, pageSizeOf())
   shown.set(row.key, all ? Number.POSITIVE_INFINITY : limitOf(row.key) + size)
+  grewAt = Date.now()
 }
 
 /** Back to the first page; the folder's row (or the list's top) comes back into view. */
 async function showLess(row: MoreRow) {
+  if (Date.now() - grewAt < 500) return
   shown.delete(row.key)
   await nextTick()
   const root = rootEl.value
@@ -534,7 +540,7 @@ const rows = computed<Row[]>(() => {
     }
     const canLess = !query && size > 0 && limit > size
     if (limit < list.length || canLess) {
-      out.push({ more: true, key, depth, remaining: list.length - limit, total: list.length, canLess })
+      out.push({ more: true, key, depth, remaining: list.length - limit, total: list.length, shown: limit, canLess })
     }
   }
   walk(roots.value, props.sources.length ? '' : props.path, 0)
@@ -1196,22 +1202,42 @@ onBeforeUnmount(() => {
       <span class="fl-cell fl-cell-check"></span>
       <span class="fl-cell fl-more-cell">
         <span class="fl-indent" aria-hidden="true"></span>
-        <span class="fl-more-count">
-          {{ node.remaining ? t('moreRemaining', { count: node.remaining }) : t('allShown', { count: node.total }) }}
+        <!--
+          Left: how much of the folder is shown. Right: less (set apart), then more and all.
+          “Less” comes first so “more” does not move under the pointer when it appears.
+        -->
+        <span class="fl-more-progress">
+          <span class="fl-more-bar" aria-hidden="true">
+            <span :style="{ width: `${(node.shown / node.total) * 100}%` }"></span>
+          </span>
+          <span v-if="node.remaining" class="fl-more-count">
+            <span class="fl-more-long">{{ t('moreShown', { shown: node.shown, total: node.total }) }}</span>
+            <span class="fl-more-short" aria-hidden="true"><strong>{{ node.shown }}</strong> / {{ node.total }}</span>
+          </span>
+          <span v-else class="fl-more-count">
+            <span class="fl-more-long">{{ t('allShown', { count: node.total }) }}</span>
+            <span class="fl-more-short" aria-hidden="true"><strong>{{ node.total }}</strong> / {{ node.total }}</span>
+          </span>
         </span>
-        <template v-if="!node.remaining"></template>
-        <template v-else-if="node.remaining > (pageSize || 0)">
-          <button class="fl-more-btn" type="button" @click="showMore(node, false)">
-            {{ t('showMore') }}<span class="fl-more-page">{{ ` ${t('folderItems', { count: pageSize })}` }}</span>
+        <span class="fl-more-actions">
+          <button v-if="node.canLess" class="fl-more-btn fl-more-less" type="button" @click="showLess(node)">
+            {{ t('showLess') }}<Icon name="up" :size="12" />
           </button>
-          <button class="fl-more-btn fl-more-all" type="button" @click="showMore(node, true)">{{ t('showAll') }}</button>
-        </template>
-        <button v-else class="fl-more-btn" type="button" @click="showMore(node, true)">
-          {{ t('showRest', { count: node.remaining }) }}
-        </button>
-        <button v-if="node.canLess" class="fl-more-btn fl-more-less" type="button" @click="showLess(node)">
-          {{ t('showLess') }}
-        </button>
+          <span v-if="node.canLess && node.remaining" class="fl-more-sep" aria-hidden="true"></span>
+          <template v-if="node.remaining > (pageSize || 0)">
+            <button class="fl-more-btn" type="button" @click="showMore(node, false)">
+              {{ t('showMore') }}<span class="fl-more-page">{{ ` ${t('folderItems', { count: pageSize })}` }}</span>
+              <Icon name="down" :size="12" />
+            </button>
+            <button class="fl-more-btn fl-more-all" type="button" :aria-label="t('showAll')" @click="showMore(node, true)">
+              <span class="fl-more-long">{{ t('showAll') }}</span>
+              <span class="fl-more-short" aria-hidden="true">{{ t('showAllShort') }}</span>
+            </button>
+          </template>
+          <button v-else-if="node.remaining" class="fl-more-btn" type="button" @click="showMore(node, true)">
+            {{ t('showRest', { count: node.remaining }) }}<Icon name="down" :size="12" />
+          </button>
+        </span>
       </span>
     </div>
     <div
