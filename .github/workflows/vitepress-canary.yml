@@ -1,0 +1,70 @@
+name: VitePress canary
+
+# Once a day, look up the newest VitePress releases on npm (dist-tags
+# `latest` and `next`) and Vue. If this exact set already passed, stop there
+# (a few seconds, no install). Otherwise install them into fresh sites with
+# the plugin and check them in a browser (scripts/compat.mjs). A failure means
+# a new release broke something; GitHub emails the repository owner about
+# failed scheduled runs. Run it by hand with "force" to test again anyway.
+on:
+  schedule:
+    - cron: '17 1 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Test even if these versions already passed
+        type: boolean
+        default: false
+
+jobs:
+  versions:
+    runs-on: ubuntu-latest
+    outputs:
+      vitepress: ${{ steps.npm.outputs.vitepress }}
+      key: ${{ steps.npm.outputs.key }}
+      tested: ${{ steps.seen.outputs.cache-hit }}
+    steps:
+      - name: Newest versions on npm
+        id: npm
+        run: |
+          latest=$(npm view vitepress@latest version)
+          next=$(npm view vitepress@next version)
+          vue=$(npm view vue@latest version)
+          versions=$(printf '%s\n%s\n' "$latest" "$next" | sort -u | paste -sd, -)
+          echo "vitepress=$versions" >> "$GITHUB_OUTPUT"
+          echo "key=vitepress-canary-${versions//,/-}-vue-$vue" >> "$GITHUB_OUTPUT"
+          echo "VitePress $versions, Vue $vue" >> "$GITHUB_STEP_SUMMARY"
+      - name: Already passed?
+        id: seen
+        if: ${{ !inputs.force }}
+        uses: actions/cache/restore@v4
+        with:
+          path: .canary-passed
+          key: ${{ steps.npm.outputs.key }}
+          lookup-only: true
+      - if: steps.seen.outputs.cache-hit == 'true'
+        run: echo "Already passed with these versions, skipped." >> "$GITHUB_STEP_SUMMARY"
+
+  canary:
+    needs: versions
+    if: needs.versions.outputs.tested != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:compat
+        env:
+          # The exact versions looked up above, so what passed matches the key.
+          COMPAT_VITEPRESS: ${{ needs.versions.outputs.vitepress }}
+      # Reached only when the test passed: remember this set of versions.
+      - run: echo "${{ needs.versions.outputs.key }}" > .canary-passed
+      - uses: actions/cache/save@v4
+        with:
+          path: .canary-passed
+          key: ${{ needs.versions.outputs.key }}

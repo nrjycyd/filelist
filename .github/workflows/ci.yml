@@ -25,6 +25,20 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm run build
 
+  # Plain VitePress 1.6 and 2.x sites with the packed plugin (scripts/compat.mjs).
+  compat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:compat
+
   # Browser tests: the fixture site in demo/e2e against a mock OpenList.
   e2e:
     runs-on: ubuntu-latest
