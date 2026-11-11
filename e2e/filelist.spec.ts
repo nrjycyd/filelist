@@ -276,16 +276,54 @@ test('HTML renders in a script-less sandbox', async ({ page }) => {
 test('deep search finds files in folders that were never opened, in place', async ({ page }) => {
   await open(page)
   await list(page).locator('.fl-search input').fill('needle')
-  const deep = list(page).locator('.fl-deep')
-  await expect(deep).toContainText('只筛选了已加载的内容')
-  await deep.locator('.fl-more-btn').click()
+  const status = list(page).locator('.fl-deep')
+  await expect(status).toHaveText('只筛选了已加载的内容，尝试深度搜索')
+  await status.locator('.fl-deep-link').click()
 
   await expect(row(page, 'needle-report.pdf')).toBeVisible()
   for (const folder of ['deep', 'a', 'b']) await expect(row(page, folder)).toBeVisible()
-  // The root "Locked" and "deep/Locked deep" are skipped without prompting.
-  await expect(deep).toContainText('跳过 2 个加密文件夹')
+  // Locked folders that may hide matches are shown, locked, without prompting.
+  await expect(status).toContainText('跳过 2 个加密文件夹')
+  await expect(row(page, 'Locked deep')).toHaveClass(/fl-row-locked/)
   await expect(list(page).locator('.fl-row-prompting')).toHaveCount(0)
-  await expect(row(page, 'needle-secret.pdf')).toHaveCount(0)
   await check(page, 'needle-report.pdf')
   await expect(list(page).locator('.fl-selection-count')).toHaveText('已选 1 项')
+})
+
+test('deep search survives a refresh; its status line is centred and stays on screen', async ({ page }) => {
+  await open(page)
+  await list(page).locator('.fl-search input').fill('needle')
+  const status = list(page).locator('.fl-deep')
+  await status.locator('.fl-deep-link').click()
+  await expect(row(page, 'needle-report.pdf')).toBeVisible()
+  await expect(status).toContainText('已搜索全部')
+  const summary = await status.innerText()
+
+  await list(page).locator('.fl-refresh').click()
+  await expect(list(page)).not.toHaveClass(/fl-refreshing/)
+  await expect(row(page, 'needle-report.pdf')).toBeVisible()
+  await expect(row(page, 'Locked deep')).toHaveClass(/fl-row-locked/)
+  await expect(status.locator('.fl-deep-link')).toHaveCount(0)
+  await expect(status).toHaveText(summary)
+
+  // Centred, and nothing in it pokes out of the card or the screen.
+  const card = await box(list(page))
+  const line = await box(status.locator('.fl-deep-text'))
+  expect(Math.abs(line.x + line.width / 2 - (card.x + card.width / 2))).toBeLessThan(2)
+  const widest = await status.evaluate((el) => Math.max(...[...el.querySelectorAll('*')].map((child) => child.getBoundingClientRect().right)))
+  expect(widest).toBeLessThanOrEqual(Math.min(card.x + card.width, page.viewportSize()!.width) + 1)
+})
+
+test('the × in the filter box clears the filter', async ({ page }) => {
+  await open(page)
+  const input = list(page).locator('.fl-search input')
+  await input.fill('needle')
+  await list(page).locator('.fl-deep .fl-deep-link').click()
+  await expect(row(page, 'needle-report.pdf')).toBeVisible()
+
+  await list(page).locator('.fl-search-clear').click()
+  await expect(input).toHaveValue('')
+  await expect(list(page).locator('.fl-deep')).toHaveCount(0)
+  await expect(row(page, 'needle-report.pdf')).toHaveCount(0)
+  await expect(row(page, 'deep')).toBeVisible()
 })

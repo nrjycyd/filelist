@@ -18,7 +18,7 @@ import { canStreamToDisk, openUrl, pickZipFile, saveBlob, zipFileName, zipToBlob
 import Icon from './Icon.vue'
 import { formatLabel, resolveLabels } from './locales'
 import PreviewDialog from './PreviewDialog.vue'
-import { descendantFiles, expandedPathsOf, folderStats, newLock, sortTree, sourceName, toNodes } from './tree'
+import { descendantFiles, expandedPathsOf, folderStats, loadedPathsOf, newLock, sortTree, sourceName, toNodes } from './tree'
 import { usePasswords } from './usePasswords'
 import {
   extOf,
@@ -44,6 +44,7 @@ const props = withDefaults(defineProps<FileListProps>(), {
   rememberPassword: true,
   pageSize: 200,
   deepSearchLimit: 500,
+  deepSearch: 'manual',
 })
 
 const text = computed<FileListLabels>(() => resolveLabels(props.locale, props.labels))
@@ -292,6 +293,22 @@ async function loadSourceRoot(source: FileListSource, expanded: boolean): Promis
   }
 }
 
+/** Run at most `size` tasks at once. */
+function concurrency(size: number) {
+  let active = 0
+  const waiting: Array<() => void> = []
+  return async <T>(task: () => Promise<T>): Promise<T> => {
+    if (active >= size) await new Promise<void>((resolve) => waiting.push(resolve))
+    active += 1
+    try {
+      return await task()
+    } finally {
+      active -= 1
+      waiting.shift()?.()
+    }
+  }
+}
+
 class RootLockedError extends Error {
   rememberedAt?: string
 
@@ -305,7 +322,7 @@ class RootLockedError extends Error {
  * Build a fresh tree. `expandedPaths` re-opens those folders (refresh keeps
  * what was open); without it the configured `expanded` defaults apply.
  */
-async function buildTree(expandedPaths?: Set<string>): Promise<FNode[]> {
+async function buildTree(expandedPaths?: Set<string>, loadedPaths?: Set<string>): Promise<FNode[]> {
   let nodes: FNode[]
   if (props.sources.length) {
     nodes = await Promise.all(
@@ -321,13 +338,20 @@ async function buildTree(expandedPaths?: Set<string>): Promise<FNode[]> {
       throw isPasswordError(error) ? new RootLockedError(rememberedAt) : error
     }
   }
-  const open = async (list: FNode[]) => {
-    for (const node of list) {
-      const wanted = node.expanded || expandedPaths?.has(node.path)
-      if (!node.is_dir || node.lock || !wanted) continue
-      node.expanded = await loadChildren(node, 'show')
-      if (node.expanded && expandedPaths) await open(node.children)
-    }
+  // Open folders are re-opened; folders a deep search had read are re-read
+  // without opening them. Four requests at a time across the whole tree.
+  const limit = concurrency(4)
+  const open = async (list: FNode[]): Promise<void> => {
+    await Promise.all(
+      list.map(async (node) => {
+        const wanted = !!(node.expanded || expandedPaths?.has(node.path))
+        const keep = !!loadedPaths?.has(node.path)
+        if (!node.is_dir || node.lock || !(wanted || keep)) return
+        const ok = await limit(() => loadChildren(node, wanted ? 'show' : false, !wanted))
+        node.expanded = wanted && ok
+        if (ok && (expandedPaths || loadedPaths)) await open(node.children)
+      }),
+    )
   }
   await open(nodes)
   return nodes
@@ -374,7 +398,8 @@ async function refresh() {
   const seq = ++refreshSeq
   refreshing.value = true
   try {
-    const fresh = await buildTree(expandedPathsOf(roots.value))
+    // In deep search mode, folders it had read are read again, so results stay.
+    const fresh = await buildTree(expandedPathsOf(roots.value), deepMode.value ? loadedPathsOf(roots.value) : undefined)
     if (seq !== refreshSeq) return
     roots.value = fresh
     const existing = new Set(fresh.flatMap(descendantFiles).map((file) => file.path))
@@ -469,8 +494,11 @@ function isMore(row: Row): row is MoreRow {
 const rows = computed<Row[]>(() => {
   const out: Row[] = []
   const query = keyword.value.trim().toLowerCase()
+  // In deep search mode a locked folder may hide matches: show it so it can be unlocked.
   const matches = (node: FNode): boolean =>
-    !query || node.name.toLowerCase().includes(query) || (node.is_dir && node.children.some(matches))
+    !query ||
+    node.name.toLowerCase().includes(query) ||
+    (node.is_dir && (node.children.some(matches) || (deepMode.value && !!node.lock)))
   const walk = (nodes: FNode[], key: string, depth: number) => {
     const list = nodes.filter(matches)
     // A filter shows every match: a cut list could hide the one searched for.
@@ -510,7 +538,13 @@ function nameParts(name: string): Array<{ text: string; hit: boolean }> {
  * mounted paths (four at a time, `deepSearchLimit` per run) so matches appear
  * in place, in their folders, like any other row. Locked folders are skipped.
  */
-const deep = reactive({ running: false, searched: 0, skipped: 0, failed: 0, capped: false, done: false })
+const deep = reactive({ running: false, searched: 0, failed: 0, capped: false, done: false })
+/**
+ * Deep search mode: entered by “Try deep search” (or at once with
+ * `deep-search="auto"`), left by clearing the filter. While on, new keywords,
+ * refreshes and newly unlocked folders are searched without asking again.
+ */
+const deepMode = ref(false)
 let deepSeq = 0
 
 /** Folders that are known but not loaded yet (locked ones excluded). */
@@ -532,15 +566,17 @@ const deepRow = computed(() => {
   if (!keyword.value.trim()) return null
   if (deep.running) return 'running'
   if (deep.capped) return 'capped'
-  if (hasUnloaded.value) return 'idle'
+  if (!deepMode.value) return hasUnloaded.value ? 'idle' : null
   return deep.done ? 'done' : null
 })
 
+/** “Try deep search”, “Continue”, and the automatic runs of deep search mode. */
 async function deepSearch() {
+  deepMode.value = true
   const seq = ++deepSeq
   const limit = Math.max(1, Math.floor(props.deepSearchLimit ?? 500))
   const runStart = deep.searched
-  Object.assign(deep, { running: true, capped: false, done: false, skipped: 0, failed: 0 })
+  Object.assign(deep, { running: true, capped: false, done: false })
   let wave = unloadedFolders()
   while (wave.length && seq === deepSeq) {
     const next: FNode[] = []
@@ -550,8 +586,7 @@ async function deepSearch() {
         if (deep.searched - runStart >= limit) return
         deep.searched += 1
         if (!(await loadChildren(node, false, true))) {
-          if (node.lock) deep.skipped += 1
-          else deep.failed += 1
+          if (!node.lock) deep.failed += 1
           continue
         }
         for (const child of node.children) if (child.is_dir && !child.loaded && !child.lock) next.push(child)
@@ -567,22 +602,75 @@ async function deepSearch() {
   deep.done = !deep.capped
 }
 
+/** Pause a run (internal: refresh, reload). */
 function stopDeepSearch() {
   deepSeq += 1
   deep.running = false
 }
 
-// Clearing the filter ends deep search; its loaded folders stay loaded.
-watch(keyword, (value) => {
-  if (value.trim()) return
+/** The user's Stop: keep the mode, offer “Continue”, do not restart by itself. */
+function pauseDeepSearch() {
+  const wasRunning = deep.running
   stopDeepSearch()
-  Object.assign(deep, { searched: 0, skipped: 0, failed: 0, capped: false, done: false })
+  if (wasRunning && hasUnloaded.value) deep.capped = true
+}
+
+function clearFilter() {
+  keyword.value = ''
+}
+
+// Clearing the filter leaves deep search mode; loaded folders stay loaded.
+watch(keyword, (value) => {
+  if (value.trim()) {
+    if (props.deepSearch === 'auto') deepMode.value = true
+    return
+  }
+  stopDeepSearch()
+  deepMode.value = false
+  Object.assign(deep, { searched: 0, failed: 0, capped: false, done: false })
 })
+
+// In deep search mode, folders that become readable (a new keyword, a refresh,
+// an unlocked folder) are searched at once, unless the user stopped or the
+// limit was reached ("Continue" then).
+watch(
+  () => deepMode.value && hasUnloaded.value && !deep.running && !deep.capped && !refreshing.value,
+  (ready) => {
+    if (ready) void deepSearch()
+  },
+)
+
+/**
+ * Counted from the tree, so a refresh that re-reads the same folders shows the
+ * same numbers: folders read (or found locked), and the locked ones.
+ */
+const folderCounts = computed(() => {
+  const counts = { checked: 0, locked: 0 }
+  const walk = (nodes: FNode[]) => {
+    for (const node of nodes) {
+      if (!node.is_dir) continue
+      if (node.lock) {
+        counts.checked += 1
+        counts.locked += 1
+      } else if (node.loaded) {
+        counts.checked += 1
+        walk(node.children)
+      }
+    }
+  }
+  walk(roots.value)
+  return counts
+})
+const lockedFolders = computed(() => folderCounts.value.locked)
+
+function lockedInSearch(node: FNode): boolean {
+  return deepMode.value && !!node.lock && !!keyword.value.trim()
+}
 
 const deepSummary = computed(() =>
   [
-    deepRow.value === 'capped' ? t('deepCapped', { count: deep.searched }) : t('deepDone', { count: deep.searched }),
-    deep.skipped ? t('deepSkipped', { count: deep.skipped }) : '',
+    t(deepRow.value === 'capped' ? 'deepCapped' : 'deepDone', { count: folderCounts.value.checked }),
+    lockedFolders.value ? t('deepSkipped', { count: lockedFolders.value }) : '',
     deep.failed ? t('deepFailed', { count: deep.failed }) : '',
   ]
     .filter(Boolean)
@@ -957,7 +1045,21 @@ onBeforeUnmount(() => {
       <div class="fl-tools">
         <label class="fl-search">
           <Icon name="search" :size="15" />
-          <input v-model="keyword" type="text" :placeholder="t('filter')" :aria-label="t('filter')" />
+          <input
+            v-model="keyword"
+            type="text"
+            :placeholder="t('filter')"
+            :aria-label="t('filter')"
+            @keydown.esc="keyword && ($event.preventDefault(), clearFilter())"
+          />
+          <button
+            v-if="keyword"
+            class="fl-search-clear"
+            type="button"
+            :aria-label="t('clearFilter')"
+            :title="t('clearFilter')"
+            @click="clearFilter"
+          ><Icon name="close" :size="12" /></button>
         </label>
         <button
           class="fl-icon-btn fl-refresh"
@@ -1136,8 +1238,10 @@ onBeforeUnmount(() => {
           <span class="fl-meta">
             <template v-if="!node.is_dir">{{ formatSize(node.size) }} · {{ formatDate(node.modified) }}</template>
             <template v-else-if="node.loaded">{{ t('folderItems', { count: statsOf(node).files }) }} · {{ formatSize(statsOf(node).bytes) }}</template>
+            <span v-else-if="lockedInSearch(node)" class="fl-locked-note">{{ t('deepLocked') }}</span>
           </span>
         </span>
+        <span v-if="lockedInSearch(node) && !node.lock?.prompting" class="fl-locked-note fl-locked-hint">{{ t('deepLocked') }}</span>
         <span v-if="node.is_dir && node.loaded" class="fl-count">{{ t('folderItems', { count: statsOf(node).files }) }}</span>
         <span
           v-if="node.lock?.prompting && node.lock.error"
@@ -1235,24 +1339,22 @@ onBeforeUnmount(() => {
     </div>
     </template>
 
-    <div v-if="deepRow" class="fl-row fl-deep" role="status">
-      <span class="fl-cell fl-cell-check"></span>
-      <span class="fl-cell fl-more-cell">
-        <span class="fl-indent" aria-hidden="true"></span>
+    <div v-if="deepRow" class="fl-deep" role="status">
+      <p class="fl-deep-text">
         <template v-if="deepRow === 'running'">
-          <span class="fl-more-count">{{ t('deepRunning', { count: deep.searched }) }}</span>
-          <button class="fl-more-btn fl-more-all" type="button" @click="stopDeepSearch">{{ t('deepStop') }}</button>
-          <span class="fl-deep-bar" aria-hidden="true"></span>
+          {{ t('deepRunning', { count: folderCounts.checked }) }} ·
+          <button class="fl-deep-link" type="button" @click="pauseDeepSearch">{{ t('deepStop') }}</button>
         </template>
         <template v-else-if="deepRow === 'idle'">
-          <span class="fl-more-count">{{ deep.searched ? deepSummary : t('deepHint') }}</span>
-          <button class="fl-more-btn" type="button" @click="deepSearch">{{ t('deepSearch') }}</button>
+          {{ t('deepHint') }}<button class="fl-deep-link" type="button" @click="deepSearch">{{ t('deepSearch') }}</button>
         </template>
-        <template v-else>
-          <span class="fl-more-count">{{ deepSummary }}</span>
-          <button v-if="deepRow === 'capped'" class="fl-more-btn" type="button" @click="deepSearch">{{ t('deepContinue') }}</button>
+        <template v-else-if="deepRow === 'capped'">
+          {{ deepSummary }} ·
+          <button class="fl-deep-link" type="button" @click="deepSearch">{{ t('deepContinue') }}</button>
         </template>
-      </span>
+        <template v-else>{{ deepSummary }}</template>
+      </p>
+      <span v-if="deepRow === 'running'" class="fl-deep-bar" aria-hidden="true"></span>
     </div>
 
     <div class="fl-foot">

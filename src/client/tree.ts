@@ -60,6 +60,17 @@ export function descendantFiles(node: FNode): FNode[] {
   return node.is_dir ? node.children.flatMap(descendantFiles) : [node]
 }
 
+/** Every loaded folder (expanded or not), e.g. what a deep search has read. */
+export function loadedPathsOf(nodes: FNode[], out = new Set<string>()): Set<string> {
+  for (const node of nodes) {
+    if (node.is_dir && node.loaded) {
+      out.add(node.path)
+      loadedPathsOf(node.children, out)
+    }
+  }
+  return out
+}
+
 export function expandedPathsOf(nodes: FNode[], out = new Set<string>()): Set<string> {
   for (const node of nodes) {
     if (node.is_dir && node.expanded) {
