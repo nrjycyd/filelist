@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Docs
+
+- Project logo: a ring in the colours of OpenList, VitePress and Cloudflare, with the plugin's own rose list card in the middle and four dots for what comes next. The README opens with the logo and name (light and dark versions); the docs site shows it in the nav and on the home page, and has a favicon, an iOS home-screen icon and a link preview image (`demo/docs/public`)
+
 ## 0.8.0 (2026-11-11)
 
 ### Features

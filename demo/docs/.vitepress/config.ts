@@ -3,19 +3,34 @@ import fileList from 'vitepress-plugin-filelist'
 import pkg from '../../../package.json'
 
 const repo = 'https://github.com/nrjycyd/vitepress-plugin-filelist'
+const site = 'https://nrjycyd.github.io/vitepress-plugin-filelist/'
+const base = process.env.PAGES_BASE || '/'
 
 export default defineConfig({
-  base: process.env.PAGES_BASE || '/',
+  base,
   lang: 'zh-CN',
   title: 'vitepress-plugin-filelist',
   description: '面向 VitePress 的 OpenList 文件浏览组件',
   cleanUrls: true,
+  // Icons and the link preview (logo sources: demo/docs/public).
+  head: [
+    ['link', { rel: 'icon', href: `${base}favicon.ico`, sizes: '48x48' }],
+    ['link', { rel: 'icon', href: `${base}favicon.svg`, type: 'image/svg+xml' }],
+    ['link', { rel: 'apple-touch-icon', href: `${base}apple-touch-icon.png` }],
+    ['meta', { name: 'theme-color', content: '#db2777' }],
+    ['meta', { property: 'og:type', content: 'website' }],
+    ['meta', { property: 'og:title', content: 'vitepress-plugin-filelist' }],
+    ['meta', { property: 'og:description', content: '在 VitePress 文档里浏览、预览、批量下载 OpenList 网盘文件' }],
+    ['meta', { property: 'og:image', content: `${site}social-preview.png` }],
+    ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
+  ],
   plugins: [fileList()],
   vite: {
     // The version shown on the home page, read from the repository at build time.
     define: { __FL_VERSION__: JSON.stringify(pkg.version) },
   },
   themeConfig: {
+    logo: { light: '/logo.svg', dark: '/logo-dark.svg', alt: 'vitepress-plugin-filelist' },
     nav: [
       { text: '指南', link: '/guide/getting-started', activeMatch: '/guide/' },
       { text: '功能', link: '/features/sources', activeMatch: '/features/' },

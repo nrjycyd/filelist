@@ -5,6 +5,10 @@ hero:
   name: FileList
   text: 把 OpenList 搬进 VitePress 文档页
   tagline: 树形浏览、弹窗预览、勾选打包下载，不离开当前页面。
+  image:
+    light: /logo.svg
+    dark: /logo-dark.svg
+    alt: vitepress-plugin-filelist
   actions:
     - theme: brand
       text: 快速开始

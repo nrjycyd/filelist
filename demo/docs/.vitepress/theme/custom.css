@@ -17,3 +17,49 @@
     padding: 0 48px 56px;
   }
 }
+
+/* Home hero: a soft glow behind the logo in the ring's colours. */
+:root {
+  --vp-home-hero-image-background-image: conic-gradient(
+    from 0deg,
+    #5eead4,
+    #38bdf8 25%,
+    #3451b2 30%,
+    #5c73e7 50%,
+    #faae40 55%,
+    #f38020 75%,
+    #ec4899 85%,
+    #5eead4
+  );
+  --vp-home-hero-image-filter: blur(56px) opacity(0.35);
+}
+
+.dark {
+  --vp-home-hero-image-filter: blur(64px) opacity(0.28);
+}
+
+/* Phones: a smaller hero logo so the live demo starts sooner. */
+@media (max-width: 639px) {
+  .VPHome .VPHero .image {
+    margin: -1rem -1.5rem 0.5rem;
+  }
+
+  .VPHome .VPHero .image-container {
+    width: 200px;
+    height: 200px;
+  }
+
+  .VPHome .VPHero .image-src {
+    max-width: 150px;
+    max-height: 150px;
+  }
+}
+
+/* Nav title: logo plus the full package name fits the 208px sidebar column. */
+.VPNavBarTitle .logo {
+  margin-right: 6px;
+}
+
+.VPNavBarTitle .title {
+  letter-spacing: -0.01em;
+}
