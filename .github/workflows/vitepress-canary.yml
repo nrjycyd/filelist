@@ -37,7 +37,7 @@ jobs:
       - name: Already passed?
         id: seen
         if: ${{ !inputs.force }}
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: .canary-passed
           key: ${{ steps.npm.outputs.key }}
@@ -50,9 +50,9 @@ jobs:
     if: needs.versions.outputs.tested != 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -64,7 +64,7 @@ jobs:
           COMPAT_VITEPRESS: ${{ needs.versions.outputs.vitepress }}
       # Reached only when the test passed: remember this set of versions.
       - run: echo "${{ needs.versions.outputs.key }}" > .canary-passed
-      - uses: actions/cache/save@v4
+      - uses: actions/cache/save@v6
         with:
           path: .canary-passed
           key: ${{ needs.versions.outputs.key }}
