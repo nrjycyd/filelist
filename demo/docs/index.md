@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: FileList
-  text: 把 OpenList 搬进 VitePress 文档页
-  tagline: 树形浏览、弹窗预览、勾选打包下载，不离开当前页面。
+  text: 文档页里的 OpenList 文件浏览器
+  tagline: 在 VitePress 文档页内浏览、预览、搜索并批量打包下载文件，支持目录密码、分页与深浅主题。
   image:
     light: /logo.svg
     dark: /logo-dark.svg
