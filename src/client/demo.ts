@@ -1,5 +1,6 @@
 import type { OLItem, OpenListApi } from './api'
 import { ApiError } from './api'
+import { SAMPLE_FOLDER, SAMPLE_NAMES, isSample, sampleSize, sampleUrl } from './demoSamples'
 import { isWithin } from './utils'
 
 /** Built-in sample data, used when no `base` is given. */
@@ -11,7 +12,22 @@ const TREE: Record<string, OLItem[]> = {
     { name: 'notes', size: 0, is_dir: true, modified: '2026-09-01T08:00:00+08:00' },
     { name: 'slides', size: 0, is_dir: true, modified: '2026-09-01T08:00:00+08:00' },
     { name: '加密示例（密码 1234）', size: 0, is_dir: true, modified: '2026-10-20T18:00:00+08:00' },
+    { name: '示例文件', size: 0, is_dir: true, modified: '2026-11-11T09:00:00+08:00' },
+    { name: '照片（260 张）', size: 0, is_dir: true, modified: '2026-10-01T12:00:00+08:00' },
   ],
+  [SAMPLE_FOLDER]: SAMPLE_NAMES.map((name) => ({
+    name,
+    size: sampleSize(name),
+    is_dir: false,
+    modified: '2026-11-11T09:00:00+08:00',
+  })),
+  // A long folder for the “show more” rows.
+  '/照片（260 张）': Array.from({ length: 260 }, (_, index) => ({
+    name: `IMG_${String(index + 1).padStart(4, '0')}.jpg`,
+    size: 2_000_000 + ((index * 7919) % 1_500_000),
+    is_dir: false,
+    modified: '2026-10-01T12:00:00+08:00',
+  })),
   '/assignments': [
     { name: '线代作业参考答案', size: 0, is_dir: true, modified: '2026-10-12T21:30:00+08:00' },
     { name: '作业提交说明.pdf', size: 186_432, is_dir: false, modified: '2026-09-03T10:15:00+08:00' },
@@ -58,7 +74,7 @@ function parentOf(path: string): string {
   return path.slice(0, path.lastIndexOf('/')) || '/'
 }
 
-/** Demo OpenList: same API, no network; files have no URL. */
+/** Demo OpenList: same API, no network; only the sample files have a URL. */
 export function createDemoApi(delay = 220): OpenListApi {
   return {
     async list(path, password) {
@@ -74,9 +90,13 @@ export function createDemoApi(delay = 220): OpenListApi {
       return item
     },
     settings: async () => ({ title: '', iframePreviews: '' }),
-    fileUrl: async () => '',
+    fileUrl: async (file) => sampleUrl(file.path),
     directUrl: () => '',
-    isAttachmentUrl: () => false,
+    // A blob: link with a file name downloads in place.
+    isAttachmentUrl: (url) => url.startsWith('blob:'),
     clearCache: () => {},
   }
 }
+
+/** Whether a demo file can really be previewed, downloaded and zipped. */
+export const isDemoFile = isSample

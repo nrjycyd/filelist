@@ -332,3 +332,37 @@ test('the × in the filter box clears the filter', async ({ page }) => {
   await expect(row(page, 'needle-report.pdf')).toHaveCount(0)
   await expect(row(page, 'deep')).toBeVisible()
 })
+
+test('demo data: the sample files preview, download and zip for real', async ({ page }) => {
+  await page.addInitScript(() => {
+    delete (window as unknown as { showSaveFilePicker?: unknown }).showSaveFilePicker
+  })
+  await open(page, '/demo')
+  await opener(row(page, '示例文件')).click()
+
+  await row(page, '使用说明.md').locator('.fl-preview-btn').click()
+  const dialog = page.locator('dialog.fl-preview')
+  await expect(dialog.locator('.fl-preview-text pre')).toContainText('# 使用说明')
+  await dialog.locator('.fl-preview-view-btn', { hasText: '渲染' }).click()
+  await expect(dialog.locator('.fl-md.vp-doc h1')).toHaveText('使用说明')
+  await expect(dialog.locator('.fl-md.vp-doc table')).toBeVisible()
+  await page.keyboard.press('Escape')
+
+  // Other demo files still only describe what would happen.
+  await opener(row(page, 'exams')).click()
+  await row(page, '2024 期中试题.pdf').locator('.fl-download').click()
+  await expect(list(page).locator('.fl-toast')).toContainText('演示模式')
+
+  await check(page, '示例文件')
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    list(page).locator('.fl-bar .fl-btn-primary').click(),
+  ])
+  const zip = await download.createReadStream().then(async (stream) => {
+    const chunks: Buffer[] = []
+    for await (const chunk of stream) chunks.push(chunk as Buffer)
+    return Buffer.concat(chunks)
+  })
+  expect(zip.subarray(0, 2).toString()).toBe('PK')
+  for (const name of ['使用说明.md', '讲义.pdf', '课程海报.svg']) expect(zip.includes(Buffer.from(name))).toBe(true)
+})

@@ -6,7 +6,7 @@
   "description": "OpenList file browser for VitePress: tree view, batch ZIP download, i18n, password and token support.",
   "author": "nrjycyd",
   "license": "MIT",
-  "homepage": "https://github.com/nrjycyd/vitepress-plugin-filelist#readme",
+  "homepage": "https://nrjycyd.github.io/vitepress-plugin-filelist/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/nrjycyd/vitepress-plugin-filelist.git"

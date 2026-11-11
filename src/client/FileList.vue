@@ -12,7 +12,7 @@ import type { ZipProgress } from './download'
 import type { FNode, FolderStats, LockState, UnlockError } from './tree'
 import type { SortKey } from './utils'
 import { createOpenListApi, errorText, isNetworkError, isPasswordError } from './api'
-import { createDemoApi } from './demo'
+import { createDemoApi, isDemoFile } from './demo'
 import ConfirmDialog from './ConfirmDialog.vue'
 import { canStreamToDisk, openUrl, pickZipFile, saveBlob, zipFileName, zipToBlob, zipToFile } from './download'
 import Icon from './Icon.vue'
@@ -762,7 +762,7 @@ function fileUrlOf(node: FNode): Promise<string> {
 
 async function download(node: FNode) {
   if (node.is_dir) return
-  if (demo.value) {
+  if (demo.value && !isDemoFile(node.path)) {
     showToast(t('demoDownload', { name: node.name }))
     return
   }
@@ -825,7 +825,7 @@ function zipName(): string {
 async function batchDownload() {
   const files = selectedFiles.value
   if (!files.length || batchBusy.value) return
-  if (demo.value) {
+  if (demo.value && !files.every((file) => isDemoFile(file.path))) {
     showToast(t('demoBatch', { count: files.length }))
     return
   }
@@ -927,7 +927,7 @@ async function preview(node: FNode) {
   previewViewer.value = ''
   previewError.value = ''
   previewResolving.value = false
-  if (demo.value || !canPreview(node)) return
+  if ((demo.value && !isDemoFile(node.path)) || !canPreview(node)) return
   previewResolving.value = true
   try {
     const url = await fileUrlOf(node)
@@ -1382,7 +1382,7 @@ onBeforeUnmount(() => {
       :viewer="previewViewer"
       :resolving="previewResolving"
       :error="previewError"
-      :demo="demo"
+      :demo="demo && !!previewNode && !isDemoFile(previewNode.path)"
       :position="previewPosition"
       :total="previewPosition ? previewList.length : 0"
       @close="closePreview"

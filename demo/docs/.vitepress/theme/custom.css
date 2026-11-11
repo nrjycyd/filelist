@@ -1,0 +1,19 @@
+.home-demo {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 24px 48px;
+}
+
+.home-demo-note {
+  margin: 10px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  text-align: center;
+  color: var(--vp-c-text-2);
+}
+
+@media (min-width: 640px) {
+  .home-demo {
+    padding: 0 48px 56px;
+  }
+}
