@@ -495,18 +495,13 @@ function limitOf(key: string): number {
   return size ? (shown.get(key) ?? size) : Number.POSITIVE_INFINITY
 }
 
-/** When the list last grew: “show less” lands where “show all” was, so a double click must not undo it. */
-let grewAt = 0
-
 function showMore(row: MoreRow, all: boolean) {
   const size = Math.max(1, pageSizeOf())
   shown.set(row.key, all ? Number.POSITIVE_INFINITY : limitOf(row.key) + size)
-  grewAt = Date.now()
 }
 
 /** Back to the first page; the folder's row (or the list's top) comes back into view. */
 async function showLess(row: MoreRow) {
-  if (Date.now() - grewAt < 500) return
   shown.delete(row.key)
   await nextTick()
   const root = rootEl.value
@@ -1201,32 +1196,42 @@ onBeforeUnmount(() => {
     >
       <span class="fl-cell fl-cell-check"></span>
       <span class="fl-cell fl-more-cell">
-        <span class="fl-indent" aria-hidden="true"></span>
         <!--
-          Left: how much of the folder is shown. Right: less (set apart), then more and all.
-          “Less” comes first so “more” does not move under the pointer when it appears.
+          Left, lined up with the folder's files: a ring in the file-type column, the count where
+          names start. Right: more, all, then less, whose place is kept even while hidden so
+          the other buttons never move under the pointer.
         -->
-        <span class="fl-more-progress">
-          <span class="fl-more-bar" aria-hidden="true">
-            <span :style="{ width: `${(node.shown / node.total) * 100}%` }"></span>
-          </span>
-          <span v-if="node.remaining" class="fl-more-count">
+        <span class="fl-indent" aria-hidden="true"></span>
+        <span class="fl-arrow-placeholder" aria-hidden="true"></span>
+        <span class="fl-more-ring" aria-hidden="true">
+          <svg viewBox="0 0 16 16" width="16" height="16">
+            <circle class="fl-more-ring-track" cx="8" cy="8" r="6.75" pathLength="100" />
+            <circle
+              class="fl-more-ring-fill"
+              cx="8"
+              cy="8"
+              r="6.75"
+              pathLength="100"
+              :stroke-dasharray="`${(node.shown / node.total) * 100} 100`"
+            />
+          </svg>
+        </span>
+        <span class="fl-more-count">
+          <template v-if="node.remaining">
             <span class="fl-more-long">{{ t('moreShown', { shown: node.shown, total: node.total }) }}</span>
             <span class="fl-more-short" aria-hidden="true"><strong>{{ node.shown }}</strong> / {{ node.total }}</span>
-          </span>
-          <span v-else class="fl-more-count">
+          </template>
+          <template v-else>
             <span class="fl-more-long">{{ t('allShown', { count: node.total }) }}</span>
             <span class="fl-more-short" aria-hidden="true"><strong>{{ node.total }}</strong> / {{ node.total }}</span>
-          </span>
+          </template>
         </span>
         <span class="fl-more-actions">
-          <button v-if="node.canLess" class="fl-more-btn fl-more-less" type="button" @click="showLess(node)">
-            {{ t('showLess') }}<Icon name="up" :size="12" />
-          </button>
-          <span v-if="node.canLess && node.remaining" class="fl-more-sep" aria-hidden="true"></span>
           <template v-if="node.remaining > (pageSize || 0)">
-            <button class="fl-more-btn" type="button" @click="showMore(node, false)">
-              {{ t('showMore') }}<span class="fl-more-page">{{ ` ${t('folderItems', { count: pageSize })}` }}</span>
+            <button class="fl-more-btn" type="button" :aria-label="`${t('showMore')} ${t('folderItems', { count: pageSize })}`"
+              @click="showMore(node, false)">
+              <span class="fl-more-long">{{ t('showMore') }}{{ ` ${t('folderItems', { count: pageSize })}` }}</span>
+              <span class="fl-more-short" aria-hidden="true">{{ t('showMoreShort') }}</span>
               <Icon name="down" :size="12" />
             </button>
             <button class="fl-more-btn fl-more-all" type="button" :aria-label="t('showAll')" @click="showMore(node, true)">
@@ -1236,6 +1241,18 @@ onBeforeUnmount(() => {
           </template>
           <button v-else-if="node.remaining" class="fl-more-btn" type="button" @click="showMore(node, true)">
             {{ t('showRest', { count: node.remaining }) }}<Icon name="down" :size="12" />
+          </button>
+          <span v-if="node.remaining" class="fl-more-sep" :class="{ 'fl-more-reserved': !node.canLess }" aria-hidden="true"></span>
+          <button
+            class="fl-more-btn fl-more-less"
+            :class="{ 'fl-more-reserved': !node.canLess }"
+            type="button"
+            :disabled="!node.canLess"
+            :aria-hidden="!node.canLess || undefined"
+            :tabindex="node.canLess ? undefined : -1"
+            @click="showLess(node)"
+          >
+            {{ t('showLess') }}<Icon name="up" :size="12" />
           </button>
         </span>
       </span>
