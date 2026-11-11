@@ -11,7 +11,7 @@
   <a href="https://github.com/nrjycyd/vitepress-plugin-filelist/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/vitepress-plugin-filelist" alt="license"></a>
 </p>
 
-<p align="center">English · <a href="https://github.com/nrjycyd/vitepress-plugin-filelist/blob/main/README.zh-CN.md">简体中文</a></p>
+<p align="center">English · <a href="https://github.com/nrjycyd/vitepress-plugin-filelist/blob/main/README-zh-CN.md">简体中文</a></p>
 
 <p align="center">An OpenList file browser for VitePress: browse, preview, search and batch-download OpenList files right in a docs page.</p>
 

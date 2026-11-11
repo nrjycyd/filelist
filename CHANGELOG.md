@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- The npm page showed the Chinese README: npm takes any root `README.*` file as the package README and picked `README.zh-CN.md`. The Chinese README is now `README-zh-CN.md`, so npm always shows the English `README.md`
+
 ## 0.9.1 (2026-11-11)
 
 ### Docs
