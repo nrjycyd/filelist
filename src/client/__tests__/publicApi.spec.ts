@@ -26,7 +26,7 @@ describe('public API', () => {
     expect(pkg.dependencies['vitepress-tuck']).toBeUndefined()
     expect(pkg.peerDependencies['vitepress-tuck']).toBeTruthy()
     expect(pkg.peerDependenciesMeta['vitepress-tuck'].optional).toBe(true)
-    expect(pkg.peerDependencies.vitepress).toBe('^1.6.0 || ^2.0.0-alpha.18')
+    expect(pkg.peerDependencies.vitepress).toBe('^1.6.0 || >=2.0.0-alpha.18')
     expect(pkg.engines.node).toBeTruthy()
   })
 })

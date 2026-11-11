@@ -14,17 +14,19 @@
 
 | 组合 | 支持 | 验证方式 |
 | --- | --- | --- |
-| VitePress 2（`^2.0.0-alpha.18`）+ vitepress-tuck | ✅ | 文档站与浏览器测试（Chromium 桌面 / 手机、WebKit） |
+| VitePress 2（`>=2.0.0-alpha.18`）+ vitepress-tuck | ✅ | 文档站与浏览器测试（Chromium 桌面 / 手机、WebKit） |
 | VitePress 2，普通写法 | ✅ | `pnpm test:compat`（2.0.0-alpha.21） |
 | VitePress 1.6，普通写法 | ✅ | `pnpm test:compat`（1.6.4） |
 | VitePress 1.6 + vitepress-tuck | ❌ | vitepress-tuck 本身需要 VitePress 2 |
 | VitePress 1.5 及更早 | ❌ | 未测试，不在 `peerDependencies` 范围内 |
 
+VitePress 2 之后的大版本没有上限，发布时不需要改依赖范围；新的大版本出来后用 `COMPAT_VITEPRESS=<版本> pnpm test:compat` 验证一次即可。
+
 `pnpm test:compat` 把打包后的插件装进全新的 VitePress 站点，构建后在浏览器里检查渲染、展开、预览、打包 ZIP，并确认开发时的公开提醒只在 `vitepress dev` 中出现。
 
 | 依赖 | 范围 |
 | --- | --- |
-| `vitepress`（peer） | `^1.6.0 \|\| ^2.0.0-alpha.18` |
+| `vitepress`（peer） | `^1.6.0 \|\| >=2.0.0-alpha.18`：VitePress 1.6 及以后的 1.x，以及 2.0.0-alpha.18 起的所有版本（含将来的 3.x、4.x 正式版） |
 | `vue`（peer） | `^3.5.0` |
 | `vitepress-tuck`（可选 peer） | `>=0.12.2 <1`；只有用 vitepress-tuck 注册时才需要安装 |
 | Node | `^20.19.0 \|\| >=22.12.0` |

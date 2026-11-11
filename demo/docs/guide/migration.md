@@ -16,7 +16,7 @@ pnpm add -D vitepress-tuck
 
 | | 0.8 | 0.9 |
 | --- | --- | --- |
-| VitePress | `^1.0.0 \|\| ^2.0.0-alpha.0` | `^1.6.0 \|\| ^2.0.0-alpha.18` |
+| VitePress | `^1.0.0 \|\| ^2.0.0-alpha.0` | `^1.6.0 \|\| >=2.0.0-alpha.18`（2 起不设上限） |
 | vitepress-tuck | 依赖 | 可选 peer（`>=0.12.2 <1`），需要 VitePress 2 |
 | Node | 未声明 | `^20.19.0 \|\| >=22.12.0` |
 
