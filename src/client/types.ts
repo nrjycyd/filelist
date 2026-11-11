@@ -142,6 +142,8 @@ export interface FileListLabels {
   moreShown: string
   /** “Show all”, short form for narrow lists. */
   showAllShort: string
+  /** “Show more”, short form for narrow lists. */
+  showMoreShort: string
   showMore: string
   showAll: string
   /** Fewer than a page left. `{count}` */

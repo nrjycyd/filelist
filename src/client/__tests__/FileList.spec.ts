@@ -939,10 +939,10 @@ describe('FileList long folders', () => {
   const names = (wrapper: VueWrapper) =>
     wrapper.findAll('.fl-row:not(.fl-head):not(.fl-more)').map((item) => item.find('.fl-name').text())
   const buttons = (wrapper: Pick<VueWrapper, 'findAll'>) =>
-    wrapper.findAll('.fl-more-btn').map((button) => button.attributes('aria-label') ?? button.text())
+    wrapper
+      .findAll('.fl-more-btn:not(.fl-more-reserved)')
+      .map((button) => button.attributes('aria-label') ?? button.text())
   const count = (wrapper: Pick<VueWrapper, 'find'>) => wrapper.find('.fl-more-count .fl-more-long').text()
-  /** “Show less” right after the list grew is taken for a double click; step past it. */
-  const later = () => vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 1000)
 
   it('shows a page per folder, then more, then the rest', async () => {
     mockOpenList({ '/': many(8) })
@@ -951,12 +951,15 @@ describe('FileList long folders', () => {
     expect(names(wrapper)).toEqual(['f01.txt', 'f02.txt', 'f03.txt'])
     expect(count(wrapper)).toBe('已显示 3 / 8 项')
     expect(buttons(wrapper)).toEqual(['显示更多 3 项', '全部显示'])
+    // “Show less” keeps its place, hidden, so the others do not move when it appears.
+    expect(wrapper.find('.fl-more-less').classes()).toContain('fl-more-reserved')
+    expect(wrapper.find('.fl-more-less').attributes('disabled')).toBeDefined()
 
     await wrapper.findAll('.fl-more-btn')[0].trigger('click')
     expect(names(wrapper)).toHaveLength(6)
-    expect(buttons(wrapper)).toEqual(['收起', '显示剩余 2 项'])
+    expect(buttons(wrapper)).toEqual(['显示剩余 2 项', '收起'])
     expect(count(wrapper)).toBe('已显示 6 / 8 项')
-    expect(wrapper.find('.fl-more-bar span').attributes('style')).toContain('width: 75%')
+    expect(wrapper.find('.fl-more-ring-fill').attributes('stroke-dasharray')).toBe('75 100')
 
     await wrapper.find('.fl-more-btn:not(.fl-more-less)').trigger('click')
     expect(names(wrapper)).toHaveLength(8)
@@ -965,12 +968,7 @@ describe('FileList long folders', () => {
     expect(buttons(wrapper)).toEqual(['收起'])
     expect(wrapper.find('.fl-more-sep').exists()).toBe(false)
 
-    // A double click on “show all” lands on “show less”: ignored.
-    await wrapper.find('.fl-more-less').trigger('click')
-    await flushPromises()
-    expect(names(wrapper)).toHaveLength(8)
-
-    later()
+    expect(wrapper.find('.fl-more-ring-fill').attributes('stroke-dasharray')).toBe('100 100')
     await wrapper.find('.fl-more-less').trigger('click')
     await flushPromises()
     expect(names(wrapper)).toEqual(['f01.txt', 'f02.txt', 'f03.txt'])

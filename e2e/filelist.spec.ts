@@ -124,20 +124,35 @@ test('long folders show a page, then more, then the rest, and go back', async ({
 
   const moreButton = more.locator('.fl-more-btn').first()
   const before = await box(moreButton)
+  await expect(more.locator('.fl-more-less')).toBeHidden() // its place is kept, empty
   await moreButton.click()
   expect(await fileCount()).toBe(30)
-  await expect(more.locator('.fl-more-btn')).toHaveCount(3)
-  // “Show less” appears to its left: “show more” stays under the pointer.
-  const after = await box(more.locator('.fl-more-btn:not(.fl-more-less)').first())
-  expect(Math.abs(after.x - before.x)).toBeLessThan(1)
+  await expect(more.locator('.fl-more-btn:visible')).toHaveCount(3)
+  // “Show less” appears in its kept place: “show more” stays under the pointer.
+  expect(Math.abs((await box(moreButton)).x - before.x)).toBeLessThan(1)
+  await expect(more.locator('.fl-more-btn').last()).toHaveClass(/fl-more-less/)
   // Three buttons still fit in the row on a phone.
   const card = await box(list(page))
   const widest = await more.evaluate((el) => Math.max(...[...el.querySelectorAll('button')].map((b) => b.getBoundingClientRect().right)))
   expect(widest).toBeLessThanOrEqual(card.x + card.width + 1)
-  // The actions sit at the right edge, the progress on the left.
+  // The actions sit at the right edge; the ring and count line up with the folder's files.
   expect(widest).toBeGreaterThan(card.x + card.width - 24)
-  expect((await box(more.locator('.fl-more-bar'))).x).toBeLessThan(card.x + card.width / 2)
+  const file = row(page, 'IMG_0030.jpg')
+  const centre = (b: { x: number; width: number }) => b.x + b.width / 2
+  expect(Math.abs(centre(await box(more.locator('.fl-more-ring'))) - centre(await box(file.locator('.fl-type'))))).toBeLessThan(1)
+  expect(Math.abs((await box(more.locator('.fl-more-count'))).x - (await box(file.locator('.fl-label'))).x)).toBeLessThan(1)
   expect((await box(more)).height).toBe(rowHeight(info))
+  // The count is not cut short.
+  expect(await more.locator('.fl-more-count').evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true)
+  if (info.project.name === 'mobile') {
+    // Smaller to look at, but a tap 5.5px above or below still lands on it (a 44px target).
+    await moreButton.scrollIntoViewIfNeeded()
+    const button = await box(moreButton)
+    expect(button.height).toBe(32)
+    for (const y of [button.y - 5.5, button.y + button.height + 5.5]) {
+      expect(await page.evaluate(([x, y]) => document.elementFromPoint(x, y)?.closest('button')?.className ?? '', [button.x + 8, y])).toContain('fl-more-btn')
+    }
+  }
 
   await more.locator('.fl-more-all').first().click()
   expect(await fileCount()).toBe(450)
@@ -146,7 +161,6 @@ test('long folders show a page, then more, then the rest, and go back', async ({
 
   // From the bottom of the long list, “show less” brings the folder back into view.
   await more.scrollIntoViewIfNeeded()
-  await page.waitForTimeout(600) // a click right after “show all” counts as a double click
   await more.locator('.fl-more-less').click()
   expect(await fileCount()).toBe(15)
   await expect(more).toContainText('已显示 15 / 450 项')
