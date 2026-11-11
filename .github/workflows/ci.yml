@@ -71,11 +71,13 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm run build
+      # pnpm 11 itself needs Node 22, so everything that runs pnpm happens
+      # before the switch; the sites below only use npm, which ships with Node 20.
+      - run: pnpm exec playwright install --with-deps chromium
       - uses: actions/setup-node@v4
         with:
           node-version: 20.19
-      - run: pnpm exec playwright install --with-deps chromium
-      - run: node scripts/compat.mjs
+      - run: node --version && node scripts/compat.mjs
         env:
           COMPAT_SKIP_BUILD: '1'
 
