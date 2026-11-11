@@ -939,40 +939,65 @@ describe('FileList long folders', () => {
   const names = (wrapper: VueWrapper) =>
     wrapper.findAll('.fl-row:not(.fl-head):not(.fl-more)').map((item) => item.find('.fl-name').text())
   const buttons = (wrapper: Pick<VueWrapper, 'findAll'>) =>
-    wrapper
-      .findAll('.fl-more-btn:not(.fl-more-reserved)')
-      .map((button) => button.attributes('aria-label') ?? button.text())
-  const count = (wrapper: Pick<VueWrapper, 'find'>) => wrapper.find('.fl-more-count .fl-more-long').text()
+    wrapper.findAll('.fl-more-link').map((button) => button.attributes('aria-label') ?? button.text())
+  const count = (wrapper: Pick<VueWrapper, 'find'>) => wrapper.find('.fl-more-count').text()
 
-  it('shows a page per folder, then more, then the rest', async () => {
+  it('shows a page per folder, then more, then the rest; the last row goes once all are shown', async () => {
     mockOpenList({ '/': many(8) })
     const wrapper = mountList({ path: '/', pageSize: 3 })
     await flushPromises()
     expect(names(wrapper)).toEqual(['f01.txt', 'f02.txt', 'f03.txt'])
-    expect(count(wrapper)).toBe('已显示 3 / 8 项')
-    expect(buttons(wrapper)).toEqual(['显示更多 3 项', '全部显示'])
-    // “Show less” keeps its place, hidden, so the others do not move when it appears.
-    expect(wrapper.find('.fl-more-less').classes()).toContain('fl-more-reserved')
-    expect(wrapper.find('.fl-more-less').attributes('disabled')).toBeDefined()
+    expect(count(wrapper)).toBe('还有 5 项')
+    expect(wrapper.find('.fl-more-tag').text()).toBe('⋯')
+    expect(buttons(wrapper)).toEqual(['再显示 3 项', '全部显示'])
 
-    await wrapper.findAll('.fl-more-btn')[0].trigger('click')
+    await wrapper.findAll('.fl-more-link')[0].trigger('click')
     expect(names(wrapper)).toHaveLength(6)
-    expect(buttons(wrapper)).toEqual(['显示剩余 2 项', '收起'])
-    expect(count(wrapper)).toBe('已显示 6 / 8 项')
-    expect(wrapper.find('.fl-more-ring-fill').attributes('stroke-dasharray')).toBe('75 100')
+    expect(buttons(wrapper)).toEqual(['显示剩余 2 项'])
 
-    await wrapper.find('.fl-more-btn:not(.fl-more-less)').trigger('click')
+    await wrapper.find('.fl-more-link').trigger('click')
     expect(names(wrapper)).toHaveLength(8)
-    // The row stays, so the list can go back to its first page.
-    expect(count(wrapper)).toBe('已显示全部 8 项')
-    expect(buttons(wrapper)).toEqual(['收起'])
-    expect(wrapper.find('.fl-more-sep').exists()).toBe(false)
+    expect(wrapper.find('.fl-more').exists()).toBe(false)
+  })
 
-    expect(wrapper.find('.fl-more-ring-fill').attributes('stroke-dasharray')).toBe('100 100')
-    await wrapper.find('.fl-more-less').trigger('click')
+  it('pins a long folder while scrolling through it, with “show less”', async () => {
+    mockOpenList({ '/': [dir('A'), file('z.txt')], '/A': many(5) })
+    const wrapper = mountList({ path: '/', pageSize: 2 })
     await flushPromises()
-    expect(names(wrapper)).toEqual(['f01.txt', 'f02.txt', 'f03.txt'])
-    expect(buttons(wrapper)).toEqual(['显示更多 3 项', '全部显示'])
+    await row(wrapper, 'A').find('.fl-arrow').trigger('click')
+    await flushPromises()
+    await wrapper.find('.fl-more-link').trigger('click')
+    expect(names(wrapper)).toHaveLength(1 + 4 + 1)
+
+    // Scrolled so that A's own row is above the screen and its files are on it.
+    let past = false
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+      const path = (this as HTMLElement).dataset?.path
+      const at = (top: number) => ({ top, bottom: top + 40, left: 0, right: 0, width: 0, height: 40, x: 0, y: top, toJSON: () => ({}) })
+      if (path === '/A') return at(past ? -400 : -40) as DOMRect
+      if (path === '/A/f04.txt') return at(past ? -80 : 300) as DOMRect
+      return at(0) as DOMRect
+    })
+    const scrolled = vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(() => {})
+    window.dispatchEvent(new Event('scroll'))
+    await vi.waitFor(() => expect(wrapper.find('.fl-pin').exists()).toBe(true))
+    expect(wrapper.find('.fl-pin-name').text()).toBe('A')
+    expect(wrapper.find('.fl-pin-count').text()).toBe('已显示 4 / 5 项')
+
+    // Past the folder's last file: no longer pinned.
+    past = true
+    window.dispatchEvent(new Event('scroll'))
+    await vi.waitFor(() => expect(wrapper.find('.fl-pin').exists()).toBe(false))
+    past = false
+    window.dispatchEvent(new Event('scroll'))
+    await vi.waitFor(() => expect(wrapper.find('.fl-pin').exists()).toBe(true))
+
+    await wrapper.find('.fl-pin-less').trigger('click')
+    await flushPromises()
+    expect(names(wrapper)).toHaveLength(1 + 2 + 1)
+    expect(wrapper.find('.fl-pin').exists()).toBe(false)
+    // Back at the folder's row.
+    expect(scrolled.mock.contexts.some((el) => (el as HTMLElement).dataset.path === '/A')).toBe(true)
   })
 
   it('starts a folder from its first page again once it is closed', async () => {
@@ -988,21 +1013,20 @@ describe('FileList long folders', () => {
     await row(wrapper, 'A').find('.fl-arrow').trigger('click')
     await flushPromises()
     expect(names(wrapper)).toHaveLength(1 + 2)
-    expect(count(wrapper)).toBe('已显示 2 / 5 项')
+    expect(count(wrapper)).toBe('还有 3 项')
   })
 
   it('limits each folder on its own and keeps the count across a refresh', async () => {
     mockOpenList({ '/': [dir('A'), ...many(4)], '/A': many(5) })
     const wrapper = mountList({ path: '/', pageSize: 2 })
     await flushPromises()
-    await wrapper.findAll('.fl-more-btn')[1].trigger('click')
+    await wrapper.findAll('.fl-more-link')[1].trigger('click')
     await row(wrapper, 'A').find('.fl-arrow').trigger('click')
     await flushPromises()
-    // A's own row, and the top level's (all shown, so only “show less”).
+    // Only A's row: the top level shows everything.
     const more = wrapper.findAll('.fl-more')
-    expect(more).toHaveLength(2)
+    expect(more).toHaveLength(1)
     expect(more[0].attributes('style')).toContain('--fl-depth: 1')
-    expect(count(more[1])).toBe('已显示全部 5 项')
 
     await wrapper.find('.fl-refresh').trigger('click')
     await flushPromises()
