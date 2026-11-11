@@ -38,7 +38,14 @@ COMPAT_VITEPRESS=latest,next pnpm test:compat   # 也可以用 npm dist-tag
 
 | 文件 | 职责 |
 | --- | --- |
-| `FileList.vue` | 组件：把下列模块接到界面 |
+| `FileList.vue` | 组件：共享的属性、文案、提示、OpenList 客户端与密码，把下列模块接到模板 |
+| `context.ts` | 各模块共享的 `ListContext` 类型 |
+| `useTree.ts` | 目录树的加载与刷新、展开、目录密码、排序 |
+| `useDeepSearch.ts` | 筛选与深度搜索 |
+| `useRows.ts` | 屏幕上的行：长目录的末行与吸顶行、吸附偏移 |
+| `useSelection.ts` | 勾选与全选 |
+| `useDownloads.ts` | 单文件下载与批量 ZIP |
+| `usePreview.ts` | 预览弹窗的状态与切换 |
 | `api.ts` | OpenList 接口、文件地址缓存、错误判断 |
 | `demo.ts` / `demoSamples.ts` | 演示数据（与 `api.ts` 同一接口）/ 演示用的真实示例文件 |
 | `tree.ts` | 树节点、排序、目录统计 |

@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import * as client from '../index'
 import { fileListLocales } from '../locales'
@@ -14,7 +14,9 @@ describe('public API', () => {
   })
 
   it('every label is shown somewhere', () => {
-    const source = ['FileList.vue', 'PreviewDialog.vue', 'ConfirmDialog.vue', 'download.ts', 'usePasswords.ts', 'api.ts', 'demo.ts']
+    // Every component and module except the label tables themselves.
+    const source = readdirSync(new URL('..', import.meta.url))
+      .filter(file => /\.(?:vue|ts)$/.test(file) && !['locales.ts', 'types.ts'].includes(file))
       .map(file => read(`../${file}`))
       .join('\n')
     const unused = Object.keys(fileListLocales['zh-CN']).filter(key => !new RegExp(`['"\`]${key}['"\`]`).test(source))
