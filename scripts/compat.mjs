@@ -4,12 +4,13 @@
 //
 //   pnpm test:compat                      # 1.6.4 and 2.0.0-alpha.21
 //   COMPAT_VITEPRESS=1.6.4 pnpm test:compat
+//   COMPAT_VITEPRESS=latest,next pnpm test:compat   # npm dist-tags work too
 //
 // Each site is built and previewed (render, expand, preview, ZIP, no console
 // warning), then started with `vitepress dev` (the public-token warning shows).
 // Needs network access for npm and a Playwright Chromium.
 import { execFileSync, spawn } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import process from 'node:process'
@@ -149,6 +150,9 @@ try {
     write(join(site, 'docs/secret.md'), '# Token\n\n<FileList token="not-a-real-token" />\n')
     try {
       run(npm, ['install', '--no-audit', '--no-fund', '--loglevel=error', `vitepress@${version}`, 'vue@^3.5.0', tarball], site)
+      const installed = JSON.parse(readFileSync(join(site, 'node_modules/vitepress/package.json'), 'utf8')).version
+      if (installed !== version)
+        console.log(`  vitepress@${version} → ${installed}`)
       run(npx, ['vitepress', 'build', 'docs'], site)
 
       const preview = await serve(site, ['preview'], port++)

@@ -24,7 +24,13 @@ CI 每次推送和 PR 都会运行，三种环境均为必过项。
 ```bash
 pnpm test:compat
 COMPAT_VITEPRESS=1.6.4 pnpm test:compat   # 只测指定版本，逗号分隔
+COMPAT_VITEPRESS=latest,next pnpm test:compat   # 也可以用 npm dist-tag
 ```
+
+跟进 VitePress 新版本：
+
+- `.github/dependabot.yml`：每天检查文档站（`demo/`）、每周检查根目录的 vitepress / vitepress-tuck / vue，有新版本就开 PR，CI 全部通过后合并，文档站随之用上新版本
+- `VitePress canary` 工作流：每天用 `latest` 和 `next` 两个 dist-tag 跑一遍 `test:compat`，新版本把插件弄坏时第一时间失败并发邮件
 
 公开接口只有组件、`enhanceAppWithFileList`、文案工具与 `FileList*` 类型（`src/client/__tests__/publicApi.spec.ts` 守着这份清单）。新增导出或文案 key 前先想清楚：1.0 之后删除即是主版本。
 
