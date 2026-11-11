@@ -4,6 +4,8 @@
 
 ### Internal
 
+- Size budget test (`size.spec.ts`): the built browser bundle, styles and Node entry must stay within their gzip budgets, and markdown-it, DOMPurify and client-zip must stay lazily loaded; CI and the release workflow fail otherwise
+- CONTRIBUTING: a manual regression checklist for a real OpenList-Worker, to run before each release candidate and release
 - `FileList.vue` split into `useTree`, `useDeepSearch`, `useRows`, `useSelection`, `useDownloads` and `usePreview` (1,107 → 200 lines of script); behaviour unchanged
 
 ## 0.9.0 (2026-11-11)
