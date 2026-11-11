@@ -42,7 +42,7 @@ const props = withDefaults(defineProps<FileListProps>(), {
   title: '',
   locale: 'zh-CN',
   rememberPassword: true,
-  pageSize: 200,
+  pageSize: 15,
   deepSearchLimit: 500,
   deepSearch: 'manual',
 })
@@ -423,6 +423,8 @@ async function toggleExpand(node: FNode) {
   if (!node.is_dir) return
   if (node.expanded) {
     node.expanded = false
+    // Opened again, a long folder starts from its first page.
+    for (const key of [...shown.keys()]) if (isWithin(key, node.path)) shown.delete(key)
     return
   }
   node.expanded = await loadChildren(node, 'focus')
@@ -463,13 +465,19 @@ const sortValue = computed<string>({
 
 /* ---------------- long folders ---------------- */
 
-/** A “show more” row closing a folder whose children are cut at `pageSize`. */
+/**
+ * The row closing a long folder: “show more” while children are cut at
+ * `pageSize`, and “show less” once more than the first page is shown.
+ */
 interface MoreRow {
   more: true
   /** Folder path (the listed folder's path for top-level rows). */
   key: string
   depth: number
   remaining: number
+  total: number
+  /** More than the first page is shown. */
+  canLess: boolean
 }
 
 type Row = FNode | MoreRow
@@ -477,14 +485,30 @@ type Row = FNode | MoreRow
 /** Rows shown per folder, beyond the first page; kept across refreshes. */
 const shown = reactive(new Map<string, number>())
 
+function pageSizeOf(): number {
+  return Math.max(0, Math.floor(props.pageSize ?? 15))
+}
+
 function limitOf(key: string): number {
-  const size = Math.max(0, Math.floor(props.pageSize ?? 200))
+  const size = pageSizeOf()
   return size ? (shown.get(key) ?? size) : Number.POSITIVE_INFINITY
 }
 
 function showMore(row: MoreRow, all: boolean) {
-  const size = Math.max(1, Math.floor(props.pageSize ?? 200))
+  const size = Math.max(1, pageSizeOf())
   shown.set(row.key, all ? Number.POSITIVE_INFINITY : limitOf(row.key) + size)
+}
+
+/** Back to the first page; the folder's row (or the list's top) comes back into view. */
+async function showLess(row: MoreRow) {
+  shown.delete(row.key)
+  await nextTick()
+  const root = rootEl.value
+  if (!root) return
+  const folder = [...root.querySelectorAll<HTMLElement>('[data-path]')].find((el) => el.dataset.path === row.key)
+  const target = folder ?? root
+  // Rows keep `scroll-margin-top` clear of the sticky bars.
+  if (target.getBoundingClientRect().top < stickyTop.value) target.scrollIntoView({ block: 'start' })
 }
 
 function isMore(row: Row): row is MoreRow {
@@ -502,12 +526,16 @@ const rows = computed<Row[]>(() => {
   const walk = (nodes: FNode[], key: string, depth: number) => {
     const list = nodes.filter(matches)
     // A filter shows every match: a cut list could hide the one searched for.
+    const size = pageSizeOf()
     const limit = query ? list.length : Math.min(list.length, limitOf(key))
     for (const node of list.slice(0, limit)) {
       out.push(node)
       if (node.is_dir && (node.expanded || query) && node.children.length) walk(node.children, node.path, node.depth + 1)
     }
-    if (limit < list.length) out.push({ more: true, key, depth, remaining: list.length - limit })
+    const canLess = !query && size > 0 && limit > size
+    if (limit < list.length || canLess) {
+      out.push({ more: true, key, depth, remaining: list.length - limit, total: list.length, canLess })
+    }
   }
   walk(roots.value, props.sources.length ? '' : props.path, 0)
   return out
@@ -1168,8 +1196,11 @@ onBeforeUnmount(() => {
       <span class="fl-cell fl-cell-check"></span>
       <span class="fl-cell fl-more-cell">
         <span class="fl-indent" aria-hidden="true"></span>
-        <span class="fl-more-count">{{ t('moreRemaining', { count: node.remaining }) }}</span>
-        <template v-if="node.remaining > (pageSize || 0)">
+        <span class="fl-more-count">
+          {{ node.remaining ? t('moreRemaining', { count: node.remaining }) : t('allShown', { count: node.total }) }}
+        </span>
+        <template v-if="!node.remaining"></template>
+        <template v-else-if="node.remaining > (pageSize || 0)">
           <button class="fl-more-btn" type="button" @click="showMore(node, false)">
             {{ t('showMore') }}<span class="fl-more-page">{{ ` ${t('folderItems', { count: pageSize })}` }}</span>
           </button>
@@ -1177,6 +1208,9 @@ onBeforeUnmount(() => {
         </template>
         <button v-else class="fl-more-btn" type="button" @click="showMore(node, true)">
           {{ t('showRest', { count: node.remaining }) }}
+        </button>
+        <button v-if="node.canLess" class="fl-more-btn fl-more-less" type="button" @click="showLess(node)">
+          {{ t('showLess') }}
         </button>
       </span>
     </div>
@@ -1192,6 +1226,7 @@ onBeforeUnmount(() => {
         'fl-row-error': node.lock?.prompting && !!node.lock.error,
       }"
       :style="{ '--fl-depth': node.depth }"
+      :data-path="node.path"
     >
       <label class="fl-cell fl-cell-check">
         <input

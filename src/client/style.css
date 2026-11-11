@@ -863,7 +863,8 @@
   border-color: var(--vp-c-brand-1);
 }
 
-.fl-more-all {
+.fl-more-all,
+.fl-more-less {
   font-weight: 400;
   background: transparent;
   border-color: transparent;
@@ -1137,13 +1138,22 @@
 
   .fl-more-count {
     flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .fl-more-btn {
     height: 44px;
-    padding: 0 12px;
+    padding: 0 10px;
     font-size: 14px;
     border-radius: 10px;
+  }
+
+  /* three buttons share the row on a phone */
+  .fl-more-all,
+  .fl-more-less {
+    padding: 0 8px;
   }
 
   .fl-more-page {
