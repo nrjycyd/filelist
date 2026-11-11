@@ -6,8 +6,6 @@ export interface FileListLabels {
   filter: string
   refresh: string
   batch: string
-  /** @deprecated No longer shown; the selection count lives in the toolbar. */
-  batchCount: string
   batching: string
   passwordPrompt: string
   passwordPlaceholder: string
@@ -27,15 +25,11 @@ export interface FileListLabels {
   download: string
   loaded: string
   selected: string
-  /** @deprecated No longer shown; the footer only shows loaded files and size. */
-  unloaded: string
   folderFailed: string
   demoDownload: string
   demoPreview: string
   demoBatch: string
   downloadFailed: string
-  /** @deprecated Preview errors are shown in the dialog (`previewUnavailable`). */
-  previewFailed: string
   batchFailed: string
   defaultZip: string
   /** Text button that clears the selection (wide layout). */
@@ -90,8 +84,6 @@ export interface FileListLabels {
   forgetPassword: string
   /** Lock button on a folder that needs a password. `{name}` */
   unlockFolder: string
-  /** @deprecated Network failures now append `corsHint`. */
-  networkHint: string
   /** Deep search: the row at the end of a filtered list. `{count}` where noted */
   deepHint: string
   deepSearch: string
@@ -146,8 +138,6 @@ export interface FileListLabels {
   showNext: string
   /** Show the next page, short form for narrow lists. `{count}` */
   showNextShort: string
-  /** No longer shown (“Show next” replaces it); kept for existing overrides. */
-  showMore: string
   showAll: string
   /** Fewer than a page left. `{count}` */
   showRest: string

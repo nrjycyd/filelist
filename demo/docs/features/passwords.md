@@ -30,3 +30,7 @@
 | --- | --- | --- |
 | `password` | `''` | 目录密码，也可以在运行时输入 |
 | `rememberPassword` | `true` | 是否提供“在此标签页中记住”开关；`false` 时不写入 sessionStorage |
+
+::: warning 写在页面里的密码是公开的
+`password`（以及 `sources` 里的 `password`）会原样进入构建后的网页。需要保密的目录不要写密码，让访客自己输入。见[安全与权限](../guide/security)。
+:::

@@ -19,6 +19,15 @@ pnpm run test:e2e    # 自动启动模拟 OpenList 与站点预览
 
 CI 每次推送和 PR 都会运行，三种环境均为必过项。
 
+兼容性测试：把打包后的插件装进全新的 VitePress 1.6 和 2.x 站点（普通写法，不用 vitepress-tuck），构建后在 Chromium 中检查渲染、展开、预览、ZIP，以及开发时的公开提醒。需要联网安装依赖，约 1 分钟：
+
+```bash
+pnpm test:compat
+COMPAT_VITEPRESS=1.6.4 pnpm test:compat   # 只测指定版本，逗号分隔
+```
+
+公开接口只有组件、`enhanceAppWithFileList`、文案工具与 `FileList*` 类型（`src/client/__tests__/publicApi.spec.ts` 守着这份清单）。新增导出或文案 key 前先想清楚：1.0 之后删除即是主版本。
+
 源码结构（`src/client`）：
 
 | 文件 | 职责 |
@@ -32,6 +41,7 @@ CI 每次推送和 PR 都会运行，三种环境均为必过项。
 | `PreviewDialog.vue` | 预览弹窗 |
 | `Icon.vue` / `icons.ts` | 图标 |
 | `utils.ts` | 路径、格式化、文件类型表 |
+| `devWarnings.ts` | 开发时提示 `token` / `password` 会公开 |
 
 仓库统一使用 pnpm（`pnpm-lock.yaml`），CI 与发布流程执行 `pnpm install --frozen-lockfile`。
 

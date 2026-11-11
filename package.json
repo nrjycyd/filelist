@@ -2,6 +2,9 @@
   "name": "vitepress-plugin-filelist",
   "version": "0.8.0",
   "packageManager": "pnpm@11.25.0",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
   "type": "module",
   "description": "OpenList file browser for VitePress: tree view, batch ZIP download, i18n, password and token support.",
   "author": "nrjycyd",
@@ -44,17 +47,23 @@
     "test:watch": "vitest",
     "pack:check": "npm pack --dry-run",
     "test:e2e": "playwright test",
-    "e2e:site": "pnpm run build && pnpm --dir demo install --force && pnpm --dir demo run build:e2e"
+    "e2e:site": "pnpm run build && pnpm --dir demo install --force && pnpm --dir demo run build:e2e",
+    "test:compat": "node scripts/compat.mjs"
   },
   "peerDependencies": {
-    "vitepress": "^1.0.0 || ^2.0.0-alpha.0",
+    "vitepress": "^1.6.0 || ^2.0.0-alpha.18",
+    "vitepress-tuck": ">=0.12.2 <1",
     "vue": "^3.5.0"
+  },
+  "peerDependenciesMeta": {
+    "vitepress-tuck": {
+      "optional": true
+    }
   },
   "dependencies": {
     "client-zip": "^2.5.1",
     "dompurify": "^3.4.17",
-    "markdown-it": "^14.3.3",
-    "vitepress-tuck": "^0.12.2"
+    "markdown-it": "^14.3.3"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
@@ -67,6 +76,7 @@
     "unplugin-vue": "^8.0.1",
     "unrun": "^0.3.1",
     "vitepress": "^2.0.0-alpha.21",
+    "vitepress-tuck": "^0.12.2",
     "vitest": "^5.1.0",
     "vue": "^3.5.0",
     "vue-tsc": "^2.2.0"

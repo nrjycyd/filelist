@@ -6,7 +6,7 @@
 
 ## 提示 guest 相关错误
 
-OpenList 没有启用 guest 用户。在后台启用 guest 并设置基础路径，或传入只读 `token`。
+OpenList 没有启用 guest 用户。在后台启用 guest 并设置基础路径；也可以传入只读 `token`，但它对访客公开，见[安全与权限](./security)。
 
 ## 关闭了 guest 的全部权限，为什么还能预览和下载？
 

@@ -49,7 +49,9 @@ export default defineConfig({
         items: [
           { text: '快速开始', link: '/guide/getting-started' },
           { text: '接入 OpenList', link: '/guide/openlist' },
+          { text: '安全与权限', link: '/guide/security' },
           { text: '常见问题', link: '/guide/faq' },
+          { text: '升级到 0.9', link: '/guide/migration' },
         ],
       },
       {
