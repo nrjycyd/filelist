@@ -5,7 +5,37 @@ on:
     branches: [main]
   pull_request:
 
+# A new push to the same PR or branch cancels the run still going for the old one.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  # Docs-only changes skip the browser jobs (a skipped job still satisfies a
+  # required check).
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            code:
+              - 'src/**'
+              - 'e2e/**'
+              - 'demo/e2e/**'
+              - 'scripts/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'demo/package.json'
+              - 'demo/pnpm-lock.yaml'
+              - '*.config.*'
+              - 'tsconfig.json'
+              - '.github/workflows/**'
+
   build:
     runs-on: ubuntu-latest
     steps:
@@ -16,6 +46,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm run lint
       - run: pnpm run build
       - run: pnpm run typecheck
       - run: pnpm test
@@ -25,8 +56,33 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm run build
 
+  # Sites on the oldest Node that package.json "engines" promises. The dev
+  # tools need Node 22, so build with it, then run the compat sites on 20.19.
+  node20:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.19
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: node scripts/compat.mjs
+        env:
+          COMPAT_SKIP_BUILD: '1'
+
   # Plain VitePress 1.6 and 2.x sites with the packed plugin (scripts/compat.mjs).
   compat:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -41,6 +97,8 @@ jobs:
 
   # Browser tests: the fixture site in demo/e2e against a mock OpenList.
   e2e:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

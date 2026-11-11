@@ -26,9 +26,22 @@ jobs:
       - run: pnpm run build
       - run: pnpm run typecheck
       - run: pnpm test
+      # The tag must match package.json; a pre-release (1.0.0-rc.1) goes to the
+      # `next` dist-tag so `npm install` keeps getting the latest stable release.
+      # npm refuses to publish a pre-release without --tag.
+      - name: Check the tag and pick the npm dist-tag
+        id: version
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $version"
+            exit 1
+          fi
+          if [[ "$version" == *-* ]]; then echo "tag=next" >> "$GITHUB_OUTPUT"; else echo "tag=latest" >> "$GITHUB_OUTPUT"; fi
       - name: Publish to npm (OIDC)
-        run: npm publish --provenance --access public
+        run: npm publish --provenance --access public --tag ${{ steps.version.outputs.tag }}
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
+          prerelease: ${{ steps.version.outputs.tag == 'next' }}

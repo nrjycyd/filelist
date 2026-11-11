@@ -12,9 +12,10 @@ updates:
       - dependency-name: vitepress
       - dependency-name: vitepress-tuck
       - dependency-name: vue
+      - dependency-name: vitepress-plugin-*
     groups:
       vitepress:
-        patterns: [vitepress, vitepress-tuck, vue]
+        patterns: [vitepress, vitepress-tuck, vue, vitepress-plugin-*]
     commit-message:
       prefix: "chore(demo)"
     labels: [dependencies]
@@ -33,4 +34,16 @@ updates:
         patterns: [vitepress, vitepress-tuck, vue]
     commit-message:
       prefix: "chore(deps-dev)"
+    labels: [dependencies]
+
+  # GitHub Actions used by the workflows, checked monthly.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ['*']
+    commit-message:
+      prefix: "ci"
     labels: [dependencies]
