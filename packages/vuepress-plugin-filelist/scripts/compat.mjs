@@ -38,7 +38,10 @@ const THEMES = {
   },
   plume: {
     pkg: 'vuepress-theme-plume',
-    extra: [],
+    // plume's components use imported types in defineProps, which Vue's
+    // compiler resolves with TypeScript, so a plume site needs it installed.
+    // TypeScript 7 (the native compiler) has no `ts.sys` for Vue to use yet.
+    extra: ['typescript@^5'],
     code: `import { plumeTheme } from 'vuepress-theme-plume'`,
     theme: `plumeTheme({})`,
     brand: '--vp-c-brand-1',
