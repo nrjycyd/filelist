@@ -1,9 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Release workflow: each package is skipped when its version is already on npm, so a failed run can be re-run
+
 ## 0.10.1 (2026-11-12)
 
 - First release of **vuepress-plugin-filelist** on npm. In 0.10.0 only vitepress-plugin-filelist reached npm (the VuePress package's trusted publisher was not set up yet), so both packages are released again together. No code changes
-- Release workflow: each package is skipped when its version is already on npm, so a failed run can be re-run
 
 ## 0.10.0 (2026-11-12)
 

@@ -44,10 +44,18 @@ jobs:
             exit 1
           fi
           if [[ "$version" == *-* ]]; then echo "tag=next" >> "$GITHUB_OUTPUT"; else echo "tag=latest" >> "$GITHUB_OUTPUT"; fi
+      # Each package is skipped when its version is already on npm, so a run
+      # that failed halfway can simply be re-run.
       - name: Publish to npm (OIDC)
-        run: npm publish --provenance --access public --tag ${{ steps.version.outputs.tag }}
-      # pnpm pack turns `workspace:*` into the exact version; npm publishes the
-      # tarball with provenance. A re-run skips a version that is already up.
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if npm view "vitepress-plugin-filelist@$version" version >/dev/null 2>&1; then
+            echo "vitepress-plugin-filelist@$version is already published, skipped."
+            exit 0
+          fi
+          npm publish --provenance --access public --tag ${{ steps.version.outputs.tag }}
+      # Published the same way as the main package, from its own folder, after
+      # `workspace:*` becomes the exact version.
       - name: Publish vuepress-plugin-filelist (OIDC)
         working-directory: packages/vuepress-plugin-filelist
         run: |
@@ -56,9 +64,9 @@ jobs:
             echo "vuepress-plugin-filelist@$version is already published, skipped."
             exit 0
           fi
-          mkdir -p ../../.release
-          pnpm pack --pack-destination ../../.release
-          npm publish ../../.release/vuepress-plugin-filelist-$version.tgz --provenance --access public --tag ${{ steps.version.outputs.tag }}
+          node -e "const fs = require('node:fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); pkg.dependencies['vitepress-plugin-filelist'] = pkg.version; fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\\n')"
+          grep -q '"vitepress-plugin-filelist": "'"$version"'"' package.json
+          npm publish --provenance --access public --tag ${{ steps.version.outputs.tag }}
       - name: Create GitHub release
         uses: softprops/action-gh-release@v3
         with:
