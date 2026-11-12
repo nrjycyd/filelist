@@ -1,15 +1,15 @@
 <h1 align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/nrjycyd/vitepress-plugin-filelist/main/demo/docs/public/wordmark-dark.svg?sanitize=true">
-    <img src="https://raw.githubusercontent.com/nrjycyd/vitepress-plugin-filelist/main/demo/docs/public/wordmark.svg?sanitize=true" alt="FileList" width="240">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/nrjycyd/filelist/main/demo/docs/public/wordmark-dark.svg?sanitize=true">
+    <img src="https://raw.githubusercontent.com/nrjycyd/filelist/main/demo/docs/public/wordmark.svg?sanitize=true" alt="FileList" width="240">
   </picture>
 </h1>
 
 <p align="center">
   <a href="https://www.npmjs.com/package/vitepress-plugin-filelist"><img src="https://img.shields.io/npm/v/vitepress-plugin-filelist?label=vitepress-plugin-filelist" alt="vitepress-plugin-filelist on npm"></a>
   <a href="https://www.npmjs.com/package/vuepress-plugin-filelist"><img src="https://img.shields.io/npm/v/vuepress-plugin-filelist?label=vuepress-plugin-filelist" alt="vuepress-plugin-filelist on npm"></a>
-  <a href="https://github.com/nrjycyd/vitepress-plugin-filelist/actions/workflows/ci.yml"><img src="https://github.com/nrjycyd/vitepress-plugin-filelist/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://github.com/nrjycyd/vitepress-plugin-filelist/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/vitepress-plugin-filelist" alt="license"></a>
+  <a href="https://github.com/nrjycyd/filelist/actions/workflows/ci.yml"><img src="https://github.com/nrjycyd/filelist/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/nrjycyd/filelist/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/vitepress-plugin-filelist" alt="license"></a>
 </p>
 
 <p align="center"><a href="./README.md">English</a> · 简体中文</p>
@@ -17,7 +17,7 @@
 <p align="center">面向 VitePress 与 VuePress 的 OpenList 文件浏览组件：在文档页里浏览、预览、批量下载 OpenList 上的文件。</p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/nrjycyd/vitepress-plugin-filelist/main/demo/docs/public/screenshot.png" alt="文件列表截图" width="640">
+  <img src="https://raw.githubusercontent.com/nrjycyd/filelist/main/demo/docs/public/screenshot.png" alt="文件列表截图" width="640">
 </p>
 
 ## 功能
@@ -35,7 +35,7 @@
 pnpm add -D vitepress-plugin-filelist
 ```
 
-用 `enhanceAppWithFileList` 注册，或作为 [vitepress-tuck](https://github.com/pengzhanbo/vitepress-tuck) 插件：[配置说明](https://nrjycyd.github.io/vitepress-plugin-filelist/guide/getting-started)。
+用 `enhanceAppWithFileList` 注册，或作为 [vitepress-tuck](https://github.com/pengzhanbo/vitepress-tuck) 插件：[配置说明](https://nrjycyd.github.io/filelist/guide/getting-started)。
 
 **VuePress** 2
 
@@ -43,7 +43,7 @@ pnpm add -D vitepress-plugin-filelist
 pnpm add -D vuepress-plugin-filelist
 ```
 
-在 `plugins` 里加上 `fileListPlugin()`：[配置说明](https://nrjycyd.github.io/vitepress-plugin-filelist/guide/vuepress)。
+在 `plugins` 里加上 `fileListPlugin()`：[配置说明](https://nrjycyd.github.io/filelist/guide/vuepress)。
 
 然后在任意页面中（不写 `base` 时显示内置演示数据）：
 
@@ -55,7 +55,7 @@ pnpm add -D vuepress-plugin-filelist
 
 ## 文档与在线演示
 
-👉 **[nrjycyd.github.io/vitepress-plugin-filelist](https://nrjycyd.github.io/vitepress-plugin-filelist/)**：配置、全部属性，每个功能都有可操作的示例。
+👉 **[nrjycyd.github.io/filelist](https://nrjycyd.github.io/filelist/)**：配置、全部属性，每个功能都有可操作的示例。
 
 ## 后端
 

@@ -1,6 +1,6 @@
 import type { FileListLocale, FileListProps } from './types'
 
-const SECURITY_DOC = 'https://nrjycyd.github.io/vitepress-plugin-filelist/guide/security'
+const SECURITY_DOC = 'https://nrjycyd.github.io/filelist/guide/security'
 
 /** Props a page wrote that end up, readable by anyone, in the built site. */
 export function publicSecrets(props: Pick<FileListProps, 'token' | 'password' | 'sources'>): string[] {

@@ -5,15 +5,15 @@ import steps from 'vitepress-plugin-steps'
 import { defineConfig } from 'vitepress-tuck'
 import pkg from '../../../package.json'
 
-const repo = 'https://github.com/nrjycyd/vitepress-plugin-filelist'
-const site = 'https://nrjycyd.github.io/vitepress-plugin-filelist/'
+const repo = 'https://github.com/nrjycyd/filelist'
+const site = 'https://nrjycyd.github.io/filelist/'
 const base = process.env.PAGES_BASE || '/'
 
 export default defineConfig({
   base,
   lang: 'zh-CN',
-  // The brand name; the packages are vitepress-plugin-filelist and
-  // vuepress-plugin-filelist (the repository keeps the first name).
+  // The brand name (and the repository's); the packages are
+  // vitepress-plugin-filelist and vuepress-plugin-filelist.
   title: 'FileList',
   description: '面向 VitePress 与 VuePress 的 OpenList 文件浏览组件',
   cleanUrls: true,

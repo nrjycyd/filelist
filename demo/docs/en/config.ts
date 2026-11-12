@@ -1,7 +1,7 @@
 import type { DefaultTheme, UserConfig } from 'vitepress'
 import pkg from '../../../package.json'
 
-const repo = 'https://github.com/nrjycyd/vitepress-plugin-filelist'
+const repo = 'https://github.com/nrjycyd/filelist'
 
 // English pages (/en/). Only what differs from the Chinese root config.
 export default {

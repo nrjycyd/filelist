@@ -58,6 +58,6 @@ VitePress 1.x 请用[普通写法](./getting-started#在普通-vitepress-中使�
 
 `compareNodes`、`encodePath`、`extOf`、`fileKind`、`fillPreviewUrl`、`formatDate`、`formatSize`、`iframePreviewsFor`、`joinPath`、`previewKind`、`totalSize`、`uniqueEntryName`、`zipEntryName`、`zipSegment`，以及类型 `FileKind`、`IframePreview`、`PreviewKind`、`SortableNode`、`SortKey`、`OpenListEntry`。
 
-文档从未承诺过它们。如果你的主题用到了，请在自己的代码里实现；它们都是几行的纯函数，可以从[源码](https://github.com/nrjycyd/vitepress-plugin-filelist/blob/v0.8.0/src/client/utils.ts)复制。
+文档从未承诺过它们。如果你的主题用到了，请在自己的代码里实现；它们都是几行的纯函数，可以从[源码](https://github.com/nrjycyd/filelist/blob/v0.8.0/src/client/utils.ts)复制。
 
 仍然导出的见[导出与兼容性](../reference/exports)。

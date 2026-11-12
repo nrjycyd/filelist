@@ -1,6 +1,6 @@
 # 参与开发
 
-使用说明见[文档站](https://nrjycyd.github.io/vitepress-plugin-filelist/)。本文面向修改插件本身的开发者。
+使用说明见[文档站](https://nrjycyd.github.io/filelist/)。本文面向修改插件本身的开发者。
 
 ```bash
 pnpm install

@@ -58,6 +58,6 @@ These 5 keys had not been shown for a while. If you override them in `labels`, d
 
 `compareNodes`, `encodePath`, `extOf`, `fileKind`, `fillPreviewUrl`, `formatDate`, `formatSize`, `iframePreviewsFor`, `joinPath`, `previewKind`, `totalSize`, `uniqueEntryName`, `zipEntryName`, `zipSegment`, and the types `FileKind`, `IframePreview`, `PreviewKind`, `SortableNode`, `SortKey`, `OpenListEntry`.
 
-The docs never promised them. If your theme used one, implement it in your own code; they are small pure functions you can copy from the [source](https://github.com/nrjycyd/vitepress-plugin-filelist/blob/v0.8.0/src/client/utils.ts).
+The docs never promised them. If your theme used one, implement it in your own code; they are small pure functions you can copy from the [source](https://github.com/nrjycyd/filelist/blob/v0.8.0/src/client/utils.ts).
 
 What is still exported: [Exports and compatibility](../reference/exports).
