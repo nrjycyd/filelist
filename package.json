@@ -1,6 +1,6 @@
 {
   "name": "vitepress-plugin-filelist",
-  "version": "0.10.2",
+  "version": "0.10.3",
   "packageManager": "pnpm@11.25.0",
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
