@@ -40,8 +40,21 @@ export interface FileListLabels {
   totalSize: string
   /** `{count}` files inside a loaded folder. */
   folderItems: string
-  /** Label of the compact sort select shown in narrow containers. */
+  /** Label of the sort button shown in narrow containers. */
   sortBy: string
+  /** Heading of the sort menu, and its accessible name. */
+  sortTitle: string
+  /** Accessible name of the order switch in the sort menu. */
+  sortOrder: string
+  /** Sort menu order, by name: ascending, descending. */
+  sortNameAsc: string
+  sortNameDesc: string
+  /** Sort menu order, by size: ascending, descending. */
+  sortSizeAsc: string
+  sortSizeDesc: string
+  /** Sort menu order, by date: ascending, descending. */
+  sortDateAsc: string
+  sortDateDesc: string
   /** Accessible name of the column header the list is sorted by, ascending, `{name}`. */
   sortedAscending: string
   /** Accessible name of the column header the list is sorted by, descending, `{name}`. */

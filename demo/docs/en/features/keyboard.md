@@ -23,6 +23,8 @@ Try it: click the filter box below and press Tab a few times until a row gets a 
 
 The toolbar (filter, refresh, Download ZIP) and the column headers (select all, sorting) stay ordinary Tab stops, before the list.
 
+The “Sort” button of narrow lists (phones): Enter, Space or ↓ opens its menu on the current sort field (↑ opens it on the last item); ↑ ↓ (or ← →) move between items, Home / End go to the first / last, Enter or Space picks, Esc closes it and goes back to the button, Tab closes it and moves on.
+
 ## When it applies
 
 - **Keyboard only**: the focus ring and the key hint only appear with the keyboard; with a mouse or touch, the list looks and works exactly as before, and the check boxes and buttons in rows are clicked as usual

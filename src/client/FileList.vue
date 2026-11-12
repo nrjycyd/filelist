@@ -28,6 +28,7 @@ import { warnPublicSecrets } from './devWarnings'
 import Icon from './Icon.vue'
 import { formatLabel, resolveLabels } from './locales'
 import PreviewDialog from './PreviewDialog.vue'
+import SortMenu from './SortMenu.vue'
 import { useDeepSearch } from './useDeepSearch'
 import { useDownloads } from './useDownloads'
 import { rowKey, useKeyboard } from './useKeyboard'
@@ -114,8 +115,7 @@ const {
   refresh,
   toggleExpand,
   setSort,
-  sortOptions,
-  sortValue,
+  applySort,
 } = useTree(ctx, {
   selected,
   stopDeepSearch: () => stopDeepSearch(),
@@ -437,13 +437,7 @@ onBeforeUnmount(() => {
       </span>
       <span class="fl-cell fl-cell-op" role="columnheader">
         <span class="fl-sr-only">{{ t('actions') }}</span>
-        <label class="fl-sort-select">
-          <span>{{ t('sortBy') }}</span>
-          <span class="fl-sort-current" aria-hidden="true">{{ sortOptions.find((option) => option.value === sortValue)?.label }}</span>
-          <select v-model="sortValue" :aria-label="t('sortBy')">
-            <option v-for="option in sortOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-          </select>
-        </label>
+        <SortMenu :sort-key="sortKey" :sort-asc="sortAsc" :uid="uid" :t="t" @sort="applySort" />
       </span>
     </div>
 
