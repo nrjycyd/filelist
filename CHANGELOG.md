@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.10.2 (2026-11-12)
 
 - The repository is now [nrjycyd/filelist](https://github.com/nrjycyd/filelist) and the docs are at [nrjycyd.github.io/filelist](https://nrjycyd.github.io/filelist/). Links to the old repository redirect; links to the old docs address (`nrjycyd.github.io/vitepress-plugin-filelist`) no longer work. Package names are unchanged
 - Release workflow: each package is skipped when its version is already on npm, so a failed run can be re-run
