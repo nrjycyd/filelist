@@ -27,17 +27,35 @@
 - Folder passwords, filter and deep search, paging for long folders
 - Follows the site theme's colours and light / dark mode (VitePress, or VuePress with the default theme, plume or hope); a compact layout on phones
 
-## Docs and live demo
+## Install
 
-👉 **[nrjycyd.github.io/vitepress-plugin-filelist/en/](https://nrjycyd.github.io/vitepress-plugin-filelist/en/)**: install, setup, every prop, and live examples.
+**VitePress** 1.6+ or 2
 
 ```bash
 npm install -D vitepress-plugin-filelist
 ```
 
-Works with VitePress 1.6+ (register with `enhanceAppWithFileList`) and VitePress 2 (also as a [vitepress-tuck](https://github.com/pengzhanbo/vitepress-tuck) plugin).
+Register with `enhanceAppWithFileList`, or as a [vitepress-tuck](https://github.com/pengzhanbo/vitepress-tuck) plugin: [setup guide](https://nrjycyd.github.io/vitepress-plugin-filelist/en/guide/getting-started).
 
-On **VuePress 2**? Install [`vuepress-plugin-filelist`](https://github.com/nrjycyd/vitepress-plugin-filelist/tree/main/packages/vuepress-plugin-filelist) instead: the same component, released together ([guide](https://nrjycyd.github.io/vitepress-plugin-filelist/en/guide/vuepress)).
+**VuePress** 2
+
+```bash
+npm install -D vuepress-plugin-filelist
+```
+
+Add `fileListPlugin()` to `plugins`: [setup guide](https://nrjycyd.github.io/vitepress-plugin-filelist/en/guide/vuepress).
+
+Then on any page (without `base` it shows built-in demo data):
+
+```md
+<FileList base="https://pan.example.com" path="/course" locale="en-US" />
+```
+
+Both packages are the same component with the same version, released together.
+
+## Docs and live demo
+
+👉 **[nrjycyd.github.io/vitepress-plugin-filelist/en/](https://nrjycyd.github.io/vitepress-plugin-filelist/en/)**: setup, every prop, and live examples you can click through.
 
 ## Backend
 

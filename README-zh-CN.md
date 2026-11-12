@@ -27,15 +27,35 @@
 - 目录密码、筛选与深度搜索、大目录分页
 - 跟随站点主题的配色与亮 / 暗模式（VitePress，或 VuePress 的默认主题、plume、hope），手机自动切换布局
 
-## 文档与在线演示
+## 安装
 
-👉 **[nrjycyd.github.io/vitepress-plugin-filelist](https://nrjycyd.github.io/vitepress-plugin-filelist/)**：安装、配置、全部属性，每个功能都有可操作的示例。
+**VitePress** 1.6+ 或 2
 
 ```bash
 pnpm add -D vitepress-plugin-filelist
 ```
 
-用 **VuePress 2**？请安装 [`vuepress-plugin-filelist`](./packages/vuepress-plugin-filelist/README-zh-CN.md)：同一个组件，一起发布（[使用说明](https://nrjycyd.github.io/vitepress-plugin-filelist/guide/vuepress)）。
+用 `enhanceAppWithFileList` 注册，或作为 [vitepress-tuck](https://github.com/pengzhanbo/vitepress-tuck) 插件：[配置说明](https://nrjycyd.github.io/vitepress-plugin-filelist/guide/getting-started)。
+
+**VuePress** 2
+
+```bash
+pnpm add -D vuepress-plugin-filelist
+```
+
+在 `plugins` 里加上 `fileListPlugin()`：[配置说明](https://nrjycyd.github.io/vitepress-plugin-filelist/guide/vuepress)。
+
+然后在任意页面中（不写 `base` 时显示内置演示数据）：
+
+```md
+<FileList base="https://pan.example.com" path="/课程资料" />
+```
+
+两个包是同一个组件、同一个版本号，一起发布。
+
+## 文档与在线演示
+
+👉 **[nrjycyd.github.io/vitepress-plugin-filelist](https://nrjycyd.github.io/vitepress-plugin-filelist/)**：配置、全部属性，每个功能都有可操作的示例。
 
 ## 后端
 
