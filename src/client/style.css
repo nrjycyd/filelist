@@ -475,6 +475,13 @@
 .fl-type[data-kind='archive'] { --fl-k-bg: var(--fl-k-archive-bg); --fl-k-fg: var(--fl-k-archive-fg); }
 .fl-type[data-kind='code'] { --fl-k-bg: var(--fl-k-code-bg); --fl-k-fg: var(--fl-k-code-fg); }
 
+/* The grey badge (other types) sits on the selection colour of a selected row:
+   full-strength text keeps it at 4.5:1 or more. */
+.fl-row-selected .fl-type:not([data-kind]),
+.fl-row-selected .fl-type[data-kind='other'] {
+  color: var(--fl-c-text-1);
+}
+
 .fl-label {
   display: flex;
   flex-direction: column;

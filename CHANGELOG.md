@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+### Accessibility
+
+- Keyboard focus no longer drops to the top of the page when the control it was on goes away. It moves to the nearest control that still makes sense:
+  - after unlocking a folder (or cancelling the password), to that folder's button
+  - after “Show all”, to the first row that appeared
+  - after the × in the filter box, to the filter box
+  - after “Clear”, to the “select all” box
+  - after a ZIP finishes or is cancelled, and after “Show less” and deep search links, likewise to the nearest control
+- The column the list is sorted by tells screen readers its direction (“Name, ascending”); the invalid `aria-sort` on a button is gone
+- “Clear” in the selection bar is announced as “清除选择 / Clear selection”, so its name contains the visible text (voice control)
+- The grey file-type badge on a selected row has enough contrast (4.5:1)
+- New label keys `sortedAscending` and `sortedDescending`
+- Browser tests run axe-core on the list in its main states
+- Docs site: the logo next to the site title has no alt text, so “FileList” is not read twice
+
 ## 0.10.2 (2026-11-12)
 
 - The repository is now [nrjycyd/filelist](https://github.com/nrjycyd/filelist) and the docs are at [nrjycyd.github.io/filelist](https://nrjycyd.github.io/filelist/). Links to the old repository redirect; links to the old docs address (`nrjycyd.github.io/vitepress-plugin-filelist`) no longer work. Package names are unchanged

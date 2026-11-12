@@ -19,7 +19,7 @@ import type { ListContext } from './context'
 import type { FNode } from './tree'
 import type { FileListLabels, FileListProps, FileListSource } from './types'
 import type { SortKey } from './utils'
-import { computed, onBeforeUnmount, onMounted, ref, useId } from 'vue'
+import { computed, onBeforeUnmount, onMounted, onUpdated, ref, useId } from 'vue'
 import { createOpenListApi, errorText, isNetworkError } from './api'
 import ConfirmDialog from './ConfirmDialog.vue'
 import { createDemoApi, isDemoFile } from './demo'
@@ -184,6 +184,78 @@ async function loadSettings() {
   iframePreviews.value = settings.iframePreviews
 }
 
+/* ---------------- keyboard focus that would be lost ---------------- */
+
+/**
+ * Where focus was in the list. Several controls disappear after their own
+ * action (“show all”, “clear”, the password form after unlocking, “Stop”…),
+ * which would drop keyboard focus back to the top of the page. When that
+ * happens, focus moves to the nearest control that still makes sense.
+ */
+interface FocusSpot {
+  el: HTMLElement
+  /** The filter box, the toolbar, a row, a “more” row, the pinned folder row, the deep search line, or elsewhere. */
+  spot: 'search' | 'bar' | 'row' | 'more' | 'pin' | 'deep' | 'other'
+  /** The row's path; for a “more” row, the path of the row above it; for the pinned row, the folder. */
+  path?: string
+}
+let lastFocus: FocusSpot | null = null
+
+function onFocusIn(event: FocusEvent) {
+  const el = event.target
+  if (!(el instanceof HTMLElement) || el.closest('dialog')) {
+    lastFocus = null
+    return
+  }
+  const row = el.closest<HTMLElement>('[data-path]')
+  const more = el.closest<HTMLElement>('.fl-more')
+  const pin = el.closest<HTMLElement>('[data-pin]')
+  if (row) lastFocus = { el, spot: 'row', path: row.dataset.path }
+  else if (more) lastFocus = { el, spot: 'more', path: (more.previousElementSibling as HTMLElement | null)?.dataset.path }
+  else if (pin) lastFocus = { el, spot: 'pin', path: pin.dataset.pin }
+  else if (el.closest('.fl-deep')) lastFocus = { el, spot: 'deep' }
+  else if (el.closest('.fl-search')) lastFocus = { el, spot: 'search' }
+  else if (el.closest('.fl-bar')) lastFocus = { el, spot: 'bar' }
+  else lastFocus = { el, spot: 'other' }
+}
+
+/** Focus that leaves for somewhere else is not ours to bring back. */
+function onFocusOut(event: FocusEvent) {
+  const el = event.target
+  setTimeout(() => {
+    if (lastFocus?.el === el && (el as HTMLElement).isConnected) lastFocus = null
+  })
+}
+
+function restoreFocus() {
+  const last = lastFocus
+  const root = rootEl.value
+  if (!last || !root || last.el.isConnected) return
+  const active = document.activeElement
+  lastFocus = null
+  if (active && active !== document.body && active !== document.documentElement) return
+  const find = (selector: string) => root.querySelector<HTMLElement>(selector)
+  const rowAt = (path?: string) =>
+    path === undefined ? null : root.querySelector<HTMLElement>(`[data-path="${CSS.escape(path)}"]`)
+  const shown = (el: HTMLElement) => !(el as HTMLButtonElement).disabled && el.getClientRects().length > 0
+  // A folder's open / unlock button (left on wide lists, right on narrow), else the row's check box.
+  const inRow = (row: Element | null | undefined) => {
+    const controls = [...(row?.querySelectorAll<HTMLElement>('.fl-arrow, .fl-arrow-end, input, button') ?? [])].filter(shown)
+    return controls.find((el) => el.matches('.fl-arrow, .fl-arrow-end')) ?? controls[0] ?? null
+  }
+  let target: HTMLElement | null = null
+  if (last.spot === 'row' || last.spot === 'pin') target = inRow(rowAt(last.path))
+  // “Show all”: the first row that just appeared.
+  else if (last.spot === 'more') target = inRow(rowAt(last.path)?.nextElementSibling)
+  else if (last.spot === 'deep') target = find('.fl-deep button') ?? find('.fl-search input')
+  else if (last.spot === 'search') target = find('.fl-search input')
+  else if (last.spot === 'bar') target = find('.fl-zip-cancel') ?? find('.fl-bar .fl-btn-primary')
+  target ??= find('.fl-head input[type="checkbox"]:not(:disabled)') ?? find('.fl-search input')
+  target?.focus()
+}
+
+onUpdated(restoreFocus)
+
 onMounted(() => {
   warnPublicSecrets(props, props.locale)
   passwords.sync()
@@ -206,6 +278,8 @@ onBeforeUnmount(() => {
     :class="{ 'fl-selecting': selected.size > 0, 'fl-refreshing': refreshing }"
     :style="{ '--fl-sticky-top-auto': `${stickyTop}px` }"
     :aria-busy="refreshing || loadingRoot"
+    @focusin="onFocusIn"
+    @focusout="onFocusOut"
   >
     <div class="fl-bar">
       <div v-if="batchBusy" class="fl-selection" role="status">
@@ -298,7 +372,7 @@ onBeforeUnmount(() => {
         <button
           class="fl-sort-btn"
           type="button"
-          :aria-sort="sortKey === column ? (sortAsc ? 'ascending' : 'descending') : undefined"
+          :aria-label="sortKey === column ? t(sortAsc ? 'sortedAscending' : 'sortedDescending', { name: t(column === 'name' ? 'columnName' : column === 'size' ? 'columnSize' : 'columnDate') }) : undefined"
           @click="setSort(column)"
         >
           {{ t(column === 'name' ? 'columnName' : column === 'size' ? 'columnSize' : 'columnDate') }}<span class="fl-sort" aria-hidden="true">{{ sortKey === column ? (sortAsc ? '▲' : '▼') : '' }}</span>
@@ -317,7 +391,7 @@ onBeforeUnmount(() => {
 
     <!-- While scrolling through a long folder, its row stays at the top with “show less”. -->
     <div class="fl-pin-anchor" :style="{ '--fl-pin-offset': `${pinOffset}px` }">
-      <div v-if="pinned" class="fl-pin" :style="{ '--fl-depth': Math.max(pinned.depth, 0) }">
+      <div v-if="pinned" class="fl-pin" :data-pin="pinned.key" :style="{ '--fl-depth': Math.max(pinned.depth, 0) }">
         <span class="fl-cell fl-cell-check"></span>
         <span class="fl-cell fl-cell-name">
           <span v-if="pinned.depth >= 0" class="fl-indent" aria-hidden="true"></span>
