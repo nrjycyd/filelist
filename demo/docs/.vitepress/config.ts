@@ -12,8 +12,10 @@ const base = process.env.PAGES_BASE || '/'
 export default defineConfig({
   base,
   lang: 'zh-CN',
-  title: 'vitepress-plugin-filelist',
-  description: '面向 VitePress 的 OpenList 文件浏览组件',
+  // The brand name; the packages are vitepress-plugin-filelist and
+  // vuepress-plugin-filelist (the repository keeps the first name).
+  title: 'FileList',
+  description: '面向 VitePress 与 VuePress 的 OpenList 文件浏览组件',
   cleanUrls: true,
   // Icons and the link preview (logo sources: demo/docs/public).
   head: [
@@ -22,8 +24,8 @@ export default defineConfig({
     ['link', { rel: 'apple-touch-icon', href: `${base}apple-touch-icon.png` }],
     ['meta', { name: 'theme-color', content: '#db2777' }],
     ['meta', { property: 'og:type', content: 'website' }],
-    ['meta', { property: 'og:title', content: 'vitepress-plugin-filelist' }],
-    ['meta', { property: 'og:description', content: '在 VitePress 文档里浏览、预览、批量下载 OpenList 网盘文件' }],
+    ['meta', { property: 'og:title', content: 'FileList' }],
+    ['meta', { property: 'og:description', content: '在 VitePress / VuePress 文档里浏览、预览、批量下载 OpenList 网盘文件' }],
     ['meta', { property: 'og:image', content: `${site}social-preview.png` }],
     ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
   ],
@@ -41,7 +43,7 @@ export default defineConfig({
     define: { __FL_VERSION__: JSON.stringify(pkg.version) },
   },
   themeConfig: {
-    logo: { light: '/logo.svg', dark: '/logo-dark.svg', alt: 'vitepress-plugin-filelist' },
+    logo: { light: '/logo.svg', dark: '/logo-dark.svg', alt: 'FileList' },
     nav: [
       { text: '指南', link: '/guide/getting-started', activeMatch: '/guide/' },
       { text: '功能', link: '/features/sources', activeMatch: '/features/' },
@@ -50,7 +52,8 @@ export default defineConfig({
         text: `v${pkg.version}`,
         items: [
           { text: '更新日志', link: `${repo}/blob/main/CHANGELOG.md` },
-          { text: 'npm', link: 'https://www.npmjs.com/package/vitepress-plugin-filelist' },
+          { text: 'npm · VitePress 版', link: 'https://www.npmjs.com/package/vitepress-plugin-filelist' },
+          { text: 'npm · VuePress 版', link: 'https://www.npmjs.com/package/vuepress-plugin-filelist' },
         ],
       },
     ],
@@ -63,7 +66,7 @@ export default defineConfig({
           { text: '接入 OpenList', link: '/guide/openlist' },
           { text: '安全与权限', link: '/guide/security' },
           { text: '常见问题', link: '/guide/faq' },
-          { text: '升级到 0.9', link: '/guide/migration' },
+          { text: '升级指南', link: '/guide/migration' },
         ],
       },
       {
@@ -112,6 +115,6 @@ export default defineConfig({
     langMenuLabel: '语言',
     sidebarMenuLabel: '菜单',
     returnToTopLabel: '回到顶部',
-    footer: { message: 'MIT License', copyright: `vitepress-plugin-filelist v${pkg.version}` },
+    footer: { message: 'MIT License', copyright: `FileList v${pkg.version} · vitepress-plugin-filelist / vuepress-plugin-filelist` },
   },
 })

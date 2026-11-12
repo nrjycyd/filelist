@@ -1,8 +1,22 @@
-# Upgrading to 0.9
+---
+title: Upgrading
+---
+
+# Upgrading
+
+## 0.10: nothing to change
+
+Just update the version.
+
+- New VuePress edition, [vuepress-plugin-filelist](./vuepress), released with the same version
+- `vitepress` is now an optional peer dependency: VitePress sites have it installed anyway
+- Colours read the theme through a layer of `--fl-c-*` variables; VitePress sites look the same
+
+## 0.9: the public API is frozen
 
 0.9 froze the public API for 1.0: props are unchanged; labels that were no longer shown and the exports of internal helpers were removed, and the dependency ranges were tightened. Most sites only need the new version.
 
-## Sites using vitepress-tuck: install vitepress-tuck yourself
+### Sites using vitepress-tuck: install vitepress-tuck yourself
 
 `vitepress-tuck` moved from the plugin's dependencies to an **optional peer dependency**. Your config already imports `defineConfig` from `vitepress-tuck`, so it is usually installed directly; if not:
 
@@ -16,7 +30,7 @@ npm install -D vitepress-tuck
 
 Plain VitePress sites (registering with `enhanceAppWithFileList`) no longer install vitepress-tuck.
 
-## Supported versions
+### Supported versions
 
 | | 0.8 | 0.9 |
 | --- | --- | --- |
@@ -26,7 +40,7 @@ Plain VitePress sites (registering with `enhanceAppWithFileList`) no longer inst
 
 On VitePress 1.x, register the component the [plain way](./getting-started).
 
-## Removed label keys
+### Removed label keys
 
 These 5 keys had not been shown for a while. If you override them in `labels`, delete them (TypeScript reports unknown keys):
 
@@ -38,7 +52,7 @@ These 5 keys had not been shown for a while. If you override them in `labels`, d
 | `networkHint` | Appended to load failures, see `corsHint` |
 | `showMore` | See `showNext`, `showAll` |
 
-## Removed helper exports
+### Removed helper exports
 
 `vitepress-plugin-filelist/client` no longer exports the helpers and types the component uses internally:
 

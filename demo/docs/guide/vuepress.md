@@ -1,3 +1,7 @@
+---
+title: 在 VuePress 中使用
+---
+
 # 在 VuePress 中使用
 
 VuePress 2 用户安装 **vuepress-plugin-filelist**。它和 vitepress-plugin-filelist 是同一个组件、同一个版本号，一起发布；属性、文案和功能完全相同，本站其它页面的说明都适用。

@@ -1,3 +1,7 @@
+---
+title: Getting started
+---
+
 # Getting started
 
 :::: steps
@@ -80,10 +84,10 @@ Next: [connect OpenList](./openlist), or see every [component prop](../reference
   - the date column is hidden; size and date move under the name
   - 56px rows; check boxes and buttons are at least 44px to tap
   - sorting moves to a drop-down
-  - the action bar sticks to the top of the component, below the VitePress nav bars
-- Colours come from the VitePress theme variables, so dark mode just works
+  - the action bar sticks to the top of the component, below the site's nav bars (VitePress, or the VuePress theme's)
+- Colours come from the site theme's variables (VitePress, or VuePress with the default theme, plume or hope), so dark mode just works
 
-The sticky offset is measured from `.VPNav` and `.VPLocalNav`. A custom theme can set it:
+The sticky offset is measured from the nav bars (`.VPNav` and `.VPLocalNav` in VitePress, `.vp-navbar`, `.vp-nav` and `.vp-local-nav` in VuePress themes). A custom theme can set it:
 
 ```css
 .fl-root {

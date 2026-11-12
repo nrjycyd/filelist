@@ -1,3 +1,7 @@
+---
+title: Using with VuePress
+---
+
 # Using with VuePress
 
 VuePress 2 sites install **vuepress-plugin-filelist**. It is the same component as vitepress-plugin-filelist, with the same version number, released together; props, labels and features are identical, so the rest of these docs apply.

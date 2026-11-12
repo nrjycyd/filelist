@@ -5,7 +5,7 @@ const repo = 'https://github.com/nrjycyd/vitepress-plugin-filelist'
 
 // English pages (/en/). Only what differs from the Chinese root config.
 export default {
-  description: 'OpenList file browser for VitePress',
+  description: 'OpenList file browser for VitePress and VuePress',
   themeConfig: {
     nav: [
       { text: 'Guide', link: '/en/guide/getting-started', activeMatch: '/en/guide/' },
@@ -15,7 +15,8 @@ export default {
         text: `v${pkg.version}`,
         items: [
           { text: 'Changelog', link: `${repo}/blob/main/CHANGELOG.md` },
-          { text: 'npm', link: 'https://www.npmjs.com/package/vitepress-plugin-filelist' },
+          { text: 'npm · for VitePress', link: 'https://www.npmjs.com/package/vitepress-plugin-filelist' },
+          { text: 'npm · for VuePress', link: 'https://www.npmjs.com/package/vuepress-plugin-filelist' },
         ],
       },
     ],
@@ -29,7 +30,7 @@ export default {
             { text: 'Connect OpenList', link: '/en/guide/openlist' },
             { text: 'Security', link: '/en/guide/security' },
             { text: 'FAQ', link: '/en/guide/faq' },
-            { text: 'Upgrading to 0.9', link: '/en/guide/migration' },
+            { text: 'Upgrading', link: '/en/guide/migration' },
           ],
         },
         {
@@ -59,6 +60,6 @@ export default {
     langMenuLabel: 'Language',
     sidebarMenuLabel: 'Menu',
     returnToTopLabel: 'Return to top',
-    footer: { message: 'MIT License', copyright: `vitepress-plugin-filelist v${pkg.version}` },
+    footer: { message: 'MIT License', copyright: `FileList v${pkg.version} · vitepress-plugin-filelist / vuepress-plugin-filelist` },
   },
 } satisfies UserConfig<DefaultTheme.Config>
