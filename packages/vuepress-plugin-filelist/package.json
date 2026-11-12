@@ -8,14 +8,14 @@
   "description": "OpenList file browser for VuePress 2: browse, preview, filter and batch download files inside your docs, with folder passwords and light / dark themes",
   "author": "nrjycyd",
   "license": "MIT",
-  "homepage": "https://nrjycyd.github.io/vitepress-plugin-filelist/en/guide/vuepress",
+  "homepage": "https://nrjycyd.github.io/filelist/en/guide/vuepress",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/nrjycyd/vitepress-plugin-filelist.git",
+    "url": "git+https://github.com/nrjycyd/filelist.git",
     "directory": "packages/vuepress-plugin-filelist"
   },
   "bugs": {
-    "url": "https://github.com/nrjycyd/vitepress-plugin-filelist/issues"
+    "url": "https://github.com/nrjycyd/filelist/issues"
   },
   "keywords": [
     "vuepress",

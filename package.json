@@ -9,13 +9,13 @@
   "description": "OpenList file browser for VitePress: browse, preview, search and batch-download OpenList files in a docs page, with folder passwords, paging and light / dark themes.",
   "author": "nrjycyd",
   "license": "MIT",
-  "homepage": "https://nrjycyd.github.io/vitepress-plugin-filelist/",
+  "homepage": "https://nrjycyd.github.io/filelist/",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/nrjycyd/vitepress-plugin-filelist.git"
+    "url": "git+https://github.com/nrjycyd/filelist.git"
   },
   "bugs": {
-    "url": "https://github.com/nrjycyd/vitepress-plugin-filelist/issues"
+    "url": "https://github.com/nrjycyd/filelist/issues"
   },
   "keywords": [
     "vitepress",
