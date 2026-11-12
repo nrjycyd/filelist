@@ -1,3 +1,7 @@
+---
+title: Component props
+---
+
 # Component props
 
 ::: field base

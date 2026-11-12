@@ -8,7 +8,7 @@ hero:
   image:
     light: /logo.svg
     dark: /logo-dark.svg
-    alt: vitepress-plugin-filelist
+    alt: FileList
   actions:
     - theme: brand
       text: 快速开始

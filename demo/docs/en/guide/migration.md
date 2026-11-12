@@ -1,3 +1,7 @@
+---
+title: Upgrading
+---
+
 # Upgrading
 
 ## 0.10: nothing to change
