@@ -668,3 +668,40 @@ test('“Download ZIP” follows themes that switch on <body> or only by the sys
   await expect.poll(bg).toBe(fitted('3eaf7c'))
   expect(await primaryContrast(page)).toBeGreaterThanOrEqual(4.5)
 })
+
+test('narrow lists sort from the sort menu', async ({ page }, info) => {
+  await open(page)
+  const trigger = list(page).locator('.fl-sort-trigger')
+  if (info.project.name !== 'mobile') {
+    // Wide lists sort from the column headers; the menu is not shown.
+    await expect(trigger).toBeHidden()
+    return
+  }
+  const names = () => list(page).locator('.fl-row:not(.fl-head) .fl-name').allTextContents()
+  const before = await names()
+
+  await trigger.tap()
+  const menu = list(page).locator('.fl-menu')
+  await expect(menu).toBeVisible()
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true')
+  const box = (await menu.boundingBox())!
+  const viewport = page.viewportSize()!
+  expect(box.x).toBeGreaterThanOrEqual(0)
+  expect(box.x + box.width).toBeLessThanOrEqual(viewport.width)
+  await expectAccessible(page)
+
+  await menu.locator('.fl-menu-order-btn').nth(1).tap()
+  await expect(menu).toBeHidden()
+  await expect(trigger).toContainText('↓')
+  const after = await names()
+  expect(after).not.toEqual(before)
+  expect([...after].sort()).toEqual([...before].sort())
+
+  // A tap elsewhere on the page closes the menu without sorting.
+  await trigger.tap()
+  await expect(menu).toBeVisible()
+  await page.locator('body').tap({ position: { x: 4, y: 4 } })
+  await expect(menu).toBeHidden()
+  await expect(trigger).toContainText('↓')
+  expect(await names()).toEqual(after)
+})

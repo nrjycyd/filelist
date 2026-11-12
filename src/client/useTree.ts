@@ -385,25 +385,6 @@ export function useTree(
     applySort(key, sortKey.value === key ? !sortAsc.value : true)
   }
 
-  /** Compact sort control for narrow containers, where header cells are hidden. */
-  const sortOptions = computed(() =>
-    (['name', 'size', 'modified'] as SortKey[]).flatMap((key) => {
-      const label = t(key === 'name' ? 'columnName' : key === 'size' ? 'columnSize' : 'columnDate')
-      return [
-        { value: `${key}:asc`, label: `${label} ↑` },
-        { value: `${key}:desc`, label: `${label} ↓` },
-      ]
-    }),
-  )
-
-  const sortValue = computed<string>({
-    get: () => `${sortKey.value}:${sortAsc.value ? 'asc' : 'desc'}`,
-    set: (value) => {
-      const [key, direction] = value.split(':') as [SortKey, string]
-      applySort(key, direction !== 'desc')
-    },
-  })
-
   return {
     roots,
     loadingRoot,
@@ -423,7 +404,6 @@ export function useTree(
     refresh,
     toggleExpand,
     setSort,
-    sortOptions,
-    sortValue,
+    applySort,
   }
 }

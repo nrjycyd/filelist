@@ -333,17 +333,100 @@ describe('FileList toolbar and rows', () => {
     expect(row(wrapper, 'A').find('.fl-arrow').attributes('aria-expanded')).toBe('true')
   })
 
-  it('sorts from the compact sort select', async () => {
+  it('sorts from the sort menu: a field keeps the order, the switch sets it', async () => {
     mockOpenList({ '/': [file('b.txt'), file('a.txt'), file('c.txt')] })
     const wrapper = mountList({ path: '/' })
     await flushPromises()
 
     const names = () => wrapper.findAll('.fl-row:not(.fl-head) .fl-name').map((item) => item.text())
+    const trigger = wrapper.find('.fl-sort-trigger')
     expect(names()).toEqual(['a.txt', 'b.txt', 'c.txt'])
+    expect(trigger.attributes('aria-haspopup')).toBe('menu')
+    expect(trigger.attributes('aria-expanded')).toBe('false')
+    expect(trigger.attributes('aria-label')).toBe('排序 文件名，升序')
+    expect(wrapper.find('.fl-menu').exists()).toBe(false)
 
-    await wrapper.find('.fl-sort-select select').setValue('name:desc')
+    await trigger.trigger('click')
+    await flushPromises()
+    const menu = wrapper.find('.fl-menu')
+    expect(trigger.attributes('aria-expanded')).toBe('true')
+    expect(menu.attributes('role')).toBe('menu')
+    expect(trigger.attributes('aria-controls')).toBe(menu.attributes('id'))
+    const fields = menu.findAll('.fl-menu-item')
+    expect(fields.map((item) => [item.text(), item.attributes('aria-checked')])).toEqual([
+      ['文件名', 'true'],
+      ['文件大小', 'false'],
+      ['最后修改日期', 'false'],
+    ])
+    expect(menu.findAll('.fl-menu-order-btn').map((item) => [item.text(), item.attributes('aria-checked')])).toEqual([
+      ['A → Z', 'true'],
+      ['Z → A', 'false'],
+    ])
+    // The checked row has focus, so a screen reader starts there.
+    expect(document.activeElement).toBe(fields[0].element)
+
+    await menu.findAll('.fl-menu-order-btn')[1].trigger('click')
     expect(names()).toEqual(['c.txt', 'b.txt', 'a.txt'])
+    expect(wrapper.find('.fl-menu').exists()).toBe(false)
+    expect(document.activeElement).toBe(trigger.element)
+    expect(trigger.text()).toContain('文件名 ↓')
     expect(wrapper.find('.fl-head .fl-cell-name .fl-sort').text()).toBe('▼')
+
+    // Another field keeps the order (descending), and the switch speaks its language.
+    await trigger.trigger('click')
+    await flushPromises()
+    await wrapper.findAll('.fl-menu-item')[2].trigger('click')
+    expect(trigger.text()).toContain('最后修改日期 ↓')
+    await trigger.trigger('click')
+    await flushPromises()
+    expect(wrapper.findAll('.fl-menu-order-btn').map((item) => [item.text(), item.attributes('aria-checked')])).toEqual([
+      ['旧 → 新', 'false'],
+      ['新 → 旧', 'true'],
+    ])
+    wrapper.unmount()
+  })
+
+  it('moves through the sort menu with the keyboard and closes it from outside', async () => {
+    mockOpenList({ '/': [file('b.txt'), file('a.txt')] })
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+    const trigger = wrapper.find('.fl-sort-trigger')
+
+    await trigger.trigger('keydown', { key: 'ArrowDown' })
+    await flushPromises()
+    const items = () => wrapper.findAll('[role="menuitemradio"]').map((item) => item.element)
+    expect(items()).toHaveLength(5)
+    expect(document.activeElement).toBe(items()[0])
+    const key = (k: string) => wrapper.find('.fl-menu').trigger('keydown', { key: k })
+    await key('ArrowDown')
+    expect(document.activeElement).toBe(items()[1])
+    await key('End')
+    expect(document.activeElement).toBe(items()[4])
+    await key('ArrowDown')
+    expect(document.activeElement).toBe(items()[0])
+    await key('ArrowUp')
+    expect(document.activeElement).toBe(items()[4])
+    await key('Escape')
+    expect(wrapper.find('.fl-menu').exists()).toBe(false)
+    expect(document.activeElement).toBe(trigger.element)
+
+    // ↑ on the button starts from the last item.
+    await trigger.trigger('keydown', { key: 'ArrowUp' })
+    await flushPromises()
+    expect(document.activeElement).toBe(items()[4])
+
+    // A tap outside closes it without moving focus back.
+    document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+    await flushPromises()
+    expect(wrapper.find('.fl-menu').exists()).toBe(false)
+    expect(trigger.attributes('aria-expanded')).toBe('false')
+
+    // Tapping the button again closes it too.
+    await trigger.trigger('click')
+    await flushPromises()
+    await trigger.trigger('click')
+    expect(wrapper.find('.fl-menu').exists()).toBe(false)
+    wrapper.unmount()
   })
 
   it('does not show an unexpanded-folders hint in the footer', async () => {

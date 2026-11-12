@@ -11,7 +11,8 @@ const dist = new URL('../../../dist/', import.meta.url)
 const BUDGET_KB = {
   // 44: the keyboard model of the list (treegrid, 0.11) added about 1 KB.
   // 45: readable primary button in every theme (contrast.ts), about 1.4 KB unminified.
-  'client/browser/index.js': 45,
+  // 46: the sort menu of the narrow layout (SortMenu.vue) replacing the native select, about 1.8 KB unminified.
+  'client/browser/index.js': 46,
   'client/style.css': 8,
   'node/index.js': 1,
 }

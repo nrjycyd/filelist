@@ -52,7 +52,7 @@ COMPAT_VUEPRESS=2.0.0-rc.31 pnpm test:compat:vuepress          # 指定 VuePress
 
 不再维护时的分离方法：删除 `packages/vuepress-plugin-filelist`、`pnpm-workspace.yaml`、根 `package.json` 里 `--filter ./packages/*` 的部分与 `test:compat:vuepress`、`vitest.config.ts` 里的 `packages/*` 路径、CI 的 `vuepress` 任务、发布流程里 “Publish vuepress-plugin-filelist” 一步和版本核对、`vuepress-canary.yml`、文档的“在 VuePress 中使用”页，再在 npm 上 `npm deprecate vuepress-plugin-filelist "…"`。`--fl-c-*` 配色层可以保留，对 VitePress 无影响。
 
-包体积：`src/client/__tests__/size.spec.ts` 检查构建产物的 gzip 大小（浏览器包 45 KB、样式 8 KB、Node 入口 1 KB），并确认 markdown-it、DOMPurify、client-zip 仍是按需加载。CI 和发布流程先构建再测试，所以超出预算会直接失败；本地先 `pnpm run build`，否则这组测试跳过。确需增大预算时，在同一个改动里调整并写明原因。
+包体积：`src/client/__tests__/size.spec.ts` 检查构建产物的 gzip 大小（浏览器包 46 KB、样式 8 KB、Node 入口 1 KB），并确认 markdown-it、DOMPurify、client-zip 仍是按需加载。CI 和发布流程先构建再测试，所以超出预算会直接失败；本地先 `pnpm run build`，否则这组测试跳过。确需增大预算时，在同一个改动里调整并写明原因。
 
 公开接口只有组件、`enhanceAppWithFileList`、文案工具与 `FileList*` 类型（`src/client/__tests__/publicApi.spec.ts` 守着这份清单）。新增导出或文案 key 前先想清楚：1.0 之后删除即是主版本。
 

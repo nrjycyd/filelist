@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Changes
+
+- Narrow lists (phones) sort from a menu of their own instead of the browser's drop-down: three rows pick name, size or date (keeping the order), a two-part switch picks the order in words that fit (A → Z, small → large, old → new). It follows the site theme, light and dark, and opens at once, without the system picker's animation on iPhone. A WAI-ARIA menu button: arrow keys, Home / End, Enter / Space, Esc. Wide lists still sort from the column headers
+- New labels: `sortTitle`, `sortOrder`, `sortNameAsc`, `sortNameDesc`, `sortSizeAsc`, `sortSizeDesc`, `sortDateAsc`, `sortDateDesc`
+- Size budget of the browser bundle: 45 → 46 KB gzip (unminified build)
+
 ## 0.11.1 (2026-11-12)
 
 ### Accessibility

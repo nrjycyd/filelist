@@ -367,7 +367,7 @@
   color: var(--fl-c-brand-1);
 }
 
-.fl-sort-select {
+.fl-sort-menu {
   display: none;
 }
 
@@ -1381,14 +1381,30 @@
     display: none;
   }
 
-  .fl-sort-select {
+  /* the sort menu replaces the clickable headers in narrow layout (SortMenu.vue) */
+  .fl-sort-menu {
     position: relative;
+    display: inline-flex;
+  }
+
+  .fl-sort-trigger {
     display: inline-flex;
     gap: 4px;
     align-items: center;
-    height: 32px;
+    height: 30px;
+    padding: 0 8px 0 10px;
+    font: inherit;
+    font-size: 13px;
     font-weight: 500;
+    color: var(--fl-c-text-1);
     cursor: pointer;
+    background: var(--fl-c-default-soft);
+    border: 0;
+    border-radius: 8px;
+  }
+
+  .fl-sort-trigger.fl-open {
+    background: var(--fl-c-brand-soft);
   }
 
   .fl-sort-current {
@@ -1396,27 +1412,137 @@
     color: var(--fl-c-brand-1);
   }
 
-  .fl-sort-select::after {
-    width: 0;
-    height: 0;
-    content: '';
-    border-top: 5px solid var(--fl-c-brand-1);
-    border-right: 4px solid transparent;
-    border-left: 4px solid transparent;
+  .fl-sort-chevron {
+    color: var(--fl-c-brand-1);
+    transition: transform 0.12s;
   }
 
-  /* the native select sits invisibly on top, so tapping opens the system picker */
-  .fl-sort-select select {
+  .fl-open .fl-sort-chevron {
+    transform: rotate(180deg);
+  }
+
+  .fl-menu {
     position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    font-size: 16px;
-    cursor: pointer;
-    opacity: 0;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 30;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    width: 236px;
+    padding: 6px;
+    font-size: 15px;
+    font-weight: 400;
+    color: var(--fl-c-text-1);
+    text-align: left;
+    background: var(--vp-c-bg-elv, var(--fl-c-bg));
+    border: 1px solid var(--fl-c-divider);
+    border-radius: 14px;
+    box-shadow:
+      0 16px 40px -8px rgb(0 0 0 / 22%),
+      0 2px 6px rgb(0 0 0 / 8%);
+    transform-origin: top right;
+    animation: fl-menu-in 0.1s ease-out;
   }
 
-  /* the compact select replaces the clickable header in narrow layout */
+  .fl-menu.fl-menu-up {
+    top: auto;
+    bottom: calc(100% + 6px);
+    transform-origin: bottom right;
+  }
+
+  :is(.dark, [data-theme='dark']) .fl-menu {
+    box-shadow:
+      0 16px 40px -8px rgb(0 0 0 / 60%),
+      0 0 0 1px rgb(255 255 255 / 4%);
+  }
+
+  .fl-menu-title {
+    padding: 6px 10px;
+    font-size: 12px;
+    color: var(--fl-c-text-2);
+  }
+
+  .fl-menu-item {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    width: 100%;
+    height: 44px;
+    padding: 0 10px;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    background: none;
+    border: 0;
+    border-radius: 9px;
+  }
+
+  .fl-menu-item svg {
+    flex: none;
+    color: var(--fl-c-text-3);
+  }
+
+  .fl-menu-label {
+    flex: 1;
+  }
+
+  .fl-menu-item.fl-current {
+    font-weight: 600;
+    color: var(--fl-c-brand-1);
+    background: var(--fl-c-brand-soft);
+  }
+
+  .fl-menu-item.fl-current svg {
+    color: var(--fl-c-brand-1);
+  }
+
+  .fl-menu-sep {
+    height: 1px;
+    margin: 6px 4px;
+    background: var(--fl-c-divider);
+  }
+
+  .fl-menu-order {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    padding: 3px;
+    background: var(--fl-c-default-soft);
+    border-radius: 10px;
+  }
+
+  .fl-menu-order-btn {
+    height: 36px;
+    padding: 0 6px;
+    font: inherit;
+    font-size: 14px;
+    color: var(--fl-c-text-2);
+    cursor: pointer;
+    background: none;
+    border: 0;
+    border-radius: 8px;
+  }
+
+  .fl-menu-order-btn.fl-current {
+    font-weight: 600;
+    color: var(--fl-c-text-1);
+    background: var(--fl-c-bg);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 14%);
+  }
+
+  :is(.dark, [data-theme='dark']) .fl-menu-order-btn.fl-current {
+    background: rgb(255 255 255 / 14%);
+    box-shadow: none;
+  }
+
+  .fl-menu :is(.fl-menu-item, .fl-menu-order-btn):focus-visible {
+    outline: 2px solid var(--fl-c-brand-1);
+    outline-offset: -2px;
+  }
+
+  /* the sort menu replaces the clickable header in narrow layout */
   .fl-head .fl-cell-name .fl-sort {
     display: none;
   }
@@ -1883,5 +2009,20 @@
 
   .fl-preview .fl-preview-head .fl-type {
     display: none;
+  }
+}
+
+@keyframes fl-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fl-menu,
+  .fl-sort-chevron {
+    transition: none;
+    animation: none;
   }
 }

@@ -83,7 +83,7 @@ Next: [connect OpenList](./openlist), or see every [component prop](../reference
 - Narrow containers (the component, not the window, narrower than 560px, so a squeezed sidebar layout counts too):
   - the date column is hidden; size and date move under the name
   - 56px rows; check boxes and buttons are at least 44px to tap
-  - sorting moves to a drop-down
+  - sorting moves to a “Sort” button: its menu picks name, size or date, then the order (A → Z, large → small, new → old…)
   - the action bar sticks to the top of the component, below the site's nav bars (VitePress, or the VuePress theme's)
 - Colours come from the site theme's variables (VitePress, or VuePress with the default theme, plume or hope), so dark mode just works; “Download ZIP” uses the theme's button colour, darkened just enough when its text would read below 4.5:1
 
