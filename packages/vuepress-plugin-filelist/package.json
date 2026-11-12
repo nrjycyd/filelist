@@ -1,6 +1,6 @@
 {
   "name": "vuepress-plugin-filelist",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
   },
