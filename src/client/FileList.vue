@@ -22,6 +22,7 @@ import type { SortKey } from './utils'
 import { computed, onBeforeUnmount, onMounted, onUpdated, ref, useId } from 'vue'
 import { createOpenListApi, errorText, isNetworkError } from './api'
 import ConfirmDialog from './ConfirmDialog.vue'
+import { fitPrimaryButton } from './contrast'
 import { createDemoApi, isDemoFile } from './demo'
 import { warnPublicSecrets } from './devWarnings'
 import Icon from './Icon.vue'
@@ -278,8 +279,16 @@ function restoreFocus() {
 
 onUpdated(restoreFocus)
 
+/** Keeps “Download ZIP” readable in every theme, light and dark (contrast.ts). */
+let themeWatch: MutationObserver | undefined
+
 onMounted(() => {
   if (/Mac|iPhone|iPad/.test(navigator.platform)) selectAllKeys.value = '⌘A'
+  const fit = () => rootEl.value && fitPrimaryButton(rootEl.value)
+  fit()
+  // Light / dark switches change the theme variables on <html>.
+  themeWatch = new MutationObserver(fit)
+  themeWatch.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme', 'style'] })
   warnPublicSecrets(props, props.locale)
   passwords.sync()
   void loadRoot()
@@ -288,6 +297,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  themeWatch?.disconnect()
   cancelZip()
   rowsPart.unmount()
   clearTimeout(toastTimer)

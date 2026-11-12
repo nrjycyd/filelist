@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Accessibility
+
+- “Download ZIP” is readable in every theme: it keeps the theme's button colour when its text reaches 4.5:1, and otherwise is darkened just enough (hover too, and again when switching light / dark). Before, white text on the light green / teal buttons of the VuePress default theme, hope and plume (dark) read at 1.8–3.1:1, and VitePress light at 4.48:1. VitePress dark and plume light are unchanged
+- axe checks in the browser tests now include the primary button; the VuePress compatibility test checks its contrast in light and dark
+
+### Changes
+
+- Size budget of the browser bundle: 44 → 45 KB gzip (unminified build)
+
 ## 0.11.0 (2026-11-12)
 
 ### Features

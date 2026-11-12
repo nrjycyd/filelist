@@ -286,13 +286,15 @@
 .fl-btn-primary {
   font-weight: 600;
   color: var(--vp-button-brand-text, #fff);
-  background: var(--vp-button-brand-bg, var(--fl-c-brand-3));
+  /* --fl-btn-primary-*: set by contrast.ts only when the theme's own colour is
+     too light for its text (several VuePress themes); otherwise unset. */
+  background: var(--fl-btn-primary-bg, var(--vp-button-brand-bg, var(--fl-c-brand-3)));
   border-color: var(--vp-button-brand-border, transparent);
 }
 
 .fl-btn-primary:hover {
   color: var(--vp-button-brand-hover-text, #fff);
-  background: var(--vp-button-brand-hover-bg, var(--fl-c-brand-2));
+  background: var(--fl-btn-primary-hover-bg, var(--vp-button-brand-hover-bg, var(--fl-c-brand-2)));
   border-color: var(--vp-button-brand-hover-border, transparent);
 }
 

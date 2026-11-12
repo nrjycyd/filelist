@@ -455,20 +455,10 @@ test('keyboard focus stays in the list when the control it was on goes away', as
   await expect(list(page).locator('.fl-head .fl-cell-check input')).toBeFocused()
 })
 
-/**
- * axe-core on the list in its main states. The primary button takes the site
- * theme's button colour (VitePress' default gives white text 4.48:1), which
- * is the theme's choice, so that one check is left to the theme.
- */
+/** axe-core on the list in its main states, colour contrast included. */
 async function expectAccessible(page: Page) {
   const { violations } = await new AxeBuilder({ page }).include('.fl-root').analyze()
-  const found = violations
-    .map((v) => ({
-      ...v,
-      nodes: v.id === 'color-contrast' ? v.nodes.filter((n) => !n.html.includes('fl-btn-primary')) : v.nodes,
-    }))
-    .filter((v) => v.nodes.length)
-    .map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)
+  const found = violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)
   expect(found).toEqual([])
 }
 
@@ -618,4 +608,32 @@ test('Enter on a “more” row shows the next page', async ({ page }, info) => 
   await page.keyboard.press('Enter')
   await expect(more.locator('.fl-more-count')).toHaveText('还有 420 项')
   await expect(more).toBeFocused()
+})
+
+/** White-on-colour contrast of “Download ZIP”, computed in the page. */
+async function primaryContrast(page: Page) {
+  return list(page).locator('.fl-btn-primary').evaluate((el) => {
+    const rgb = (value: string) => value.match(/[\d.]+/g)!.slice(0, 3).map(Number)
+    const lum = (c: number[]) => {
+      const [r, g, b] = c.map((v) => (v / 255 <= 0.03928 ? v / 255 / 12.92 : ((v / 255 + 0.055) / 1.055) ** 2.4))
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b
+    }
+    const style = getComputedStyle(el)
+    const [a, b] = [lum(rgb(style.color)), lum(rgb(style.backgroundColor))].sort((x, y) => y - x)
+    return (a + 0.05) / (b + 0.05)
+  })
+}
+
+test('“Download ZIP” is readable in light and dark', async ({ page }) => {
+  for (const colorScheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme })
+    await open(page)
+    await check(page, 'notes.txt')
+    expect(await primaryContrast(page)).toBeGreaterThanOrEqual(4.5)
+  }
+  // Switching the theme while the page is open works it out again.
+  const before = await list(page).locator('.fl-btn-primary').evaluate((el) => getComputedStyle(el).backgroundColor)
+  await page.evaluate(() => document.documentElement.classList.toggle('dark'))
+  await expect.poll(() => list(page).locator('.fl-btn-primary').evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe(before)
+  expect(await primaryContrast(page)).toBeGreaterThanOrEqual(4.5)
 })

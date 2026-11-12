@@ -96,7 +96,7 @@ export default {
   - 行高 56px，复选框、展开、预览、下载的触控区不小于 44px
   - 表头排序改为下拉选择
   - 勾选后操作条吸附在组件顶部，位于站点导航栏（VitePress 的导航栏 / “On this page” 栏，或 VuePress 主题的导航栏）下方，只在本组件范围内吸附
-- 颜色取自站点主题的变量（VitePress，或 VuePress 的默认主题、plume、hope），暗色模式自动适配
+- 颜色取自站点主题的变量（VitePress，或 VuePress 的默认主题、plume、hope），暗色模式自动适配；“下载 ZIP”按钮用主题的按钮色，若白字不够清楚（低于 4.5:1）会自动加深到刚好清楚
 
 吸顶偏移默认根据导航栏的实际高度自动计算（VitePress 的 `.VPNav`、`.VPLocalNav`，VuePress 主题的 `.vp-navbar`、`.vp-nav`、`.vp-local-nav`）；自定义主题可手动指定：
 
