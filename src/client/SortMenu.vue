@@ -146,7 +146,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onOutside, tru
         tabindex="-1"
         @click="pick(field.key, sortAsc)"
       >
-        <Icon :name="field.icon" :size="14" />
+        <Icon :name="field.icon" :size="16" />
         {{ t(field.label) }}
       </button>
       <div class="fl-menu-sep" role="separator" />
@@ -163,7 +163,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onOutside, tru
           tabindex="-1"
           @click="pick(sortKey, ascending)"
         >
-          <Icon :name="ascending ? 'arrowUp' : 'arrowDown'" :size="12" />
+          <Icon :name="ascending ? 'arrowUp' : 'arrowDown'" :size="14" />
           {{ t(ascending ? 'sortAscending' : 'sortDescending') }}
         </button>
       </div>

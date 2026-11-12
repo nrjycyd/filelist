@@ -1077,6 +1077,8 @@ describe('FileList long folders', () => {
     window.dispatchEvent(new Event('scroll'))
     await vi.waitFor(() => expect(wrapper.find('.fl-pin').exists()).toBe(true))
 
+    // Named for screen readers also where only the arrow shows (phones).
+    expect(wrapper.find('.fl-pin-less').attributes('aria-label')).toBe('收起')
     await wrapper.find('.fl-pin-less').trigger('click')
     await flushPromises()
     expect(names(wrapper)).toHaveLength(1 + 2 + 1)

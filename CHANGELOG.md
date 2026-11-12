@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Changes
+
+- Phones: the sort menu is a step larger, easier to read and tap on a real iPhone: 15px type and 40px rows (was 12px and 32px), 16px icons, a 32px order switch
+- Phones: “Show less” on a pinned folder row is just its arrow, in the brand colour, in the column of the row buttons below (it sat 6px from the card's edge); 44px to tap, named “Show less” for screen readers. Wider lists keep the words
+
 ## 0.13.0 (2026-11-12)
 
 ### Changes

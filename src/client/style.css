@@ -1346,16 +1346,22 @@
     display: none;
   }
 
+  /* only the arrow, in the actions column */
   .fl-pin-less {
-    position: relative;
-    height: 32px;
-    font-size: 13px;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: 10px;
   }
 
-  .fl-pin-less::after {
-    position: absolute;
-    inset: -6px 0;
-    content: '';
+  .fl-pin-less-text {
+    display: none;
+  }
+
+  .fl-pin-less svg {
+    width: 18px;
+    height: 18px;
   }
 
   /* rows (container queries cannot restyle .fl-root itself) */
@@ -1414,7 +1420,7 @@
     transform: rotate(180deg);
   }
 
-  /* as wide as its longest label; type the size of the header's */
+  /* as wide as its longest label; type a step below the file names */
   .fl-menu {
     position: absolute;
     top: calc(100% + 4px);
@@ -1425,14 +1431,14 @@
     flex-direction: column;
     gap: 1px;
     width: max-content;
-    padding: 4px;
-    font-size: inherit;
+    padding: 5px;
+    font-size: 15px;
     font-weight: 400;
     color: var(--fl-c-text-1);
     text-align: left;
     background: var(--vp-c-bg-elv, var(--fl-c-bg));
     border: 1px solid var(--fl-c-divider);
-    border-radius: 11px;
+    border-radius: 13px;
     box-shadow:
       0 1px 2px rgb(0 0 0 / 6%),
       0 6px 16px -4px rgb(0 0 0 / 14%),
@@ -1455,10 +1461,10 @@
 
   .fl-menu-item {
     display: flex;
-    gap: 7px;
+    gap: 9px;
     align-items: center;
-    height: 32px;
-    padding: 0 14px 0 8px;
+    height: 40px;
+    padding: 0 18px 0 10px;
     font: inherit;
     color: inherit;
     text-align: left;
@@ -1466,7 +1472,7 @@
     cursor: pointer;
     background: none;
     border: 0;
-    border-radius: 6px;
+    border-radius: 8px;
   }
 
   .fl-menu-item svg {
@@ -1487,32 +1493,33 @@
   /* edge to edge */
   .fl-menu-sep {
     height: 1px;
-    margin: 3px -4px;
+    margin: 4px -5px;
     background: var(--fl-c-divider);
   }
 
   .fl-menu-order {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    padding: 2px;
+    padding: 3px;
     background: var(--fl-c-default-soft);
-    border-radius: 7px;
+    border-radius: 9px;
   }
 
   .fl-menu-order-btn {
     display: inline-flex;
-    gap: 3px;
+    gap: 4px;
     align-items: center;
     justify-content: center;
-    height: 26px;
-    padding: 0 9px;
+    height: 32px;
+    padding: 0 12px;
     font: inherit;
+    font-size: 14px;
     color: var(--fl-c-text-2);
     white-space: nowrap;
     cursor: pointer;
     background: none;
     border: 0;
-    border-radius: 5px;
+    border-radius: 7px;
   }
 
   .fl-menu-order-btn.fl-current {
