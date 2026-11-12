@@ -42,6 +42,7 @@ export default {
             { text: 'Filter and deep search', link: '/en/features/search' },
             { text: 'Folder passwords and refresh', link: '/en/features/passwords' },
             { text: 'Preview', link: '/en/features/preview' },
+            { text: 'Keyboard', link: '/en/features/keyboard' },
           ],
         },
         {
