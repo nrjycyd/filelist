@@ -243,7 +243,7 @@ describe('FileList passwords with sources', () => {
     expect(wrapper.findAll('.fl-row:not(.fl-head)')).toHaveLength(1)
 
     await lockedRow.find('.fl-unlock-row input').setValue('pw')
-    await lockedRow.find('.fl-unlock-row').trigger('submit')
+    await lockedRow.find('.fl-unlock-row input').trigger('keydown', { key: 'Enter' })
     await flushPromises()
 
     expect(row(wrapper, 'secret').classes()).not.toContain('fl-row-locked')
@@ -521,7 +521,7 @@ describe('FileList folder passwords (same row)', () => {
     const target = row(wrapper, name)
     if (remember) await target.find('.fl-unlock-remember').trigger('click')
     await target.find('.fl-unlock-row input').setValue(password)
-    await target.find('.fl-unlock-row').trigger('submit')
+    await target.find('.fl-unlock-row input').trigger('keydown', { key: 'Enter' })
     await flushPromises()
   }
 
@@ -703,7 +703,7 @@ describe('FileList refresh', () => {
     await row(wrapper, 'Locked').find('.fl-arrow').trigger('click')
     await flushPromises()
     await row(wrapper, 'Locked').find('.fl-unlock-row input').setValue('pw')
-    await row(wrapper, 'Locked').find('.fl-unlock-row').trigger('submit')
+    await row(wrapper, 'Locked').find('.fl-unlock-row input').trigger('keydown', { key: 'Enter' })
     await flushPromises()
 
     await wrapper.find('.fl-refresh').trigger('click')
@@ -739,7 +739,7 @@ describe('FileList audit regressions', () => {
     await flushPromises()
     await row(wrapper, 's').find('.fl-lock').trigger('click')
     await row(wrapper, 's').find('.fl-unlock-row input').setValue('pw')
-    await row(wrapper, 's').find('.fl-unlock-row').trigger('submit')
+    await row(wrapper, 's').find('.fl-unlock-row input').trigger('keydown', { key: 'Enter' })
     await flushPromises()
     expect(row(wrapper, 'a.txt').exists()).toBe(true)
 
@@ -764,7 +764,7 @@ describe('FileList audit regressions', () => {
       await row(wrapper, 'my folder').find('.fl-arrow').trigger('click')
       await flushPromises()
       await row(wrapper, 'my folder').find('.fl-unlock-row input').setValue('bad')
-      await row(wrapper, 'my folder').find('.fl-unlock-row').trigger('submit')
+      await row(wrapper, 'my folder').find('.fl-unlock-row input').trigger('keydown', { key: 'Enter' })
       await flushPromises()
     }
     const ids = [first, second].map((wrapper) => {
@@ -1238,7 +1238,7 @@ describe('FileList deep search', () => {
 
     await row(wrapper, 'Locked').find('.fl-lock').trigger('click')
     await row(wrapper, 'Locked').find('.fl-unlock-row input').setValue('pw')
-    await row(wrapper, 'Locked').find('.fl-unlock-row').trigger('submit')
+    await row(wrapper, 'Locked').find('.fl-unlock-row input').trigger('keydown', { key: 'Enter' })
     await flushPromises()
     expect(names(wrapper)).toContain('target-2.pdf')
     expect(status(wrapper).text()).toBe('已搜索全部 4 个文件夹')

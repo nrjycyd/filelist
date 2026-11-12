@@ -29,6 +29,7 @@ import { formatLabel, resolveLabels } from './locales'
 import PreviewDialog from './PreviewDialog.vue'
 import { useDeepSearch } from './useDeepSearch'
 import { useDownloads } from './useDownloads'
+import { rowKey, useKeyboard } from './useKeyboard'
 import { usePasswords } from './usePasswords'
 import { canPreview, usePreview } from './usePreview'
 import { isMore, useRows } from './useRows'
@@ -178,6 +179,30 @@ const {
 
 const displayTitle = computed(() => props.title || siteTitle.value || (props.path === '/' ? t('allFiles') : props.path))
 
+/* ---------------- keyboard (treegrid) ---------------- */
+
+const gridEl = ref<HTMLElement>()
+const keyboard = useKeyboard({
+  grid: gridEl,
+  rows,
+  toggleExpand,
+  open: (node) => (canPreview(node) ? preview(node) : download(node)),
+  showNext: (row) => (isMore(row) ? showMore(row, false) : undefined),
+  toggleAll: () => gridEl.value?.querySelector<HTMLInputElement>('.fl-head .fl-cell-check input:not(:disabled)')?.click(),
+})
+const { rowTabIndex, keyboardInside } = keyboard
+/**
+ * What a screen reader says for a row (its level, open and ticked states come
+ * from the treegrid roles): the name, then size and date, or a folder's count.
+ */
+function rowLabel(node: FNode): string {
+  if (!node.is_dir) return `${node.name}, ${formatSize(node.size)}, ${formatDate(node.modified)}`
+  return node.loaded ? `${node.name}, ${t('folderItems', { count: statsOf(node).files })}` : node.name
+}
+
+/** “⌘A” on Apple keyboards, “Ctrl+A” elsewhere; decided in the browser. */
+const selectAllKeys = ref('Ctrl+A')
+
 async function loadSettings() {
   const settings = await api.value.settings()
   siteTitle.value = settings.title
@@ -237,12 +262,9 @@ function restoreFocus() {
   const find = (selector: string) => root.querySelector<HTMLElement>(selector)
   const rowAt = (path?: string) =>
     path === undefined ? null : root.querySelector<HTMLElement>(`[data-path="${CSS.escape(path)}"]`)
-  const shown = (el: HTMLElement) => !(el as HTMLButtonElement).disabled && el.getClientRects().length > 0
-  // A folder's open / unlock button (left on wide lists, right on narrow), else the row's check box.
-  const inRow = (row: Element | null | undefined) => {
-    const controls = [...(row?.querySelectorAll<HTMLElement>('.fl-arrow, .fl-arrow-end, input, button') ?? [])].filter(shown)
-    return controls.find((el) => el.matches('.fl-arrow, .fl-arrow-end')) ?? controls[0] ?? null
-  }
+  // Rows take focus themselves (one Tab stop for the list, see useKeyboard.ts).
+  const inRow = (row: Element | null | undefined) =>
+    row instanceof HTMLElement && row.dataset.key !== undefined ? row : null
   let target: HTMLElement | null = null
   if (last.spot === 'row' || last.spot === 'pin') target = inRow(rowAt(last.path))
   // “Show all”: the first row that just appeared.
@@ -257,6 +279,7 @@ function restoreFocus() {
 onUpdated(restoreFocus)
 
 onMounted(() => {
+  if (/Mac|iPhone|iPad/.test(navigator.platform)) selectAllKeys.value = '⌘A'
   warnPublicSecrets(props, props.locale)
   passwords.sync()
   void loadRoot()
@@ -351,23 +374,39 @@ onBeforeUnmount(() => {
       </button>
     </div>
 
-    <div class="fl-row fl-head">
+    <!-- One Tab stop for the list; arrow keys inside (useKeyboard.ts). -->
+    <div
+      ref="gridEl"
+      class="fl-grid"
+      role="treegrid"
+      :aria-label="displayTitle"
+      aria-multiselectable="true"
+      @keydown="keyboard.onKeydown"
+      @focusin="keyboard.onFocusin"
+      @focusout="keyboard.onFocusout"
+      @pointerdown="keyboard.onPointerdown"
+    >
+    <div class="fl-row fl-head" role="row">
       <span v-if="refreshing" class="fl-progress" aria-hidden="true"></span>
-      <label class="fl-cell fl-cell-check">
-        <input
-          type="checkbox"
-          :aria-label="t('selectAll')"
-          :disabled="batchBusy"
-          :checked="allChecked"
-          :indeterminate.prop="someChecked"
-          @change="toggleCheckAll"
-        />
-      </label>
+      <span class="fl-cell fl-cell-check" role="columnheader">
+        <label class="fl-check-hit">
+          <input
+            type="checkbox"
+            :aria-label="t('selectAll')"
+            :disabled="batchBusy"
+            :checked="allChecked"
+            :indeterminate.prop="someChecked"
+            @change="toggleCheckAll"
+          />
+        </label>
+      </span>
       <span
         v-for="column in (['name', 'size', 'modified'] as SortKey[])"
         :key="column"
         class="fl-cell"
         :class="`fl-cell-${column === 'modified' ? 'date' : column}`"
+        role="columnheader"
+        :aria-sort="sortKey === column ? (sortAsc ? 'ascending' : 'descending') : undefined"
       >
         <button
           class="fl-sort-btn"
@@ -378,7 +417,8 @@ onBeforeUnmount(() => {
           {{ t(column === 'name' ? 'columnName' : column === 'size' ? 'columnSize' : 'columnDate') }}<span class="fl-sort" aria-hidden="true">{{ sortKey === column ? (sortAsc ? '▲' : '▼') : '' }}</span>
         </button>
       </span>
-      <span class="fl-cell fl-cell-op">
+      <span class="fl-cell fl-cell-op" role="columnheader">
+        <span class="fl-sr-only">{{ t('actions') }}</span>
         <label class="fl-sort-select">
           <span>{{ t('sortBy') }}</span>
           <span class="fl-sort-current" aria-hidden="true">{{ sortOptions.find((option) => option.value === sortValue)?.label }}</span>
@@ -391,9 +431,9 @@ onBeforeUnmount(() => {
 
     <!-- While scrolling through a long folder, its row stays at the top with “show less”. -->
     <div class="fl-pin-anchor" :style="{ '--fl-pin-offset': `${pinOffset}px` }">
-      <div v-if="pinned" class="fl-pin" :data-pin="pinned.key" :style="{ '--fl-depth': Math.max(pinned.depth, 0) }">
-        <span class="fl-cell fl-cell-check"></span>
-        <span class="fl-cell fl-cell-name">
+      <div v-if="pinned" class="fl-pin" role="row" :data-pin="pinned.key" :style="{ '--fl-depth': Math.max(pinned.depth, 0) }">
+        <span class="fl-cell fl-cell-check" role="gridcell"></span>
+        <span class="fl-cell fl-cell-name" role="gridcell">
           <span v-if="pinned.depth >= 0" class="fl-indent" aria-hidden="true"></span>
           <span v-if="pinned.depth >= 0" class="fl-pin-arrow" aria-hidden="true"><Icon name="next" :size="14" /></span>
           <svg class="fl-folder-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg>
@@ -404,61 +444,28 @@ onBeforeUnmount(() => {
               : t('allShown', { count: pinned.total }) }}
           </span>
         </span>
-        <button class="fl-pin-less" type="button" @click="showLess(pinned.key)">
-          {{ t('showLess') }}<Icon name="up" :size="12" />
-        </button>
+        <span class="fl-pin-cell" role="gridcell">
+          <button class="fl-pin-less" type="button" @click="showLess(pinned.key)">
+            {{ t('showLess') }}<Icon name="up" :size="12" />
+          </button>
+        </span>
       </div>
     </div>
 
-    <div v-if="loadingRoot" class="fl-status">{{ t('loading') }}</div>
-    <form
-      v-else-if="rootLock"
-      class="fl-unlock-root"
-      :class="{ 'fl-unlock-error': rootLock.error }"
-      @submit.prevent="submitRootUnlock"
-    >
-      <Icon class="fl-unlock-lock" name="lock" />
-      <label class="fl-unlock-label" :for="`${uid}-root`">{{ t('passwordPrompt') }}</label>
-      <span v-if="rootLock.error" :id="`${uid}-root-error`" class="fl-unlock-message" role="alert">{{ unlockErrorText(rootLock.error) }}</span>
-      <span class="fl-unlock">
-        <input
-          :id="`${uid}-root`"
-          v-model="rootLock.input"
-          type="password"
-          autocomplete="off"
-          :data-unlock="path"
-          :placeholder="t('passwordPlaceholder')"
-          :aria-invalid="!!rootLock.error"
-          :aria-describedby="rootLock.error ? `${uid}-root-error` : undefined"
-        />
-        <button
-          v-if="canRemember"
-          class="fl-unlock-remember"
-          type="button"
-          :aria-pressed="rootLock.remember"
-          :aria-label="t('rememberPassword')"
-          :title="t('rememberPassword')"
-          @click="rootLock.remember = !rootLock.remember"
-        ><Icon name="key" /></button>
-        <button class="fl-unlock-submit" type="submit" :disabled="rootLock.busy || !rootLock.input">{{ t('open') }}</button>
-      </span>
-    </form>
-    <div v-else-if="errorMsg" class="fl-status fl-error">
-      {{ t('loadFailed', { message: errorMsg }) }}
-      <div v-if="/guest/i.test(errorMsg)" class="fl-hint">{{ t('guestHint') }}</div>
-      <div v-if="isNetworkError(errorMsg)" class="fl-hint">{{ t('corsHint') }}</div>
-      <button class="fl-btn" type="button" @click="loadRoot">{{ t('retry') }}</button>
-    </div>
-    <div v-else-if="visible.length === 0" class="fl-status">{{ t('empty') }}</div>
 
-    <template v-for="(node, index) in rows" :key="isMore(node) ? `more:${node.key}` : node.path">
+    <template v-for="(node, index) in rows" :key="rowKey(node)">
     <div
       v-if="isMore(node)"
       class="fl-row fl-more"
+      role="row"
+      :aria-label="t('moreRemaining', { count: node.remaining })"
+      :aria-level="node.depth + 1"
+      :data-key="rowKey(node)"
+      :tabindex="rowTabIndex(node)"
       :style="{ '--fl-depth': node.depth }"
     >
-      <span class="fl-cell fl-cell-check"></span>
-      <span class="fl-cell fl-more-cell">
+      <span class="fl-cell fl-cell-check" role="gridcell"></span>
+      <span class="fl-cell fl-more-cell" role="gridcell">
         <!-- Reads as one more row of the folder: “⋯” in the type column, the count where names start. -->
         <span class="fl-indent" aria-hidden="true"></span>
         <span class="fl-arrow-placeholder" aria-hidden="true"></span>
@@ -469,18 +476,19 @@ onBeforeUnmount(() => {
             <button
               class="fl-more-link"
               type="button"
+              tabindex="-1"
               :aria-label="t('showNext', { count: pageSize })"
               @click="showMore(node, false)"
             >
               <span class="fl-more-long">{{ t('showNext', { count: pageSize }) }}</span>
               <span class="fl-more-short" aria-hidden="true">{{ t('showNextShort', { count: pageSize }) }}</span>
             </button>
-            <button class="fl-more-link fl-more-all" type="button" :aria-label="t('showAll')" @click="showMore(node, true)">
+            <button class="fl-more-link fl-more-all" type="button" tabindex="-1" :aria-label="t('showAll')" @click="showMore(node, true)">
               <span class="fl-more-long">{{ t('showAll') }}</span>
               <span class="fl-more-short" aria-hidden="true">{{ t('showAllShort') }}</span>
             </button>
           </template>
-          <button v-else class="fl-more-link fl-more-all" type="button" @click="showMore(node, true)">
+          <button v-else class="fl-more-link fl-more-all" type="button" tabindex="-1" @click="showMore(node, true)">
             {{ t('showRest', { count: node.remaining }) }}
           </button>
         </span>
@@ -497,25 +505,36 @@ onBeforeUnmount(() => {
         'fl-row-prompting': node.lock?.prompting,
         'fl-row-error': node.lock?.prompting && !!node.lock.error,
       }"
+      role="row"
+      :aria-label="rowLabel(node)"
+      :aria-level="node.depth + 1"
+      :aria-expanded="node.is_dir ? !!node.expanded : undefined"
+      :aria-selected="isChecked(node)"
+      :data-key="rowKey(node)"
+      :tabindex="rowTabIndex(node)"
       :style="{ '--fl-depth': node.depth }"
       :data-path="node.path"
     >
-      <label class="fl-cell fl-cell-check">
-        <input
-          type="checkbox"
-          :disabled="!!node.lock || batchBusy"
-          :aria-label="t('selectItem', { name: node.name })"
-          :checked="isChecked(node)"
-          :indeterminate.prop="isIndeterminate(node)"
-          @change="toggleCheck(node, $event)"
-        />
-      </label>
-      <span class="fl-cell fl-cell-name" :title="node.isRoot ? node.path : undefined">
+      <span class="fl-cell fl-cell-check" role="gridcell">
+        <label class="fl-check-hit">
+          <input
+            type="checkbox"
+            tabindex="-1"
+            :disabled="!!node.lock || batchBusy"
+            :aria-label="t('selectItem', { name: node.name })"
+            :checked="isChecked(node)"
+            :indeterminate.prop="isIndeterminate(node)"
+            @change="toggleCheck(node, $event)"
+          />
+        </label>
+      </span>
+      <span class="fl-cell fl-cell-name" role="gridcell" :title="node.isRoot ? node.path : undefined">
         <span class="fl-indent" aria-hidden="true"></span>
         <button
           v-if="node.lock"
           class="fl-arrow fl-lock"
           type="button"
+          tabindex="-1"
           :aria-label="t('unlockFolder', { name: node.name })"
           :title="t('unlockFolder', { name: node.name })"
           @click="toggleExpand(node)"
@@ -526,6 +545,7 @@ onBeforeUnmount(() => {
           v-else-if="node.is_dir"
           class="fl-arrow"
           type="button"
+          tabindex="-1"
           :class="{ 'fl-arrow-open': node.expanded }"
           :aria-label="t(node.expanded ? 'collapse' : 'expand', { name: node.name })"
           :aria-expanded="node.expanded"
@@ -569,10 +589,10 @@ onBeforeUnmount(() => {
         </button>
         <span v-if="node.loading" class="fl-loading" aria-hidden="true">…</span>
       </span>
-      <form
+      <div
         v-if="node.lock?.prompting"
         class="fl-unlock fl-unlock-row"
-        @submit.prevent="submitUnlock(node)"
+        role="gridcell"
         @keydown.esc.prevent="cancelUnlock(node.lock)"
       >
         <Icon class="fl-unlock-lock" name="lock" :size="18" />
@@ -585,6 +605,7 @@ onBeforeUnmount(() => {
           :aria-label="t('passwordFor', { name: node.name })"
           :aria-invalid="!!node.lock.error"
           :aria-describedby="node.lock.error ? `${uid}-error-${index}` : undefined"
+          @keydown.enter.prevent="node.lock.input && !node.lock.busy && submitUnlock(node)"
         />
         <button
           v-if="canRemember"
@@ -595,19 +616,20 @@ onBeforeUnmount(() => {
           :title="t('rememberPassword')"
           @click="node.lock.remember = !node.lock.remember"
         ><Icon name="key" /></button>
-        <button class="fl-unlock-submit" type="submit" :disabled="node.lock.busy || !node.lock.input">{{ t('open') }}</button>
+        <button class="fl-unlock-submit" type="button" :disabled="node.lock.busy || !node.lock.input" @click="submitUnlock(node)">{{ t('open') }}</button>
         <button class="fl-unlock-cancel" type="button" :aria-label="t('cancel')" :title="t('cancel')" @click="cancelUnlock(node.lock)">
           <Icon name="close" :size="14" />
         </button>
-      </form>
+      </div>
       <template v-else>
-        <span class="fl-cell fl-cell-size">{{ node.is_dir ? '—' : formatSize(node.size) }}</span>
-        <span class="fl-cell fl-cell-date">{{ formatDate(node.modified) }}</span>
-        <span class="fl-cell fl-cell-op">
+        <span class="fl-cell fl-cell-size" role="gridcell">{{ node.is_dir ? '—' : formatSize(node.size) }}</span>
+        <span class="fl-cell fl-cell-date" role="gridcell">{{ formatDate(node.modified) }}</span>
+        <span class="fl-cell fl-cell-op" role="gridcell">
           <button
             v-if="node.lock"
             class="fl-action fl-arrow-end fl-lock"
             type="button"
+            tabindex="-1"
             :aria-label="t('unlockFolder', { name: node.name })"
             @click="toggleExpand(node)"
           >
@@ -617,6 +639,7 @@ onBeforeUnmount(() => {
             v-else-if="node.is_dir"
             class="fl-action fl-arrow-end"
             type="button"
+            tabindex="-1"
             :class="{ 'fl-arrow-open': node.expanded }"
             :aria-label="t(node.expanded ? 'collapse' : 'expand', { name: node.name })"
             :aria-expanded="node.expanded"
@@ -629,6 +652,7 @@ onBeforeUnmount(() => {
               v-if="canPreview(node)"
               class="fl-action fl-preview-btn"
               type="button"
+              tabindex="-1"
               :aria-label="`${t('preview')} ${node.name}`"
               :title="t('preview')"
               @click="preview(node)"
@@ -636,6 +660,7 @@ onBeforeUnmount(() => {
             <button
               class="fl-action fl-download"
               type="button"
+              tabindex="-1"
               :aria-label="`${t('download')} ${node.name}`"
               :title="t('download')"
               @click="download(node)"
@@ -645,6 +670,49 @@ onBeforeUnmount(() => {
       </template>
     </div>
     </template>
+    </div>
+
+    <!-- Loading, password, error and empty states: outside the treegrid, where only rows belong. -->
+    <div v-if="loadingRoot" class="fl-status">{{ t('loading') }}</div>
+    <form
+      v-else-if="rootLock"
+      class="fl-unlock-root"
+      :class="{ 'fl-unlock-error': rootLock.error }"
+      @submit.prevent="submitRootUnlock"
+    >
+      <Icon class="fl-unlock-lock" name="lock" />
+      <label class="fl-unlock-label" :for="`${uid}-root`">{{ t('passwordPrompt') }}</label>
+      <span v-if="rootLock.error" :id="`${uid}-root-error`" class="fl-unlock-message" role="alert">{{ unlockErrorText(rootLock.error) }}</span>
+      <span class="fl-unlock">
+        <input
+          :id="`${uid}-root`"
+          v-model="rootLock.input"
+          type="password"
+          autocomplete="off"
+          :data-unlock="path"
+          :placeholder="t('passwordPlaceholder')"
+          :aria-invalid="!!rootLock.error"
+          :aria-describedby="rootLock.error ? `${uid}-root-error` : undefined"
+        />
+        <button
+          v-if="canRemember"
+          class="fl-unlock-remember"
+          type="button"
+          :aria-pressed="rootLock.remember"
+          :aria-label="t('rememberPassword')"
+          :title="t('rememberPassword')"
+          @click="rootLock.remember = !rootLock.remember"
+        ><Icon name="key" /></button>
+        <button class="fl-unlock-submit" type="submit" :disabled="rootLock.busy || !rootLock.input">{{ t('open') }}</button>
+      </span>
+    </form>
+    <div v-else-if="errorMsg" class="fl-status fl-error">
+      {{ t('loadFailed', { message: errorMsg }) }}
+      <div v-if="/guest/i.test(errorMsg)" class="fl-hint">{{ t('guestHint') }}</div>
+      <div v-if="isNetworkError(errorMsg)" class="fl-hint">{{ t('corsHint') }}</div>
+      <button class="fl-btn" type="button" @click="loadRoot">{{ t('retry') }}</button>
+    </div>
+    <div v-else-if="visible.length === 0" class="fl-status">{{ t('empty') }}</div>
 
     <div v-if="deepRow" class="fl-deep" role="status">
       <div class="fl-deep-text">
@@ -666,6 +734,14 @@ onBeforeUnmount(() => {
 
     <div class="fl-foot">
       <span>{{ t('loaded', { count: allFiles.length }) }} · {{ t('totalSize', { size: formatSize(totalSize(allFiles)) }) }}</span>
+      <!-- Shown while keyboard focus is on a row; screen readers get the treegrid roles instead. -->
+      <span v-if="keyboardInside" class="fl-keys" aria-hidden="true">
+        <span><kbd>↑</kbd><kbd>↓</kbd>{{ t('keyMove') }}</span>
+        <span><kbd>←</kbd><kbd>→</kbd>{{ t('keyExpand') }}</span>
+        <span><kbd>{{ t('keySpace') }}</kbd>{{ t('keySelect') }}</span>
+        <span><kbd>{{ t('keyEnter') }}</kbd>{{ t('keyOpen') }}</span>
+        <span><kbd>{{ selectAllKeys }}</kbd>{{ t('keySelectAll') }}</span>
+      </span>
     </div>
 
     <div v-if="toast" class="fl-toast" role="status">{{ toast }}</div>

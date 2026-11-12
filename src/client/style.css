@@ -303,6 +303,17 @@
 
 /* ---------------- table ---------------- */
 
+/* Rows take keyboard focus themselves (one Tab stop, arrow keys inside). */
+.fl-row[data-key]:focus {
+  outline: none;
+}
+
+.fl-row[data-key]:focus-visible {
+  outline: 2px solid var(--fl-c-brand-1);
+  outline-offset: -2px;
+  border-radius: 6px;
+}
+
 .fl-row {
   display: grid;
   grid-template-columns: var(--fl-cols);
@@ -368,6 +379,26 @@
   justify-content: center;
   align-self: stretch;
   cursor: pointer;
+}
+
+/* The whole check cell is the click area. */
+.fl-check-hit {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  justify-content: center;
+  width: 100%;
+  cursor: pointer;
+}
+
+/* Read by screen readers, not shown. */
+.fl-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 .fl-cell-check input {
@@ -798,6 +829,34 @@
   color: var(--fl-c-text-2);
 }
 
+.fl-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  align-items: center;
+}
+
+.fl-keys kbd {
+  display: inline-block;
+  min-width: 10px;
+  margin-right: 3px;
+  padding: 0 5px;
+  font-family: var(--vp-font-family-mono, ui-monospace, monospace);
+  font-size: 11px;
+  line-height: 17px;
+  color: var(--fl-c-text-1);
+  text-align: center;
+  background: var(--fl-c-bg);
+  border: 1px solid var(--fl-c-divider);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+}
+
+.fl-pin-cell {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .fl-foot {
   display: flex;
   flex-wrap: wrap;
@@ -1121,6 +1180,11 @@
 /* ---------------- narrow containers ---------------- */
 
 @container fl (max-width: 559px) {
+  /* Phones have no arrow keys; the key hint would only crowd the footer. */
+  .fl-keys {
+    display: none;
+  }
+
   .fl-bar {
     padding: 10px;
   }

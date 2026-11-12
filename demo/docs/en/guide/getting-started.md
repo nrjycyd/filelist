@@ -94,3 +94,19 @@ The sticky offset is measured from the nav bars (`.VPNav` and `.VPLocalNav` in V
   --fl-sticky-top: 56px;
 }
 ```
+
+## Keyboard
+
+The list is a single Tab stop: Tab lands on a row, Tab again leaves the list. While keyboard focus is in the list, the footer shows a key hint (not with a mouse or touch).
+
+| Keys | What they do |
+| --- | --- |
+| ↑ ↓ | Previous / next row; Home / End for the first and last, PageUp / PageDown jump 10 rows |
+| → | Folder: open it (a locked one asks for its password), or go to its first item when open; file: go to the row's Preview and Download buttons |
+| ← | Open folder: close it; otherwise go to the parent folder; on a button: back to the row |
+| Space | Tick / untick |
+| Enter | Folder: open / close; file: preview when it can, else download; “N more” row: the next page |
+| Typing | Jump to the next row whose name starts with what you typed; the same letter again goes on to the next one |
+| Ctrl+A (Mac: ⌘A) | Tick everything, again to untick; only while keyboard focus is on a row, elsewhere it stays the browser's select-all |
+
+Screen readers hear a tree grid, and each row's name, size, date, level, and open and ticked states.
