@@ -46,6 +46,22 @@ export interface FileListLabels {
   sortedAscending: string
   /** Accessible name of the column header the list is sorted by, descending, `{name}`. */
   sortedDescending: string
+  /** Accessible name of the last column header (preview / download). */
+  actions: string
+  /** Key hint shown while keyboard focus is on a row: ↑ ↓. */
+  keyMove: string
+  /** Key hint: ← →. */
+  keyExpand: string
+  /** Key hint: the name of the Space key. */
+  keySpace: string
+  /** Key hint: what Space does. */
+  keySelect: string
+  /** Key hint: the name of the Enter key. */
+  keyEnter: string
+  /** Key hint: what Enter does. */
+  keyOpen: string
+  /** Key hint: what Ctrl / ⌘ + A does. */
+  keySelectAll: string
   selectAll: string
   /** Accessible name of a row checkbox, `{name}`. */
   selectItem: string

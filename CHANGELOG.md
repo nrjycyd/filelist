@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+### Features
+
+- **Keyboard model for the list** (WAI-ARIA tree grid). The list is one Tab stop: ↑ ↓ move between rows, Home / End / PageUp / PageDown jump, → opens a folder or goes into a row's buttons, ← closes or goes to the parent, Space ticks, Enter opens (folder) or previews / downloads (file) or shows the next page (“N more” row), typing jumps to a name, Ctrl / ⌘ + A ticks everything while keyboard focus is on a row. A key hint shows in the footer while keyboard focus is in the list. Mouse and touch look and work exactly as before
+- Screen readers get a tree grid: rows with name, size and date, level, open and ticked states; column headers with the sort direction
+- New label keys: `actions`, `keyMove`, `keyExpand`, `keySpace`, `keySelect`, `keyEnter`, `keyOpen`, `keySelectAll`
+
+### Changes
+
+- The controls inside rows (check boxes, open, preview, download, “show more”) leave the Tab order; the arrow keys reach them. They work with a mouse or touch as before
+- The password form in a row is no longer a `<form>` element (Enter and the buttons work as before)
+- Size budget of the browser bundle: 42 → 44 KB gzip (the keyboard model adds about 1 KB)
+
+### Docs
+
+- Getting started: a Keyboard section with every key
+
 ## 0.10.3 (2026-11-12)
 
 ### Accessibility

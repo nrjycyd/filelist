@@ -9,7 +9,8 @@ import { describe, expect, it } from 'vitest'
 // Raise a budget on purpose, in the same change that needs it, and say why.
 const dist = new URL('../../../dist/', import.meta.url)
 const BUDGET_KB = {
-  'client/browser/index.js': 42,
+  // 44: the keyboard model of the list (treegrid, 0.11) added about 1 KB.
+  'client/browser/index.js': 44,
   'client/style.css': 8,
   'node/index.js': 1,
 }

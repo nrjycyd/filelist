@@ -431,14 +431,14 @@ test('keyboard focus stays in the list when the control it was on goes away', as
   await input.fill('1234')
   await input.press('Enter')
   await expect(row(page, 'secret-1.txt')).toBeVisible()
-  await expect(opener(locked)).toBeFocused()
+  await expect(locked).toBeFocused()
 
   // “Show all”: the first row that just appeared.
   await opener(row(page, 'photos')).click()
   await list(page).locator('.fl-more .fl-more-all').focus()
   await page.keyboard.press('Enter')
   await expect(list(page).locator('.fl-more')).toHaveCount(0)
-  await expect(row(page, 'IMG_0016.jpg').locator('.fl-cell-check input')).toBeFocused()
+  await expect(row(page, 'IMG_0016.jpg')).toBeFocused()
 
   // The × in the filter box: back in the filter box.
   const search = list(page).locator('.fl-search input')
@@ -489,4 +489,133 @@ test('no accessibility violations in the main states (axe)', async ({ page }) =>
   await row(page, 'guide.md').locator('.fl-preview-btn').click()
   await expect(page.locator('dialog.fl-preview .fl-preview-text pre')).toBeVisible()
   await expectAccessible(page)
+})
+
+/* ---------------- keyboard model (treegrid) ---------------- */
+
+const focusedKey = (page: Page) => page.evaluate(() => (document.activeElement as HTMLElement | null)?.dataset.key)
+
+test('the list is one Tab stop, whatever its length', async ({ page }, info) => {
+  await open(page)
+  const stops = async () => {
+    await list(page).locator('.fl-search input').focus()
+    let count = 0
+    for (; count < 50; count++) {
+      await page.keyboard.press('Tab')
+      if (!(await page.evaluate(() => !!document.activeElement?.closest('.fl-root')))) break
+    }
+    return count
+  }
+  // Wide: refresh, select all, three column headers, one row. Narrow lists swap
+  // the headers for a sort menu; either way the rows count once.
+  const before = await stops()
+  if (info.project.name !== 'mobile') expect(before).toBe(6)
+  expect(before).toBeLessThanOrEqual(6)
+  await opener(row(page, 'photos')).click()
+  await list(page).locator('.fl-more .fl-more-all').click()
+  await expect(row(page, 'IMG_0450.jpg')).toBeVisible()
+  expect(await stops()).toBe(before)
+})
+
+test('arrow keys move between rows and open, close and climb folders', async ({ page }, info) => {
+  test.skip(info.project.name === 'mobile', 'no arrow keys on phones')
+  await open(page)
+  const grid = list(page).locator('[role="treegrid"]')
+  await expect(grid).toHaveAttribute('aria-multiselectable', 'true')
+  await row(page, 'deep').focus()
+
+  await page.keyboard.press('ArrowDown')
+  expect(await focusedKey(page)).toBe('/docs')
+  await page.keyboard.press('End')
+  expect(await focusedKey(page)).toBe('/notes.txt')
+  await page.keyboard.press('Home')
+  expect(await focusedKey(page)).toBe('/deep')
+
+  // → opens a folder, → again goes to its first child, ← climbs back, ← closes.
+  await page.keyboard.press('ArrowDown')
+  const docs = row(page, 'docs')
+  await page.keyboard.press('ArrowRight')
+  await expect(docs).toHaveAttribute('aria-expanded', 'true')
+  await page.keyboard.press('ArrowRight')
+  await expect(row(page, 'guide.md')).toBeFocused()
+  await expect(row(page, 'guide.md')).toHaveAttribute('aria-level', '2')
+  await page.keyboard.press('ArrowLeft')
+  await expect(docs).toBeFocused()
+  await page.keyboard.press('ArrowLeft')
+  await expect(docs).toHaveAttribute('aria-expanded', 'false')
+
+  // Typing jumps to a name; the same letter again goes to the next one.
+  await page.keyboard.press('p')
+  await expect(row(page, 'photos')).toBeFocused()
+  await page.waitForTimeout(700) // letters typed within 0.6 s make one name
+  await page.keyboard.press('b')
+  await expect(row(page, 'big-a.bin')).toBeFocused()
+  await page.keyboard.press('b')
+  await expect(row(page, 'big-b.bin')).toBeFocused()
+})
+
+test('Space ticks, Enter opens, → reaches the row\'s buttons', async ({ page }, info) => {
+  test.skip(info.project.name === 'mobile', 'no arrow keys on phones')
+  await open(page)
+  const notes = row(page, 'notes.txt')
+  await notes.focus()
+
+  await page.keyboard.press(' ')
+  await expect(notes).toHaveAttribute('aria-selected', 'true')
+  await expect(list(page).locator('.fl-selection')).toBeVisible()
+  await page.keyboard.press(' ')
+  await expect(notes).toHaveAttribute('aria-selected', 'false')
+
+  await page.keyboard.press('ArrowRight')
+  await expect(notes.locator('.fl-preview-btn')).toBeFocused()
+  await page.keyboard.press('ArrowRight')
+  await expect(notes.locator('.fl-download')).toBeFocused()
+  await page.keyboard.press('ArrowLeft')
+  await page.keyboard.press('ArrowLeft')
+  await expect(notes).toBeFocused()
+
+  // Enter previews; closing the preview comes back to the row.
+  await page.keyboard.press('Enter')
+  const dialog = page.locator('dialog.fl-preview')
+  await expect(dialog).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+  await expect(notes).toBeFocused()
+})
+
+test('Ctrl / ⌘ + A ticks everything, from the keyboard only', async ({ page }, info) => {
+  test.skip(info.project.name === 'mobile', 'no keyboard on phones')
+  await open(page)
+  const all = list(page).locator('.fl-head .fl-cell-check input')
+  const hint = list(page).locator('.fl-keys')
+
+  // A mouse click keeps the browser's own select-all and shows no key hint.
+  await row(page, 'notes.txt').locator('.fl-cell-size').click()
+  await page.keyboard.press('ControlOrMeta+a')
+  await expect(all).not.toBeChecked()
+  await expect(hint).toHaveCount(0)
+
+  await row(page, 'notes.txt').focus()
+  await page.keyboard.press('ArrowUp')
+  await expect(hint).toBeVisible()
+  await page.keyboard.press('ControlOrMeta+a')
+  await expect(all).toBeChecked()
+  await page.keyboard.press('ControlOrMeta+a')
+  await expect(all).not.toBeChecked()
+
+  // Leaving the list hides the hint.
+  await list(page).locator('.fl-search input').focus()
+  await expect(hint).toHaveCount(0)
+})
+
+test('Enter on a “more” row shows the next page', async ({ page }, info) => {
+  test.skip(info.project.name === 'mobile', 'no keyboard on phones')
+  await open(page)
+  await opener(row(page, 'photos')).click()
+  const more = list(page).locator('.fl-more')
+  await expect(more.locator('.fl-more-count')).toHaveText('还有 435 项')
+  await more.focus()
+  await page.keyboard.press('Enter')
+  await expect(more.locator('.fl-more-count')).toHaveText('还有 420 项')
+  await expect(more).toBeFocused()
 })
