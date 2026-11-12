@@ -21,6 +21,8 @@ export default antfu(
       'jsonc/sort-keys': 'off',
       'test/prefer-lowercase-title': 'off',
       'unicorn/number-literal-case': 'off',
+      // pnpm-workspace.yaml only lists the packages; pnpm settings stay as they are.
+      'pnpm/yaml-enforce-settings': 'off',
     },
   },
   {

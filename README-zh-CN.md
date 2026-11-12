@@ -34,6 +34,8 @@
 pnpm add -D vitepress-plugin-filelist
 ```
 
+用 **VuePress 2**？请安装 [`vuepress-plugin-filelist`](./packages/vuepress-plugin-filelist/README-zh-CN.md)：同一个组件，一起发布（[使用说明](https://nrjycyd.github.io/vitepress-plugin-filelist/guide/vuepress)）。
+
 ## 后端
 
 - 接口：[OpenList](https://github.com/OpenListTeam/OpenList)

@@ -34,6 +34,24 @@ COMPAT_SKIP_BUILD=1 node scripts/compat.mjs     # 用现有 dist/，CI 用它在
 - `.github/dependabot.yml`：每天检查文档站（`demo/`）、每周检查根目录的 vitepress / vitepress-tuck / vue，有新版本就开 PR，CI 全部通过后合并，文档站随之用上新版本
 - `VitePress canary` 工作流：每天查一次 npm 上 `latest`、`next` 两个 dist-tag 对应的 VitePress 和最新 Vue 的版本号；这组版本已经测过就直接结束（几秒，不安装），有新版本才跑 `test:compat`，失败时发邮件。手动运行时勾选 force 可强制重测
 
+## VuePress 版（packages/vuepress-plugin-filelist）
+
+仓库是 pnpm 工作区：根目录是 vitepress-plugin-filelist，`packages/vuepress-plugin-filelist` 是 VuePress 2 版。组件、样式、文案都只在根目录的 `src/client` 里；VuePress 版只有插件和客户端注册（`src/index.ts`、`src/client.ts`），依赖 `vitepress-plugin-filelist: workspace:*`，打包时变成同一个确切版本。
+
+- 两个包版本号相同、一起发布（`src/__tests__/plugin.spec.ts` 检查版本一致；发布流程也会核对）
+- 根目录的 `build`、`typecheck`、`test` 已包含它；`pnpm test:compat:vuepress` 把两个包打包装进全新的 VuePress 2 站点（默认主题、plume、hope），构建后在 Chromium 中检查渲染、主色与深浅色、Markdown 预览、ZIP，约 2 分钟
+- 组件的配色通过 `style.css` 开头的 `--fl-c-*` 变量读取主题：先读 VitePress / plume 的变量名，再读 VuePress 默认主题 / hope 的变量名；深色同时认 `.dark` 与 `data-theme="dark"`
+- `VuePress canary` 工作流每天检查 VuePress next 与三个主题的新版本，做法同 VitePress canary
+
+```bash
+pnpm test:compat:vuepress
+COMPAT_THEMES=plume pnpm test:compat:vuepress                  # 只测指定主题
+COMPAT_THEME_VERSIONS=hope=2.0.0-rc.110 pnpm test:compat:vuepress   # 指定主题版本
+COMPAT_VUEPRESS=2.0.0-rc.31 pnpm test:compat:vuepress          # 指定 VuePress 版本（默认用主题要求的版本）
+```
+
+不再维护时的分离方法：删除 `packages/vuepress-plugin-filelist`、`pnpm-workspace.yaml`、根 `package.json` 里 `--filter ./packages/*` 的部分与 `test:compat:vuepress`、`vitest.config.ts` 里的 `packages/*` 路径、CI 的 `vuepress` 任务、发布流程里 “Publish vuepress-plugin-filelist” 一步和版本核对、`vuepress-canary.yml`、文档的“在 VuePress 中使用”页，再在 npm 上 `npm deprecate vuepress-plugin-filelist "…"`。`--fl-c-*` 配色层可以保留，对 VitePress 无影响。
+
 包体积：`src/client/__tests__/size.spec.ts` 检查构建产物的 gzip 大小（浏览器包 42 KB、样式 8 KB、Node 入口 1 KB），并确认 markdown-it、DOMPurify、client-zip 仍是按需加载。CI 和发布流程先构建再测试，所以超出预算会直接失败；本地先 `pnpm run build`，否则这组测试跳过。确需增大预算时，在同一个改动里调整并写明原因。
 
 公开接口只有组件、`enhanceAppWithFileList`、文案工具与 `FileList*` 类型（`src/client/__tests__/publicApi.spec.ts` 守着这份清单）。新增导出或文案 key 前先想清楚：1.0 之后删除即是主版本。
@@ -108,4 +126,4 @@ pnpm run dev         # 本地预览文档站
 
 ## 发布
 
-通过 GitHub Actions 的 Trusted Publishing（OIDC）发布到 npm，带 provenance。
+通过 GitHub Actions 的 Trusted Publishing（OIDC）发布到 npm，带 provenance。推送 `v*` 标签后先发 vitepress-plugin-filelist，再发 vuepress-plugin-filelist（已发布的版本会跳过，失败后可直接重跑）。两个包都要在 npmjs.com 上把本仓库的 `release.yml` 设为 Trusted Publisher。

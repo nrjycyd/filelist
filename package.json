@@ -41,8 +41,8 @@
   ],
   "scripts": {
     "dev": "tsdown --watch",
-    "build": "tsdown && node scripts/fix-dts.mjs",
-    "typecheck": "vue-tsc --noEmit",
+    "build": "tsdown && node scripts/fix-dts.mjs && pnpm --filter ./packages/* run build",
+    "typecheck": "vue-tsc --noEmit && pnpm --filter ./packages/* run typecheck",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "vitest run",
@@ -50,7 +50,8 @@
     "pack:check": "npm pack --dry-run",
     "test:e2e": "playwright test",
     "e2e:site": "pnpm run build && pnpm --dir demo install --force && pnpm --dir demo run build:e2e",
-    "test:compat": "node scripts/compat.mjs"
+    "test:compat": "node scripts/compat.mjs",
+    "test:compat:vuepress": "pnpm --filter vuepress-plugin-filelist run test:compat"
   },
   "peerDependencies": {
     "vitepress": "^1.6.0 || >=2.0.0-alpha.18",
@@ -58,6 +59,9 @@
     "vue": "^3.5.0"
   },
   "peerDependenciesMeta": {
+    "vitepress": {
+      "optional": true
+    },
     "vitepress-tuck": {
       "optional": true
     }

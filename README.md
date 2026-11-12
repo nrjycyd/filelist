@@ -36,6 +36,8 @@ npm install -D vitepress-plugin-filelist
 
 Works with VitePress 1.6+ (register with `enhanceAppWithFileList`) and VitePress 2 (also as a [vitepress-tuck](https://github.com/pengzhanbo/vitepress-tuck) plugin).
 
+On **VuePress 2**? Install [`vuepress-plugin-filelist`](https://github.com/nrjycyd/vitepress-plugin-filelist/tree/main/packages/vuepress-plugin-filelist) instead: the same component, released together ([guide](https://nrjycyd.github.io/vitepress-plugin-filelist/en/guide/vuepress)).
+
 ## Backend
 
 - API: [OpenList](https://github.com/OpenListTeam/OpenList)

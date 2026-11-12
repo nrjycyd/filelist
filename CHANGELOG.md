@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+### Features
+
+- New package **vuepress-plugin-filelist**: the same component for VuePress 2 (`@vuepress/bundler-vite`), released together with vitepress-plugin-filelist under the same version. Register it with `plugins: [fileListPlugin()]`; tested with the default theme, vuepress-theme-plume and vuepress-theme-hope
+- Colours read the site theme through a small layer of `--fl-c-*` variables: VitePress / plume names first, then the VuePress default theme / hope names. Dark mode also follows `data-theme="dark"`. VitePress sites look the same as before
+- The selection bar's sticky offset also measures VuePress navbars
+
+### Changes
+
+- `vitepress` is now an optional peer dependency, so VuePress sites do not get VitePress installed
+- `enhanceAppWithFileList` takes any `{ app }` (VitePress' `enhanceApp` context still works)
+- The demo Markdown file says "the site's page style" instead of "VitePress' page style"
+
+### Docs
+
+- New page: Using with VuePress (Chinese and English); the compatibility table lists VuePress 2
+
 ## 0.9.5 (2026-11-11)
 
 ### Features

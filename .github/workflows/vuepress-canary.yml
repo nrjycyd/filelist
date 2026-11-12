@@ -1,0 +1,71 @@
+name: VuePress canary
+
+# Once a day, look up the newest VuePress 2 release candidate and the three
+# themes we support (default, plume, hope). If this exact set already passed,
+# stop there (a few seconds, no install). Otherwise build fresh sites with
+# vuepress-plugin-filelist and check them in a browser
+# (packages/vuepress-plugin-filelist/scripts/compat.mjs). Each site gets the
+# VuePress version its theme pins. Run it by hand with "force" to test again.
+on:
+  schedule:
+    - cron: '47 1 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Test even if these versions already passed
+        type: boolean
+        default: false
+
+jobs:
+  versions:
+    runs-on: ubuntu-latest
+    outputs:
+      themes: ${{ steps.npm.outputs.themes }}
+      key: ${{ steps.npm.outputs.key }}
+      tested: ${{ steps.seen.outputs.cache-hit }}
+    steps:
+      - name: Newest versions on npm
+        id: npm
+        run: |
+          vuepress=$(npm view vuepress@next version)
+          default=$(npm view @vuepress/theme-default@next version)
+          plume=$(npm view vuepress-theme-plume@latest version)
+          hope=$(npm view vuepress-theme-hope@latest version)
+          vue=$(npm view vue@latest version)
+          echo "themes=default=$default,plume=$plume,hope=$hope" >> "$GITHUB_OUTPUT"
+          echo "key=vuepress-canary-$vuepress-$default-$plume-$hope-vue-$vue" >> "$GITHUB_OUTPUT"
+          echo "VuePress $vuepress · default $default · plume $plume · hope $hope · Vue $vue" >> "$GITHUB_STEP_SUMMARY"
+      - name: Already passed?
+        id: seen
+        if: ${{ !inputs.force }}
+        uses: actions/cache/restore@v6
+        with:
+          path: .canary-passed
+          key: ${{ steps.npm.outputs.key }}
+          lookup-only: true
+      - if: steps.seen.outputs.cache-hit == 'true'
+        run: echo "Already passed with these versions, skipped." >> "$GITHUB_STEP_SUMMARY"
+
+  canary:
+    needs: versions
+    if: needs.versions.outputs.tested != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:compat:vuepress
+        env:
+          # The exact theme versions looked up above, so what passed matches the key.
+          COMPAT_THEME_VERSIONS: ${{ needs.versions.outputs.themes }}
+      # Reached only when the test passed: remember this set of versions.
+      - run: echo "${{ needs.versions.outputs.key }}" > .canary-passed
+      - uses: actions/cache/save@v6
+        with:
+          path: .canary-passed
+          key: ${{ needs.versions.outputs.key }}

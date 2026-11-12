@@ -1,0 +1,56 @@
+{
+  "name": "vuepress-plugin-filelist",
+  "version": "0.9.5",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "type": "module",
+  "description": "OpenList file browser for VuePress 2: browse, preview, filter and batch download files inside your docs, with folder passwords and light / dark themes",
+  "author": "nrjycyd",
+  "license": "MIT",
+  "homepage": "https://nrjycyd.github.io/vitepress-plugin-filelist/en/guide/vuepress",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nrjycyd/vitepress-plugin-filelist.git",
+    "directory": "packages/vuepress-plugin-filelist"
+  },
+  "bugs": {
+    "url": "https://github.com/nrjycyd/vitepress-plugin-filelist/issues"
+  },
+  "keywords": [
+    "vuepress",
+    "vuepress-plugin",
+    "openlist",
+    "alist",
+    "file-list",
+    "file-browser",
+    "download",
+    "zip"
+  ],
+  "sideEffects": [
+    "./dist/client.js"
+  ],
+  "exports": {
+    ".": "./dist/index.js",
+    "./package.json": "./package.json"
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit -p .",
+    "test:compat": "node scripts/compat.mjs"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0",
+    "vuepress": ">=2.0.0-rc.20"
+  },
+  "dependencies": {
+    "vitepress-plugin-filelist": "workspace:*"
+  },
+  "devDependencies": {
+    "vuepress": "2.0.0-rc.31"
+  }
+}

@@ -19,6 +19,7 @@
 | VitePress 1.6，普通写法 | ✅ | `pnpm test:compat`（1.6.4） |
 | VitePress 1.6 + vitepress-tuck | ❌ | vitepress-tuck 本身需要 VitePress 2 |
 | VitePress 1.5 及更早 | ❌ | 未测试，不在 `peerDependencies` 范围内 |
+| VuePress 2（默认主题 / plume / hope）| ✅ | 使用 [vuepress-plugin-filelist](../guide/vuepress)；`pnpm test:compat:vuepress` |
 | 以上站点在 Node 20.19 上构建 | ✅ | CI 的 node20 任务（Node 22 构建插件，Node 20.19 构建并检查站点） |
 
 VitePress 2 之后的大版本没有上限，发布时不需要改依赖范围。仓库每天检查 npm 上最新的 VitePress（`latest` 与 `next`），出了新版本就跑一遍兼容性测试，文档站也通过 Dependabot 跟进最新版本，新版本出问题时会第一时间发现。

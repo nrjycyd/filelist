@@ -1,0 +1,4 @@
+# The root package is vitepress-plugin-filelist; packages/ holds the VuePress
+# wrapper, released together with it. demo/ is not part of the workspace.
+packages:
+  - packages/*
