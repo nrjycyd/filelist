@@ -356,11 +356,13 @@ describe('FileList toolbar and rows', () => {
     expect(fields.map((item) => [item.text(), item.attributes('aria-checked')])).toEqual([
       ['文件名', 'true'],
       ['文件大小', 'false'],
-      ['最后修改日期', 'false'],
+      ['修改日期', 'false'],
     ])
-    expect(menu.findAll('.fl-menu-order-btn').map((item) => [item.text(), item.attributes('aria-checked')])).toEqual([
-      ['A → Z', 'true'],
-      ['Z → A', 'false'],
+    const order = () =>
+      wrapper.findAll('.fl-menu-order-btn').map((item) => [item.text(), item.attributes('aria-label'), item.attributes('aria-checked')])
+    expect(order()).toEqual([
+      ['升序', '文件名，升序', 'true'],
+      ['降序', '文件名，降序', 'false'],
     ])
     // The checked row has focus, so a screen reader starts there.
     expect(document.activeElement).toBe(fields[0].element)
@@ -372,16 +374,16 @@ describe('FileList toolbar and rows', () => {
     expect(trigger.text()).toContain('文件名 ↓')
     expect(wrapper.find('.fl-head .fl-cell-name .fl-sort').text()).toBe('▼')
 
-    // Another field keeps the order (descending), and the switch speaks its language.
+    // Another field keeps the order (descending); the switch names the field for screen readers.
     await trigger.trigger('click')
     await flushPromises()
     await wrapper.findAll('.fl-menu-item')[2].trigger('click')
-    expect(trigger.text()).toContain('最后修改日期 ↓')
+    expect(trigger.text()).toContain('修改日期 ↓')
     await trigger.trigger('click')
     await flushPromises()
-    expect(wrapper.findAll('.fl-menu-order-btn').map((item) => [item.text(), item.attributes('aria-checked')])).toEqual([
-      ['旧 → 新', 'false'],
-      ['新 → 旧', 'true'],
+    expect(order()).toEqual([
+      ['升序', '修改日期，升序', 'false'],
+      ['降序', '修改日期，降序', 'true'],
     ])
     wrapper.unmount()
   })

@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Changes
+
+- The sort menu of narrow lists is smaller and tighter (about a third of the area): no heading or tick, 32px rows, type the size of the header's, as wide as its longest label. Its order switch reads “↑ Asc / ↓ Desc” (“升序 / 降序”) for every field; screen readers hear the field with it (“Name, ascending”)
+- The “Sort” button of narrow lists and the “Show less” button of a pinned folder row are plain text with an arrow, without a tinted pill behind them
+- 简体中文: the date column reads “修改日期” (was “最后修改日期”)
+- Labels: `sortAscending` and `sortDescending` replace `sortNameAsc`, `sortNameDesc`, `sortSizeAsc`, `sortSizeDesc`, `sortDateAsc` and `sortDateDesc` (added in 0.12.0)
+
 ## 0.12.0 (2026-11-12)
 
 ### Changes

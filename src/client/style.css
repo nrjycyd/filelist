@@ -976,8 +976,7 @@
 
 /* hover only where there is a pointer, so a tap does not leave a mark behind */
 @media (hover: hover) {
-  .fl-more-link:hover,
-  .fl-pin-less:hover {
+  .fl-more-link:hover {
     background: var(--fl-c-default-soft);
   }
 }
@@ -1033,15 +1032,15 @@
   gap: 4px;
   align-items: center;
   height: 26px;
-  padding: 0 10px;
+  padding: 0 2px;
   font-size: 12px;
   font-weight: 600;
   color: var(--fl-c-brand-1);
   white-space: nowrap;
   cursor: pointer;
-  background: var(--fl-c-brand-soft);
+  background: none;
   border: 0;
-  border-radius: 13px;
+  border-radius: 6px;
 }
 
 /* ---------------- filter and deep search ---------------- */
@@ -1350,9 +1349,7 @@
   .fl-pin-less {
     position: relative;
     height: 32px;
-    padding: 0 12px;
     font-size: 13px;
-    border-radius: 16px;
   }
 
   .fl-pin-less::after {
@@ -1392,19 +1389,15 @@
     gap: 4px;
     align-items: center;
     height: 30px;
-    padding: 0 8px 0 10px;
+    padding: 0;
     font: inherit;
     font-size: 13px;
     font-weight: 500;
     color: var(--fl-c-text-1);
     cursor: pointer;
-    background: var(--fl-c-default-soft);
+    background: none;
     border: 0;
-    border-radius: 8px;
-  }
-
-  .fl-sort-trigger.fl-open {
-    background: var(--fl-c-brand-soft);
+    border-radius: 6px;
   }
 
   .fl-sort-current {
@@ -1421,71 +1414,64 @@
     transform: rotate(180deg);
   }
 
+  /* as wide as its longest label; type the size of the header's */
   .fl-menu {
     position: absolute;
-    top: calc(100% + 6px);
+    top: calc(100% + 4px);
     right: 0;
     z-index: 30;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    width: 236px;
-    padding: 6px;
-    font-size: 15px;
+    gap: 1px;
+    width: max-content;
+    padding: 4px;
+    font-size: inherit;
     font-weight: 400;
     color: var(--fl-c-text-1);
     text-align: left;
     background: var(--vp-c-bg-elv, var(--fl-c-bg));
     border: 1px solid var(--fl-c-divider);
-    border-radius: 14px;
+    border-radius: 11px;
     box-shadow:
-      0 16px 40px -8px rgb(0 0 0 / 22%),
-      0 2px 6px rgb(0 0 0 / 8%);
+      0 1px 2px rgb(0 0 0 / 6%),
+      0 6px 16px -4px rgb(0 0 0 / 14%),
+      0 16px 32px -12px rgb(0 0 0 / 14%);
     transform-origin: top right;
     animation: fl-menu-in 0.1s ease-out;
   }
 
   .fl-menu.fl-menu-up {
     top: auto;
-    bottom: calc(100% + 6px);
+    bottom: calc(100% + 4px);
     transform-origin: bottom right;
   }
 
   :is(.dark, [data-theme='dark']) .fl-menu {
     box-shadow:
-      0 16px 40px -8px rgb(0 0 0 / 60%),
-      0 0 0 1px rgb(255 255 255 / 4%);
-  }
-
-  .fl-menu-title {
-    padding: 6px 10px;
-    font-size: 12px;
-    color: var(--fl-c-text-2);
+      0 1px 2px rgb(0 0 0 / 40%),
+      0 8px 20px -4px rgb(0 0 0 / 55%);
   }
 
   .fl-menu-item {
     display: flex;
-    gap: 10px;
+    gap: 7px;
     align-items: center;
-    width: 100%;
-    height: 44px;
-    padding: 0 10px;
+    height: 32px;
+    padding: 0 14px 0 8px;
     font: inherit;
     color: inherit;
     text-align: left;
+    white-space: nowrap;
     cursor: pointer;
     background: none;
     border: 0;
-    border-radius: 9px;
+    border-radius: 6px;
   }
 
   .fl-menu-item svg {
     flex: none;
     color: var(--fl-c-text-3);
-  }
-
-  .fl-menu-label {
-    flex: 1;
   }
 
   .fl-menu-item.fl-current {
@@ -1498,38 +1484,44 @@
     color: var(--fl-c-brand-1);
   }
 
+  /* edge to edge */
   .fl-menu-sep {
     height: 1px;
-    margin: 6px 4px;
+    margin: 3px -4px;
     background: var(--fl-c-divider);
   }
 
   .fl-menu-order {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 2px;
-    padding: 3px;
+    padding: 2px;
     background: var(--fl-c-default-soft);
-    border-radius: 10px;
+    border-radius: 7px;
   }
 
   .fl-menu-order-btn {
-    height: 36px;
-    padding: 0 6px;
+    display: inline-flex;
+    gap: 3px;
+    align-items: center;
+    justify-content: center;
+    height: 26px;
+    padding: 0 9px;
     font: inherit;
-    font-size: 14px;
     color: var(--fl-c-text-2);
+    white-space: nowrap;
     cursor: pointer;
     background: none;
     border: 0;
-    border-radius: 8px;
+    border-radius: 5px;
   }
 
   .fl-menu-order-btn.fl-current {
     font-weight: 600;
     color: var(--fl-c-text-1);
     background: var(--fl-c-bg);
-    box-shadow: 0 1px 3px rgb(0 0 0 / 14%);
+    box-shadow:
+      0 0 0 0.5px rgb(0 0 0 / 6%),
+      0 1px 2px rgb(0 0 0 / 12%);
   }
 
   :is(.dark, [data-theme='dark']) .fl-menu-order-btn.fl-current {
