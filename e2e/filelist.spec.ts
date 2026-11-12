@@ -1,6 +1,8 @@
 import type { Locator, Page, TestInfo } from '@playwright/test'
+import type { Rgb } from '../src/client/contrast'
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
+import { readableBackground } from '../src/client/contrast'
 
 const list = (page: Page) => page.locator('.fl-root').first()
 const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -635,5 +637,34 @@ test('“Download ZIP” is readable in light and dark', async ({ page }) => {
   const before = await list(page).locator('.fl-btn-primary').evaluate((el) => getComputedStyle(el).backgroundColor)
   await page.evaluate(() => document.documentElement.classList.toggle('dark'))
   await expect.poll(() => list(page).locator('.fl-btn-primary').evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe(before)
+  expect(await primaryContrast(page)).toBeGreaterThanOrEqual(4.5)
+})
+
+test('“Download ZIP” follows themes that switch on <body> or only by the system setting', async ({ page }) => {
+  // Keep VitePress itself on light, so only the stand-in theme below changes.
+  await page.addInitScript(() => localStorage.setItem('vitepress-theme-appearance', 'light'))
+  await page.emulateMedia({ colorScheme: 'light' })
+  await open(page)
+  await page.addStyleTag({ content: `
+    body.fake-dark .fl-root { --vp-button-brand-bg: #8cccd5; }
+    @media (prefers-color-scheme: dark) { .fl-root { --vp-button-brand-bg: #3eaf7c; } }
+  ` })
+  await check(page, 'notes.txt')
+  const bg = () => list(page).locator('.fl-btn-primary').evaluate((el) => getComputedStyle(el).backgroundColor)
+
+  // The button takes the new theme colour, darkened just enough, not the one
+  // worked out for the old theme.
+  const fitted = (hex: string) => {
+    const rgb = readableBackground(hex.match(/\w\w/g)!.map((h) => Number.parseInt(h, 16)) as Rgb, [255, 255, 255])!
+    return `rgb(${rgb.join(', ')})`
+  }
+  await page.evaluate(() => document.body.classList.add('fake-dark'))
+  await expect.poll(bg).toBe(fitted('8cccd5'))
+  expect(await primaryContrast(page)).toBeGreaterThanOrEqual(4.5)
+
+  await page.evaluate(() => document.body.classList.remove('fake-dark'))
+  await page.emulateMedia({ colorScheme: 'dark' })
+  await expect(page.locator('html')).not.toHaveClass(/dark/)
+  await expect.poll(bg).toBe(fitted('3eaf7c'))
   expect(await primaryContrast(page)).toBeGreaterThanOrEqual(4.5)
 })

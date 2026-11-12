@@ -280,15 +280,23 @@ function restoreFocus() {
 onUpdated(restoreFocus)
 
 /** Keeps “Download ZIP” readable in every theme, light and dark (contrast.ts). */
-let themeWatch: MutationObserver | undefined
+let stopThemeWatch: (() => void) | undefined
 
 onMounted(() => {
   if (/Mac|iPhone|iPad/.test(navigator.platform)) selectAllKeys.value = '⌘A'
   const fit = () => rootEl.value && fitPrimaryButton(rootEl.value)
   fit()
-  // Light / dark switches change the theme variables on <html>.
-  themeWatch = new MutationObserver(fit)
-  themeWatch.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme', 'style'] })
+  // Light / dark switches: a class or attribute on <html> or <body>, or only
+  // the system setting (themes that follow prefers-color-scheme in CSS).
+  const watch = new MutationObserver(fit)
+  for (const el of [document.documentElement, document.body])
+    watch.observe(el, { attributes: true, attributeFilter: ['class', 'data-theme', 'style'] })
+  const scheme = window.matchMedia?.('(prefers-color-scheme: dark)')
+  scheme?.addEventListener('change', fit)
+  stopThemeWatch = () => {
+    watch.disconnect()
+    scheme?.removeEventListener('change', fit)
+  }
   warnPublicSecrets(props, props.locale)
   passwords.sync()
   void loadRoot()
@@ -297,7 +305,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  themeWatch?.disconnect()
+  stopThemeWatch?.()
   cancelZip()
   rowsPart.unmount()
   clearTimeout(toastTimer)
