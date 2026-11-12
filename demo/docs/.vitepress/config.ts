@@ -79,6 +79,7 @@ export default defineConfig({
           { text: '筛选与深度搜索', link: '/features/search' },
           { text: '目录密码与刷新', link: '/features/passwords' },
           { text: '预览', link: '/features/preview' },
+          { text: '键盘操作', link: '/features/keyboard' },
         ],
       },
       {
