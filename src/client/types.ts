@@ -42,6 +42,10 @@ export interface FileListLabels {
   folderItems: string
   /** Label of the compact sort select shown in narrow containers. */
   sortBy: string
+  /** Accessible name of the column header the list is sorted by, ascending, `{name}`. */
+  sortedAscending: string
+  /** Accessible name of the column header the list is sorted by, descending, `{name}`. */
+  sortedDescending: string
   selectAll: string
   /** Accessible name of a row checkbox, `{name}`. */
   selectItem: string

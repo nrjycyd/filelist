@@ -43,7 +43,8 @@ export default defineConfig({
     define: { __FL_VERSION__: JSON.stringify(pkg.version) },
   },
   themeConfig: {
-    logo: { light: '/logo.svg', dark: '/logo-dark.svg', alt: 'FileList' },
+    // No alt text: the site title “FileList” sits right next to the logo.
+    logo: { light: '/logo.svg', dark: '/logo-dark.svg', alt: '' },
     nav: [
       { text: '指南', link: '/guide/getting-started', activeMatch: '/guide/' },
       { text: '功能', link: '/features/sources', activeMatch: '/features/' },

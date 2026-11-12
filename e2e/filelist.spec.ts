@@ -1,4 +1,5 @@
 import type { Locator, Page, TestInfo } from '@playwright/test'
+import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
 
 const list = (page: Page) => page.locator('.fl-root').first()
@@ -416,4 +417,76 @@ test('demo data: the sample files preview, download and zip for real', async ({ 
   })
   expect(zip.subarray(0, 2).toString()).toBe('PK')
   for (const name of ['使用说明.md', '讲义.pdf', '课程海报.svg']) expect(zip.includes(Buffer.from(name))).toBe(true)
+})
+
+test('keyboard focus stays in the list when the control it was on goes away', async ({ page }) => {
+  await open(page)
+
+  // Unlocking: the password form gives way to the folder's own button.
+  const locked = row(page, 'Locked')
+  await opener(locked).focus()
+  await page.keyboard.press('Enter')
+  const input = locked.locator('.fl-unlock-row input')
+  await expect(input).toBeFocused()
+  await input.fill('1234')
+  await input.press('Enter')
+  await expect(row(page, 'secret-1.txt')).toBeVisible()
+  await expect(opener(locked)).toBeFocused()
+
+  // “Show all”: the first row that just appeared.
+  await opener(row(page, 'photos')).click()
+  await list(page).locator('.fl-more .fl-more-all').focus()
+  await page.keyboard.press('Enter')
+  await expect(list(page).locator('.fl-more')).toHaveCount(0)
+  await expect(row(page, 'IMG_0016.jpg').locator('.fl-cell-check input')).toBeFocused()
+
+  // The × in the filter box: back in the filter box.
+  const search = list(page).locator('.fl-search input')
+  await search.fill('IMG_00')
+  await list(page).locator('.fl-search-clear').focus()
+  await page.keyboard.press('Enter')
+  await expect(search).toHaveValue('')
+  await expect(search).toBeFocused()
+
+  // “Clear” in the selection bar: the “select all” box.
+  await check(page, 'big-a.bin')
+  await list(page).locator('.fl-clear').focus()
+  await page.keyboard.press('Enter')
+  await expect(list(page).locator('.fl-head .fl-cell-check input')).toBeFocused()
+})
+
+/**
+ * axe-core on the list in its main states. The primary button takes the site
+ * theme's button colour (VitePress' default gives white text 4.48:1), which
+ * is the theme's choice, so that one check is left to the theme.
+ */
+async function expectAccessible(page: Page) {
+  const { violations } = await new AxeBuilder({ page }).include('.fl-root').analyze()
+  const found = violations
+    .map((v) => ({
+      ...v,
+      nodes: v.id === 'color-contrast' ? v.nodes.filter((n) => !n.html.includes('fl-btn-primary')) : v.nodes,
+    }))
+    .filter((v) => v.nodes.length)
+    .map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)
+  expect(found).toEqual([])
+}
+
+test('no accessibility violations in the main states (axe)', async ({ page }) => {
+  await open(page)
+  await expectAccessible(page)
+
+  await opener(row(page, 'photos')).click()
+  await check(page, 'big-a.bin')
+  await expectAccessible(page)
+
+  await opener(row(page, 'Locked')).click()
+  await expect(row(page, 'Locked')).toHaveClass(/fl-row-prompting/)
+  await expectAccessible(page)
+  await page.keyboard.press('Escape')
+
+  await opener(row(page, 'docs')).click()
+  await row(page, 'guide.md').locator('.fl-preview-btn').click()
+  await expect(page.locator('dialog.fl-preview .fl-preview-text pre')).toBeVisible()
+  await expectAccessible(page)
 })
