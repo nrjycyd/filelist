@@ -59,6 +59,7 @@ export default defineConfig({
         text: '指南',
         items: [
           { text: '快速开始', link: '/guide/getting-started' },
+          { text: '在 VuePress 中使用', link: '/guide/vuepress' },
           { text: '接入 OpenList', link: '/guide/openlist' },
           { text: '安全与权限', link: '/guide/security' },
           { text: '常见问题', link: '/guide/faq' },

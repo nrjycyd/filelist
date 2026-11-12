@@ -25,6 +25,8 @@ jobs:
           filters: |
             code:
               - 'src/**'
+              - 'packages/**'
+              - 'pnpm-workspace.yaml'
               - 'e2e/**'
               - 'demo/e2e/**'
               - 'scripts/**'
@@ -96,6 +98,23 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:compat
+
+  # VuePress 2 sites (default theme, plume, hope) with both packages packed
+  # (packages/vuepress-plugin-filelist/scripts/compat.mjs).
+  vuepress:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:compat:vuepress
 
   # Browser tests: the fixture site in demo/e2e against a mock OpenList.
   e2e:

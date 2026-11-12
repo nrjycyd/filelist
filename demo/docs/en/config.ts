@@ -25,6 +25,7 @@ export default {
           text: 'Guide',
           items: [
             { text: 'Getting started', link: '/en/guide/getting-started' },
+            { text: 'Using with VuePress', link: '/en/guide/vuepress' },
             { text: 'Connect OpenList', link: '/en/guide/openlist' },
             { text: 'Security', link: '/en/guide/security' },
             { text: 'FAQ', link: '/en/guide/faq' },

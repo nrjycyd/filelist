@@ -11,7 +11,7 @@ interface Sample {
 const SAMPLES_ZH: Record<string, Sample> = {
   "使用说明.md": {
     type: "text/markdown",
-    body: "# 使用说明\n\n这是 **vitepress-plugin-filelist** 演示数据自带的 Markdown 文件。\n\n## 试一试\n\n- 点右上角“渲染”，按 VitePress 正文样式显示\n- 用 ← / → 切换到同一目录里的其它文件\n- 勾选“示例文件”文件夹，点“下载 ZIP”打包\n\n| 文件 | 类型 |\n| --- | --- |\n| 讲义.pdf | PDF |\n| 课程海报.svg | 图片 |\n| 网页示例.html | 网页 |\n\n> 接入 OpenList 后，这里显示的就是网盘里的真实文件。\n\n更多说明见 [文档站](https://nrjycyd.github.io/vitepress-plugin-filelist/)。\n",
+    body: "# 使用说明\n\n这是 **vitepress-plugin-filelist** 演示数据自带的 Markdown 文件。\n\n## 试一试\n\n- 点右上角“渲染”，按站点正文样式显示\n- 用 ← / → 切换到同一目录里的其它文件\n- 勾选“示例文件”文件夹，点“下载 ZIP”打包\n\n| 文件 | 类型 |\n| --- | --- |\n| 讲义.pdf | PDF |\n| 课程海报.svg | 图片 |\n| 网页示例.html | 网页 |\n\n> 接入 OpenList 后，这里显示的就是网盘里的真实文件。\n\n更多说明见 [文档站](https://nrjycyd.github.io/vitepress-plugin-filelist/)。\n",
   },
   "网页示例.html": {
     type: "text/html",
@@ -34,7 +34,7 @@ const SAMPLES_ZH: Record<string, Sample> = {
 const SAMPLES_EN: Record<string, Sample> = {
   "Read me.md": {
     type: "text/markdown",
-    body: "# Read me\n\nThis Markdown file ships with the demo data of **vitepress-plugin-filelist**.\n\n## Try it\n\n- Click “Rendered” at the top right to show it in VitePress' page style\n- Use ← / → to move to the other files in this folder\n- Tick the “Sample files” folder and click “Download ZIP”\n\n| File | Type |\n| --- | --- |\n| Lecture notes.pdf | PDF |\n| Course poster.svg | Image |\n| Web page.html | Web page |\n\n> With OpenList connected, this list shows the real files on your drive.\n\nMore in the [docs](https://nrjycyd.github.io/vitepress-plugin-filelist/en/).\n",
+    body: "# Read me\n\nThis Markdown file ships with the demo data of **vitepress-plugin-filelist**.\n\n## Try it\n\n- Click “Rendered” at the top right to show it in the site's page style\n- Use ← / → to move to the other files in this folder\n- Tick the “Sample files” folder and click “Download ZIP”\n\n| File | Type |\n| --- | --- |\n| Lecture notes.pdf | PDF |\n| Course poster.svg | Image |\n| Web page.html | Web page |\n\n> With OpenList connected, this list shows the real files on your drive.\n\nMore in the [docs](https://nrjycyd.github.io/vitepress-plugin-filelist/en/).\n",
   },
   "Web page.html": {
     type: "text/html",

@@ -1,0 +1,4 @@
+# The docs site is its own pnpm project with its own lockfile. Without this
+# file pnpm would treat it as part of the repository's workspace (one level
+# up) and `pnpm install` here would install nothing for the site.
+packages: []

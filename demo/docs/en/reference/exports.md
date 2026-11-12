@@ -19,6 +19,7 @@ That is the whole public API, kept with semantic versioning from 1.0: new props 
 | VitePress 1.6, plain registration | ✅ | `pnpm test:compat` (1.6.4) |
 | VitePress 1.6 + vitepress-tuck | ❌ | vitepress-tuck itself needs VitePress 2 |
 | VitePress 1.5 and older | ❌ | Not tested, outside `peerDependencies` |
+| VuePress 2 (default theme / plume / hope) | ✅ | Use [vuepress-plugin-filelist](../guide/vuepress); `pnpm test:compat:vuepress` |
 | The sites above built on Node 20.19 | ✅ | CI's node20 job (plugin built on Node 22, sites built and checked on Node 20.19) |
 
 From VitePress 2 on there is no upper bound, so a new VitePress release needs no change here. The repository checks the newest VitePress on npm (`latest` and `next`) every day and runs the compatibility test when a new version appears; Dependabot keeps the docs site on the newest version too, so a breaking release shows up early.

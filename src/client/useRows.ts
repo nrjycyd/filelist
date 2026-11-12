@@ -178,14 +178,16 @@ export function useRows(
 
   /*
    * In narrow containers the selection bar sticks below the theme's fixed bars.
-   * VitePress 1 and 2 pin different bars at different widths, so measure them.
+   * VitePress 1 and 2 pin different bars at different widths, and VuePress
+   * themes have their own (`.vp-navbar`, plume's `.vp-nav` / `.vp-local-nav`),
+   * so measure them.
    * `--fl-sticky-top` on the component overrides the measured value.
    */
   const stickyTop = ref(0)
 
   function measureStickyTop() {
     let top = 0
-    for (const el of document.querySelectorAll<HTMLElement>('.VPNav, .VPLocalNav')) {
+    for (const el of document.querySelectorAll<HTMLElement>('.VPNav, .VPLocalNav, .vp-navbar, .vp-nav, .vp-local-nav')) {
       const style = getComputedStyle(el)
       if (style.display === 'none' || (style.position !== 'fixed' && style.position !== 'sticky')) continue
       top = Math.max(top, (Number.parseFloat(style.top) || 0) + el.offsetHeight)

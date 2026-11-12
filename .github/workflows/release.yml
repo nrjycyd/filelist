@@ -37,9 +37,28 @@ jobs:
             echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $version"
             exit 1
           fi
+          # vuepress-plugin-filelist is released with the same version.
+          vuepress=$(node -p "require('./packages/vuepress-plugin-filelist/package.json').version")
+          if [ "$vuepress" != "$version" ]; then
+            echo "::error::packages/vuepress-plugin-filelist is $vuepress, expected $version"
+            exit 1
+          fi
           if [[ "$version" == *-* ]]; then echo "tag=next" >> "$GITHUB_OUTPUT"; else echo "tag=latest" >> "$GITHUB_OUTPUT"; fi
       - name: Publish to npm (OIDC)
         run: npm publish --provenance --access public --tag ${{ steps.version.outputs.tag }}
+      # pnpm pack turns `workspace:*` into the exact version; npm publishes the
+      # tarball with provenance. A re-run skips a version that is already up.
+      - name: Publish vuepress-plugin-filelist (OIDC)
+        working-directory: packages/vuepress-plugin-filelist
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if npm view "vuepress-plugin-filelist@$version" version >/dev/null 2>&1; then
+            echo "vuepress-plugin-filelist@$version is already published, skipped."
+            exit 0
+          fi
+          mkdir -p ../../.release
+          pnpm pack --pack-destination ../../.release
+          npm publish ../../.release/vuepress-plugin-filelist-$version.tgz --provenance --access public --tag ${{ steps.version.outputs.tag }}
       - name: Create GitHub release
         uses: softprops/action-gh-release@v3
         with:
