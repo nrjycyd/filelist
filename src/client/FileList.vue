@@ -22,6 +22,7 @@ import type { SortKey } from './utils'
 import { computed, onBeforeUnmount, onMounted, onUpdated, ref, useId } from 'vue'
 import { createOpenListApi, errorText, isNetworkError } from './api'
 import ConfirmDialog from './ConfirmDialog.vue'
+import { fitPrimaryButton } from './contrast'
 import { createDemoApi, isDemoFile } from './demo'
 import { warnPublicSecrets } from './devWarnings'
 import Icon from './Icon.vue'
@@ -278,8 +279,24 @@ function restoreFocus() {
 
 onUpdated(restoreFocus)
 
+/** Keeps “Download ZIP” readable in every theme, light and dark (contrast.ts). */
+let stopThemeWatch: (() => void) | undefined
+
 onMounted(() => {
   if (/Mac|iPhone|iPad/.test(navigator.platform)) selectAllKeys.value = '⌘A'
+  const fit = () => rootEl.value && fitPrimaryButton(rootEl.value)
+  fit()
+  // Light / dark switches: a class or attribute on <html> or <body>, or only
+  // the system setting (themes that follow prefers-color-scheme in CSS).
+  const watch = new MutationObserver(fit)
+  for (const el of [document.documentElement, document.body])
+    watch.observe(el, { attributes: true, attributeFilter: ['class', 'data-theme', 'style'] })
+  const scheme = window.matchMedia?.('(prefers-color-scheme: dark)')
+  scheme?.addEventListener('change', fit)
+  stopThemeWatch = () => {
+    watch.disconnect()
+    scheme?.removeEventListener('change', fit)
+  }
   warnPublicSecrets(props, props.locale)
   passwords.sync()
   void loadRoot()
@@ -288,6 +305,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  stopThemeWatch?.()
   cancelZip()
   rowsPart.unmount()
   clearTimeout(toastTimer)

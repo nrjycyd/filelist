@@ -10,7 +10,8 @@ import { describe, expect, it } from 'vitest'
 const dist = new URL('../../../dist/', import.meta.url)
 const BUDGET_KB = {
   // 44: the keyboard model of the list (treegrid, 0.11) added about 1 KB.
-  'client/browser/index.js': 44,
+  // 45: readable primary button in every theme (contrast.ts), about 1.4 KB unminified.
+  'client/browser/index.js': 45,
   'client/style.css': 8,
   'node/index.js': 1,
 }

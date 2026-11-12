@@ -129,8 +129,25 @@ async function smoke(browser, url, theme) {
     check(colours.dark === (colorScheme === 'dark'), `${colorScheme}: the theme did not switch to ${colorScheme}`)
     check(colorScheme === 'dark' ? colours.text > 0.6 : colours.text < 0.4, `${colorScheme}: text luminance ${colours.text.toFixed(2)}`)
 
-    if (colorScheme === 'light') {
+    // “Download ZIP” stays readable even where the theme's button colour is light.
+    if (!(await row('使用说明.md').count()))
       await row('示例文件').locator('.fl-arrow').first().click()
+    await row('使用说明.md').locator('.fl-cell-check input').check()
+    const ratio = await list.locator('.fl-btn-primary').evaluate((el) => {
+      const rgb = value => value.match(/[\d.]+/g).slice(0, 3).map(Number)
+      const lum = (c) => {
+        const [r, g, b] = c.map(v => (v / 255 <= 0.03928 ? v / 255 / 12.92 : ((v / 255 + 0.055) / 1.055) ** 2.4))
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b
+      }
+      const style = getComputedStyle(el)
+      const [a, b] = [lum(rgb(style.color)), lum(rgb(style.backgroundColor))].sort((x, y) => y - x)
+      return (a + 0.05) / (b + 0.05)
+    })
+    check(ratio >= 4.5, `${colorScheme}: “Download ZIP” contrast ${ratio.toFixed(2)}`)
+    console.log(`  ${colorScheme}: “Download ZIP” contrast ${ratio.toFixed(2)}`)
+    await list.locator('.fl-clear').click()
+
+    if (colorScheme === 'light') {
       await row('使用说明.md').waitFor()
       await row('使用说明.md').locator('.fl-preview-btn').click()
       const dialog = page.locator('dialog.fl-preview')
