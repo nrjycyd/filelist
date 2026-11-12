@@ -2,8 +2,8 @@
 /**
  * Sort control of the narrow layout, where the column headers are hidden: a
  * button that opens a small menu (WAI-ARIA menu button). Three rows pick
- * what to sort by, keeping the order; a two-part switch picks the order, in
- * words that fit the field (A → Z, small → large, old → new).
+ * what to sort by, keeping the order; a two-part switch picks ascending or
+ * descending.
  */
 import type { IconName } from './icons'
 import type { FileListLabels } from './types'
@@ -20,18 +20,19 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ sort: [key: SortKey, ascending: boolean] }>()
 
-const FIELDS: Array<{ key: SortKey; label: keyof FileListLabels; icon: IconName; order: [keyof FileListLabels, keyof FileListLabels] }> = [
-  { key: 'name', label: 'columnName', icon: 'sortName', order: ['sortNameAsc', 'sortNameDesc'] },
-  { key: 'size', label: 'columnSize', icon: 'sortSize', order: ['sortSizeAsc', 'sortSizeDesc'] },
-  { key: 'modified', label: 'columnDate', icon: 'sortDate', order: ['sortDateAsc', 'sortDateDesc'] },
+const FIELDS: Array<{ key: SortKey; label: keyof FileListLabels; icon: IconName }> = [
+  { key: 'name', label: 'columnName', icon: 'sortName' },
+  { key: 'size', label: 'columnSize', icon: 'sortSize' },
+  { key: 'modified', label: 'columnDate', icon: 'sortDate' },
 ]
 
 const current = computed(() => FIELDS.find((field) => field.key === props.sortKey) ?? FIELDS[0])
 const menuId = computed(() => `${props.uid}-sort-menu`)
-const buttonLabel = computed(() => {
-  const name = props.t(current.value.label)
-  return `${props.t('sortBy')} ${props.t(props.sortAsc ? 'sortedAscending' : 'sortedDescending', { name })}`
-})
+/** “Name, ascending”: the field with an order, for screen readers. */
+function orderLabel(ascending: boolean): string {
+  return props.t(ascending ? 'sortedAscending' : 'sortedDescending', { name: props.t(current.value.label) })
+}
+const buttonLabel = computed(() => `${props.t('sortBy')} ${orderLabel(props.sortAsc)}`)
 
 const open = ref(false)
 /** Opens upwards when there is no room below the button. */
@@ -134,7 +135,6 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onOutside, tru
       :aria-label="t('sortTitle')"
       @keydown="onMenuKeydown"
     >
-      <div class="fl-menu-title" aria-hidden="true">{{ t('sortTitle') }}</div>
       <button
         v-for="field in FIELDS"
         :key="field.key"
@@ -146,24 +146,25 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onOutside, tru
         tabindex="-1"
         @click="pick(field.key, sortAsc)"
       >
-        <Icon :name="field.icon" :size="18" />
-        <span class="fl-menu-label">{{ t(field.label) }}</span>
-        <Icon v-if="field.key === sortKey" name="check" :size="18" class="fl-menu-check" />
+        <Icon :name="field.icon" :size="14" />
+        {{ t(field.label) }}
       </button>
       <div class="fl-menu-sep" role="separator" />
       <div class="fl-menu-order" role="group" :aria-label="t('sortOrder')">
         <button
-          v-for="(order, index) in current.order"
-          :key="order"
+          v-for="ascending in [true, false]"
+          :key="String(ascending)"
           class="fl-menu-order-btn"
-          :class="{ 'fl-current': sortAsc === (index === 0) }"
+          :class="{ 'fl-current': sortAsc === ascending }"
           type="button"
           role="menuitemradio"
-          :aria-checked="sortAsc === (index === 0)"
+          :aria-checked="sortAsc === ascending"
+          :aria-label="orderLabel(ascending)"
           tabindex="-1"
-          @click="pick(sortKey, index === 0)"
+          @click="pick(sortKey, ascending)"
         >
-          {{ t(order) }}
+          <Icon :name="ascending ? 'arrowUp' : 'arrowDown'" :size="12" />
+          {{ t(ascending ? 'sortAscending' : 'sortDescending') }}
         </button>
       </div>
     </div>

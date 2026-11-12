@@ -42,22 +42,16 @@ export interface FileListLabels {
   folderItems: string
   /** Label of the sort button shown in narrow containers. */
   sortBy: string
-  /** Heading of the sort menu, and its accessible name. */
+  /** Accessible name of the sort menu. */
   sortTitle: string
   /** Accessible name of the order switch in the sort menu. */
   sortOrder: string
-  /** Sort menu order, by name: ascending, descending. */
-  sortNameAsc: string
-  sortNameDesc: string
-  /** Sort menu order, by size: ascending, descending. */
-  sortSizeAsc: string
-  sortSizeDesc: string
-  /** Sort menu order, by date: ascending, descending. */
-  sortDateAsc: string
-  sortDateDesc: string
-  /** Accessible name of the column header the list is sorted by, ascending, `{name}`. */
+  /** The two halves of the order switch in the sort menu (short: “Asc”, “Desc”). */
+  sortAscending: string
+  sortDescending: string
+  /** Accessible name of a field with its order, ascending, `{name}`: the sorted column header, the sort menu. */
   sortedAscending: string
-  /** Accessible name of the column header the list is sorted by, descending, `{name}`. */
+  /** The same, descending, `{name}`. */
   sortedDescending: string
   /** Accessible name of the last column header (preview / download). */
   actions: string
