@@ -7,6 +7,7 @@
 | `vitepress-plugin-filelist` | `fileList`：vitepress-tuck 插件（也是默认导出） |
 | `vitepress-plugin-filelist/client` | 组件 `FileList`、`VPFileList`；注册函数 `enhanceAppWithFileList`；文案工具 `fileListLocales`、`formatLabel`、`resolveLabels`；类型 `FileListProps`、`FileListSource`、`FileListLabels`、`FileListLocale` |
 | `vitepress-plugin-filelist/style.css` | 组件样式（普通写法需要手动引入） |
+| `vuepress-plugin-filelist` | `fileListPlugin`：VuePress 2 插件（也是默认导出），注册组件并引入样式；见[在 VuePress 中使用](../guide/vuepress) |
 
 以上就是全部公开接口，1.0 之后按语义化版本维护：新增属性、文案 key 属于次版本，删除或改名属于主版本。其它内部模块（路径与格式化工具、目录树、OpenList 请求）随时可能调整，请不要从 `dist` 里直接引用。
 
@@ -28,10 +29,12 @@ VitePress 2 之后的大版本没有上限，发布时不需要改依赖范围�
 
 | 依赖 | 范围 |
 | --- | --- |
-| `vitepress`（peer） | `^1.6.0 \|\| >=2.0.0-alpha.18`：VitePress 1.6 及以后的 1.x，以及 2.0.0-alpha.18 起的所有版本（含将来的 3.x、4.x 正式版） |
+| `vitepress`（可选 peer） | `^1.6.0 \|\| >=2.0.0-alpha.18`：VitePress 1.6 及以后的 1.x，以及 2.0.0-alpha.18 起的所有版本（含将来的 3.x、4.x 正式版）。VitePress 站点本来就装着它；标为可选，是为了 VuePress 站点不被顺带装上 |
 | `vue`（peer） | `^3.5.0` |
 | `vitepress-tuck`（可选 peer） | `>=0.12.2`（不设上限）；只有用 vitepress-tuck 注册时才需要安装 |
 | Node | `^20.19.0 \|\| >=22.12.0` |
+
+vuepress-plugin-filelist 另外需要 `vuepress`（peer，`>=2.0.0-rc.20`）和 `@vuepress/bundler-vite`，并依赖同版本的 vitepress-plugin-filelist。
 
 在 Node 22 下针对 VitePress `2.0.0-alpha.21` 本地实测包管理器：
 

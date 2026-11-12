@@ -7,6 +7,7 @@
 | `vitepress-plugin-filelist` | `fileList`: the vitepress-tuck plugin (also the default export) |
 | `vitepress-plugin-filelist/client` | Components `FileList`, `VPFileList`; registrar `enhanceAppWithFileList`; label tools `fileListLocales`, `formatLabel`, `resolveLabels`; types `FileListProps`, `FileListSource`, `FileListLabels`, `FileListLocale` |
 | `vitepress-plugin-filelist/style.css` | Component styles (import it yourself with the plain registration) |
+| `vuepress-plugin-filelist` | `fileListPlugin`: the VuePress 2 plugin (also the default export), registers the component and loads the styles; see [Using with VuePress](../guide/vuepress) |
 
 That is the whole public API, kept with semantic versioning from 1.0: new props and label keys come in minor releases, removals and renames only in major ones. Everything else (path and format helpers, the tree, the OpenList client) may change in any release; please don't import from `dist`.
 
@@ -28,10 +29,12 @@ From VitePress 2 on there is no upper bound, so a new VitePress release needs no
 
 | Dependency | Range |
 | --- | --- |
-| `vitepress` (peer) | `^1.6.0 \|\| >=2.0.0-alpha.18`: 1.6 and later 1.x, and every release from 2.0.0-alpha.18 on (future 3.x and 4.x included) |
+| `vitepress` (optional peer) | `^1.6.0 \|\| >=2.0.0-alpha.18`: 1.6 and later 1.x, and every release from 2.0.0-alpha.18 on (future 3.x and 4.x included). VitePress sites have it anyway; it is optional so VuePress sites do not get it installed |
 | `vue` (peer) | `^3.5.0` |
 | `vitepress-tuck` (optional peer) | `>=0.12.2`, no upper bound; only needed when registering through vitepress-tuck |
 | Node | `^20.19.0 \|\| >=22.12.0` |
+
+vuepress-plugin-filelist also needs `vuepress` (peer, `>=2.0.0-rc.20`) and `@vuepress/bundler-vite`, and depends on vitepress-plugin-filelist of the same version.
 
 Package managers, checked locally on Node 22 with VitePress `2.0.0-alpha.21`:
 

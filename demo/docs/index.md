@@ -4,7 +4,7 @@ layout: home
 hero:
   name: FileList
   text: 文档页里的 OpenList 文件浏览器
-  tagline: 在 VitePress 文档页内浏览、预览、搜索并批量打包下载文件，支持目录密码、分页与深浅主题。
+  tagline: 在 VitePress / VuePress 文档页内浏览、预览、搜索并批量打包下载文件，支持目录密码、分页与深浅主题。
   image:
     light: /logo.svg
     dark: /logo-dark.svg
@@ -16,6 +16,9 @@ hero:
     - theme: alt
       text: 接入 OpenList
       link: /guide/openlist
+    - theme: alt
+      text: 在 VuePress 中使用
+      link: /guide/vuepress
 
 features:
   - icon: 📦

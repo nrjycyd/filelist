@@ -5,7 +5,7 @@ const repo = 'https://github.com/nrjycyd/vitepress-plugin-filelist'
 
 // English pages (/en/). Only what differs from the Chinese root config.
 export default {
-  description: 'OpenList file browser for VitePress',
+  description: 'OpenList file browser for VitePress and VuePress',
   themeConfig: {
     nav: [
       { text: 'Guide', link: '/en/guide/getting-started', activeMatch: '/en/guide/' },
@@ -29,7 +29,7 @@ export default {
             { text: 'Connect OpenList', link: '/en/guide/openlist' },
             { text: 'Security', link: '/en/guide/security' },
             { text: 'FAQ', link: '/en/guide/faq' },
-            { text: 'Upgrading to 0.9', link: '/en/guide/migration' },
+            { text: 'Upgrading', link: '/en/guide/migration' },
           ],
         },
         {

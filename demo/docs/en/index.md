@@ -4,7 +4,7 @@ layout: home
 hero:
   name: FileList
   text: OpenList file browser for your docs
-  tagline: Browse, preview, search and download OpenList files in batches, right in a VitePress page. Folder passwords, paging, light and dark themes.
+  tagline: Browse, preview, search and download OpenList files in batches, right in a VitePress or VuePress page. Folder passwords, paging, light and dark themes.
   image:
     light: /logo.svg
     dark: /logo-dark.svg
@@ -16,6 +16,9 @@ hero:
     - theme: alt
       text: Connect OpenList
       link: /en/guide/openlist
+    - theme: alt
+      text: Using with VuePress
+      link: /en/guide/vuepress
 
 features:
   - icon: 📦

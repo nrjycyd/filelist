@@ -13,7 +13,7 @@ export default defineConfig({
   base,
   lang: 'zh-CN',
   title: 'vitepress-plugin-filelist',
-  description: '面向 VitePress 的 OpenList 文件浏览组件',
+  description: '面向 VitePress 与 VuePress 的 OpenList 文件浏览组件',
   cleanUrls: true,
   // Icons and the link preview (logo sources: demo/docs/public).
   head: [
@@ -23,7 +23,7 @@ export default defineConfig({
     ['meta', { name: 'theme-color', content: '#db2777' }],
     ['meta', { property: 'og:type', content: 'website' }],
     ['meta', { property: 'og:title', content: 'vitepress-plugin-filelist' }],
-    ['meta', { property: 'og:description', content: '在 VitePress 文档里浏览、预览、批量下载 OpenList 网盘文件' }],
+    ['meta', { property: 'og:description', content: '在 VitePress / VuePress 文档里浏览、预览、批量下载 OpenList 网盘文件' }],
     ['meta', { property: 'og:image', content: `${site}social-preview.png` }],
     ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
   ],
@@ -63,7 +63,7 @@ export default defineConfig({
           { text: '接入 OpenList', link: '/guide/openlist' },
           { text: '安全与权限', link: '/guide/security' },
           { text: '常见问题', link: '/guide/faq' },
-          { text: '升级到 0.9', link: '/guide/migration' },
+          { text: '升级指南', link: '/guide/migration' },
         ],
       },
       {
