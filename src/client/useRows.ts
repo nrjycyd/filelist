@@ -124,6 +124,7 @@ export function useRows(
   const pinned = ref<LongFolder | null>(null)
   /** Height of the sticky selection bar above the pinned row (narrow lists only). */
   const pinOffset = ref(0)
+  const toolbarOverFooter = ref(false)
 
   function rowElement(path: string): HTMLElement | undefined {
     return [...(rootEl.value?.querySelectorAll<HTMLElement>('[data-path]') ?? [])].find((el) => el.dataset.path === path)
@@ -150,6 +151,8 @@ export function useRows(
     if (!root) return
     const bar = root.querySelector<HTMLElement>('.fl-bar')
     pinOffset.value = bar && getComputedStyle(bar).position === 'sticky' ? bar.offsetHeight : 0
+    const footer = pinOffset.value ? root.querySelector('.fl-foot') : null
+    toolbarOverFooter.value = !!(bar && footer && bar.getBoundingClientRect().bottom > footer.getBoundingClientRect().top)
     const top = stickyTop.value + pinOffset.value
     const rowHeight = root.querySelector<HTMLElement>('.fl-head')?.offsetHeight ?? 40
     let found: LongFolder | null = null
@@ -221,6 +224,8 @@ export function useRows(
     pinOffset,
     pinnedName,
     stickyTop,
+    toolbarOverFooter,
+    schedulePin,
     mount,
     unmount,
   }

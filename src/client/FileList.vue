@@ -140,7 +140,7 @@ const {
 } = useDeepSearch(ctx, { roots, refreshing, loadChildren })
 
 const rowsPart = useRows(ctx, { roots, keyword, deepMode })
-const { showMore, showLess, resetShown, rows, visible, pinned, pinOffset, pinnedName, stickyTop } = rowsPart
+const { showMore, showLess, resetShown, rows, visible, pinned, pinOffset, pinnedName, stickyTop, toolbarOverFooter, schedulePin } = rowsPart
 
 const {
   statsOf,
@@ -279,7 +279,10 @@ function restoreFocus() {
   target?.focus()
 }
 
-onUpdated(restoreFocus)
+onUpdated(() => {
+  restoreFocus()
+  schedulePin()
+})
 
 /** Keeps “Download ZIP” readable in every theme, light and dark (contrast.ts). */
 let stopThemeWatch: (() => void) | undefined
@@ -318,7 +321,7 @@ onBeforeUnmount(() => {
   <div
     ref="rootEl"
     class="fl-root"
-    :class="{ 'fl-selecting': selected.size > 0, 'fl-refreshing': refreshing }"
+    :class="{ 'fl-selecting': selected.size > 0, 'fl-refreshing': refreshing, 'fl-toolbar-over-footer': toolbarOverFooter }"
     :style="{ '--fl-sticky-top-auto': `${stickyTop}px` }"
     :aria-busy="refreshing || loadingRoot"
     @focusin="onFocusIn"
