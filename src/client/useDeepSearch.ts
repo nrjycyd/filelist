@@ -34,7 +34,7 @@ export function useDeepSearch(
   let deepSeq = 0
 
   /** Folders that are known but not loaded yet (locked ones excluded). */
-  function unloadedFolders(): FNode[] {
+  const unloaded = computed(() => {
     const out: FNode[] = []
     const walk = (nodes: FNode[]) => {
       for (const node of nodes) {
@@ -45,10 +45,10 @@ export function useDeepSearch(
     }
     walk(roots.value)
     return out
-  }
+  })
 
-  const pending = computed(() => unloadedFolders().filter((node) => !failed.has(node)))
-  const failedCount = computed(() => unloadedFolders().filter((node) => failed.has(node)).length)
+  const pending = computed(() => unloaded.value.filter((node) => !failed.has(node)))
+  const failedCount = computed(() => unloaded.value.length - pending.value.length)
   const deepRow = computed(() => {
     if (!keyword.value.trim()) return null
     if (deep.running) return 'running'
@@ -82,7 +82,7 @@ export function useDeepSearch(
             if (!node.lock) failed.add(node)
             continue
           }
-          for (const child of node.children) if (child.is_dir && !child.loaded && !child.lock && !failed.has(child)) next.push(child)
+          for (const child of node.children) if (child.is_dir && !child.loaded && !child.lock) next.push(child)
         }
       }
       await Promise.all(Array.from({ length: Math.min(4, queue.length) }, worker))
@@ -162,21 +162,17 @@ export function useDeepSearch(
     walk(roots.value)
     return counts
   })
-  const lockedFolders = computed(() => folderCounts.value.locked)
-
   function lockedInSearch(node: FNode): boolean {
     return deepMode.value && !!node.lock && !!keyword.value.trim()
   }
 
-  const deepSummary = computed(() =>
-    [
-      t(deepRow.value === 'capped' || deepRow.value === 'failed' ? 'deepCapped' : 'deepDone', { count: folderCounts.value.checked }),
-      lockedFolders.value ? t('deepSkipped', { count: lockedFolders.value }) : '',
-      failedCount.value ? t('deepFailed', { count: failedCount.value }) : '',
-    ]
-      .filter(Boolean)
-      .join(' · '),
-  )
+  const deepSummary = computed(() => {
+    const { checked, locked } = folderCounts.value
+    const summary = t(deep.capped || failedCount.value ? 'deepCapped' : 'deepDone', { count: checked })
+    const skipped = locked ? ` · ${t('deepSkipped', { count: locked })}` : ''
+    const failures = failedCount.value ? ` · ${t('deepFailed', { count: failedCount.value })}` : ''
+    return summary + skipped + failures
+  })
 
   /** A name split around the filter keyword, for highlighting. */
   function nameParts(name: string): Array<{ text: string; hit: boolean }> {
@@ -196,7 +192,6 @@ export function useDeepSearch(
 
   return {
     keyword,
-    deep,
     deepMode,
     deepRow,
     deepSearch,
@@ -205,7 +200,6 @@ export function useDeepSearch(
     pauseDeepSearch,
     clearFilter,
     folderCounts,
-    lockedFolders,
     lockedInSearch,
     deepSummary,
     nameParts,
