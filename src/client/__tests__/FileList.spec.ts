@@ -1297,6 +1297,39 @@ describe('FileList preview: Markdown and HTML rendering', () => {
 })
 
 describe('FileList deep search', () => {
+  it.each([false, true])('shares a pending folder read with expand and selection (locked: %s)', async (locked) => {
+    mockOpenList({ '/': [dir('target')], '/target': [file('target.txt')] }, locked ? { '/target': 'pw' } : {})
+    const original = globalThis.fetch
+    let reads = 0
+    let finish!: () => void
+    const pending = new Promise<void>((resolve) => { finish = resolve })
+    vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      if (String(input).endsWith('/api/fs/list') && JSON.parse(String(init?.body)).path === '/target') {
+        reads += 1
+        await pending
+      }
+      return original(input, init)
+    }))
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+    await wrapper.get('.fl-search input').setValue('target')
+    await wrapper.get('.fl-deep-link').trigger('click')
+    await row(wrapper, 'target').get('.fl-arrow').trigger('click')
+    await row(wrapper, 'target').get('.fl-cell-check input').trigger('change')
+    await flushPromises()
+    finish()
+    await flushPromises()
+
+    expect(reads).toBe(1)
+    if (locked) {
+      expect(row(wrapper, 'target').find('.fl-unlock-row input').exists()).toBe(true)
+      expect(wrapper.find('.fl-toast').exists()).toBe(false)
+    } else {
+      expect(row(wrapper, 'target').attributes('aria-expanded')).toBe('true')
+      expect(wrapper.get('.fl-selection-count').text()).toBe('已选 1 项')
+    }
+  })
+
   const tree: MockTree = {
     '/': [dir('A'), dir('Locked'), file('readme.txt')],
     '/A': [dir('B'), file('a-notes.txt')],
