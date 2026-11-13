@@ -194,6 +194,33 @@ describe('FileList batch ZIP', () => {
 })
 
 describe('FileList folder selection', () => {
+  it.each([true, false])('shows a partially loaded folder as mixed after selecting all (empty child: %s)', async (empty) => {
+    const { calls } = mockOpenList({
+      '/': [dir('A')],
+      '/A': [file('a.txt'), dir('B')],
+      '/A/B': empty ? [] : [file('b.txt')],
+    })
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+    await row(wrapper, 'A').find('.fl-arrow').trigger('click')
+    await flushPromises()
+
+    const parent = row(wrapper, 'A').get<HTMLInputElement>('.fl-cell-check input')
+    const all = wrapper.get<HTMLInputElement>('.fl-head .fl-cell-check input')
+    await all.setValue(true)
+    expect(all.element.checked).toBe(true)
+    expect(parent.element.checked).toBe(false)
+    expect(parent.element.indeterminate).toBe(true)
+    expect(calls.some((call) => call.body?.path === '/A/B')).toBe(false)
+
+    await parent.setValue(true)
+    await flushPromises()
+    expect(calls.some((call) => call.body?.path === '/A/B')).toBe(true)
+    expect(parent.element.checked).toBe(true)
+    expect(parent.element.indeterminate).toBe(false)
+    expect(wrapper.find('.fl-selection').text()).toContain(empty ? '已选 1 项' : '已选 2 项')
+  })
+
   it('loads and selects every nested file when a folder is checked', async () => {
     const { calls } = mockOpenList({
       '/': [dir('A')],
