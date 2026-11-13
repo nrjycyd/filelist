@@ -25,6 +25,7 @@ import ConfirmDialog from './ConfirmDialog.vue'
 import { fitPrimaryButton } from './contrast'
 import { createDemoApi, isDemoFile } from './demo'
 import { warnPublicSecrets } from './devWarnings'
+import FileListToolbar from './FileListToolbar.vue'
 import Icon from './Icon.vue'
 import { formatLabel, resolveLabels } from './locales'
 import PreviewDialog from './PreviewDialog.vue'
@@ -323,75 +324,24 @@ onBeforeUnmount(() => {
     @focusin="onFocusIn"
     @focusout="onFocusOut"
   >
-    <div class="fl-bar">
-      <div v-if="batchBusy" class="fl-selection" role="status">
-        <span class="fl-selection-count">{{ t('batching', { percent: zipPercent }) }}</span>
-        <span v-if="zipProgress" class="fl-selection-size">{{
-          t('batchProgress', {
-            done: formatSize(zipProgress.bytes),
-            total: formatSize(zipProgress.totalBytes),
-            files: zipProgress.files,
-            count: zipProgress.totalFiles,
-          })
-        }}</span>
-        <span class="fl-zip-bar" :style="{ width: `${zipPercent}%` }" aria-hidden="true"></span>
-      </div>
-      <div v-else-if="selected.size" class="fl-selection" role="status">
-        <span class="fl-selection-count">{{ t('selected', { count: selected.size }) }}</span>
-        <span class="fl-selection-size">{{ t('totalSize', { size: formatSize(totalSize(selectedFiles)) }) }}</span>
-      </div>
-      <div v-else class="fl-title">
-        <span class="fl-title-text">{{ displayTitle }}</span>
-        <span v-if="demo" class="fl-demo-badge">{{ t('demoBadge') }}</span>
-      </div>
-      <button
-        v-if="selected.size && !batchBusy"
-        class="fl-clear"
-        type="button"
-        :aria-label="t('clearSelection')"
-        :title="t('clearSelection')"
-        @click="clearSelection"
-      >
-        <Icon class="fl-clear-icon" name="close" :size="18" />
-        <span class="fl-clear-text">{{ t('clear') }}</span>
-      </button>
-      <div class="fl-tools">
-        <label class="fl-search">
-          <Icon name="search" :size="15" />
-          <input
-            v-model="keyword"
-            type="text"
-            :placeholder="t('filter')"
-            :aria-label="t('filter')"
-            @keydown.esc="keyword && ($event.preventDefault(), clearFilter())"
-          />
-          <button
-            v-if="keyword"
-            class="fl-search-clear"
-            type="button"
-            :aria-label="t('clearFilter')"
-            :title="t('clearFilter')"
-            @click="clearFilter"
-          ><Icon name="close" :size="12" /></button>
-        </label>
-        <button
-          class="fl-icon-btn fl-refresh"
-          :class="{ 'fl-spinning': refreshing }"
-          type="button"
-          :disabled="refreshing || loadingRoot"
-          :aria-label="refreshing ? t('refreshing') : t('refresh')"
-          :title="refreshing ? t('refreshing') : t('refresh')"
-          @click="refresh"
-        >
-          <Icon name="refresh" :size="15" />
-        </button>
-      </div>
-      <button v-if="batchBusy" class="fl-btn fl-zip-cancel" type="button" @click="cancelZip">{{ t('cancel') }}</button>
-      <button v-else-if="selected.size" class="fl-btn fl-btn-primary" type="button" @click="batchDownload">
-        <Icon name="download" :size="15" />
-        {{ t('batch') }}
-      </button>
-    </div>
+    <FileListToolbar
+      v-model:keyword="keyword"
+      :t="t"
+      :display-title="displayTitle"
+      :demo="demo"
+      :selected-count="selected.size"
+      :selected-bytes="selected.size && !batchBusy ? totalSize(selectedFiles) : 0"
+      :refreshing="refreshing"
+      :loading-root="loadingRoot"
+      :batch-busy="batchBusy"
+      :zip-progress="zipProgress"
+      :zip-percent="zipPercent"
+      @clear-selection="clearSelection"
+      @clear-filter="clearFilter"
+      @refresh="refresh"
+      @cancel-zip="cancelZip"
+      @batch-download="batchDownload"
+    />
 
     <!-- One Tab stop for the list; arrow keys inside (useKeyboard.ts). -->
     <div
