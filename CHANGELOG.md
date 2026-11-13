@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.13.3 (2026-11-13)
+
+### Fixes
+
+- Finish deep search with partial results when a folder cannot be read, and offer an explicit retry.
+- Show folders with selected files and unloaded descendants as partially selected. Select all still applies to loaded files.
+- Share in-flight directory reads across expansion, recursive selection, and deep search.
+- Preserve mounted file extensions in display aliases and use the original filename to determine the preview type.
+
+### Changes
+
+- Extract the FileList toolbar into its own component.
+
 ## 0.13.2 (2026-11-13)
 
 ### Changes
