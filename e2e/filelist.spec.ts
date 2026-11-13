@@ -138,6 +138,27 @@ test('wide lists: a file\'s buttons take the place of its date while it is point
   await expect.poll(() => opacity(file.locator('.fl-cell-op'))).toBe('1')
 })
 
+test('desktop mouse can click both actions after they replace the date', async ({ page }, info) => {
+  test.skip(info.project.name === 'mobile', 'phones show the buttons in every row')
+  await open(page, '/demo')
+  await opener(row(page, 'assignments')).click()
+  const file = row(page, '作业提交说明.pdf')
+
+  async function clickAction(selector: string) {
+    await file.locator('.fl-cell-name').hover()
+    await expect(file.locator('.fl-cell-op')).toHaveCSS('opacity', '1')
+    const { x, y, width, height } = await box(file.locator(selector))
+    await page.mouse.click(x + width / 2, y + height / 2)
+  }
+
+  await clickAction('.fl-preview-btn')
+  const dialog = page.locator('dialog.fl-preview')
+  await expect(dialog.locator('.fl-preview-message')).toContainText('作业提交说明.pdf')
+  await dialog.locator('.fl-preview-close').click()
+  await clickAction('.fl-download')
+  await expect(list(page).locator('.fl-toast')).toContainText('作业提交说明.pdf')
+})
+
 test('folder passwords are asked for in the row, without moving anything', async ({ page }, info) => {
   await open(page)
   const locked = row(page, 'Locked')

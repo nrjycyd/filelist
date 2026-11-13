@@ -1218,14 +1218,15 @@
       transition: opacity 0.12s;
     }
 
-    /* still clickable while hidden: a pointer that reaches them has shown them */
-    .fl-row > .fl-cell-op {
+    /* Keep actions above the date throughout the opacity transition. */
+    .fl-row:not(.fl-head, .fl-row-dir) > .fl-cell-op {
+      z-index: 1;
       margin-right: -6px; /* icons at the 24px margin */
       opacity: 0;
     }
 
-    /* the header's sits over the date heading, which it must not cover */
-    .fl-head > .fl-cell-op {
+    .fl-row:not(.fl-head, .fl-row-dir) > .fl-cell-date,
+    .fl-row:is(.fl-head, .fl-row-dir) > .fl-cell-op {
       pointer-events: none;
     }
 
