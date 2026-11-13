@@ -10,7 +10,9 @@ const row = (page: Page, name: string) =>
   list(page).locator('.fl-row').filter({ has: page.locator('.fl-name', { hasText: new RegExp(`^${escape(name)}$`) }) })
 /** The expand / lock button that is shown (left arrow on wide lists, right one on narrow). */
 const opener = (target: Locator) => target.locator('.fl-arrow, .fl-arrow-end').locator('visible=true').first()
-const rowHeight = (info: TestInfo) => (info.project.name === 'mobile' ? 56 : 40)
+const rowHeight = (info: TestInfo) => (info.project.name === 'mobile' ? 60 : 44)
+/** A file's buttons, which a mouse finds by pointing at its row (wide lists). */
+const button = (target: Locator, selector: string) => target.hover().then(() => target.locator(selector))
 
 async function open(page: Page, path = '/') {
   await page.goto(path)
@@ -80,6 +82,8 @@ async function edges(page: Page) {
       rowCheck: rect(file?.querySelector('.fl-cell-check input') ?? null),
       download: rect(file?.querySelector('.fl-download svg') ?? null),
       showAll: q('.fl-more-all'),
+      date: q('.fl-row:not(.fl-head) .fl-cell-date'),
+      headDate: q('.fl-head .fl-cell-date .fl-sort-btn'),
       sort: q('.fl-sort-chevron'),
       foot: q('.fl-foot > *'),
     }
@@ -91,11 +95,47 @@ test('one margin on each side: everything at the left and at the right lines up'
   await opener(row(page, 'photos')).click()
   await expect(list(page).locator('.fl-more')).toBeVisible()
   const phone = info.project.name === 'mobile'
-  const gutter = phone ? 14 : 16
+  const gutter = phone ? 16 : 24
   const e = await edges(page)
   const near = (value: number | undefined) => expect(Math.abs((value ?? Number.NaN) - gutter)).toBeLessThanOrEqual(1)
   for (const left of [phone ? e.search : e.title, e.headCheck, e.rowCheck, e.foot]) near(left?.left)
-  for (const right of [e.refresh, e.download, e.showAll, ...(phone ? [e.sort] : [])]) near(right?.right)
+  for (const right of [e.refresh, e.download, e.showAll, ...(phone ? [e.sort] : [e.date, e.headDate])]) near(right?.right)
+})
+
+test('wide lists: a file\'s buttons take the place of its date while it is pointed at or focused', async ({ page }, info) => {
+  test.skip(info.project.name === 'mobile', 'phones show the buttons in every row')
+  await open(page)
+  const file = row(page, 'notes.txt')
+  const folder = row(page, 'photos')
+  const opacity = (target: Locator) => target.evaluate((el) => getComputedStyle(el).opacity)
+  await page.mouse.move(0, 0)
+  await expect.poll(() => opacity(file.locator('.fl-cell-op'))).toBe('0')
+  await expect.poll(() => opacity(file.locator('.fl-cell-date'))).toBe('1')
+  // one column for both, at the right margin
+  const [date, op] = await Promise.all([box(file.locator('.fl-cell-date')), box(file.locator('.fl-cell-op'))])
+  expect(Math.abs(op.x + op.width - (date.x + date.width) - 6)).toBeLessThanOrEqual(1)
+
+  await file.hover()
+  await expect.poll(() => opacity(file.locator('.fl-cell-op'))).toBe('1')
+  await expect.poll(() => opacity(file.locator('.fl-cell-date'))).toBe('0')
+  // the date heading under the header's (empty) actions cell still sorts
+  await list(page).locator('.fl-head .fl-cell-date .fl-sort-btn').click()
+  await expect(list(page).locator('.fl-head .fl-cell-date')).toHaveAttribute('aria-sort', /ascending|descending/)
+  await file.hover()
+  // folders keep their date
+  await folder.hover()
+  await expect.poll(() => opacity(folder.locator('.fl-cell-date'))).toBe('1')
+  await expect.poll(() => opacity(file.locator('.fl-cell-op'))).toBe('0')
+
+  // keyboard: the buttons show on the focused row, and on the row of a focused button
+  await page.mouse.move(0, 0)
+  await file.focus()
+  await page.keyboard.press('ArrowRight')
+  await expect(file.locator('.fl-preview-btn')).toBeFocused()
+  await expect.poll(() => opacity(file.locator('.fl-cell-op'))).toBe('1')
+  await page.keyboard.press('ArrowLeft')
+  await expect(file).toBeFocused()
+  await expect.poll(() => opacity(file.locator('.fl-cell-op'))).toBe('1')
 })
 
 test('folder passwords are asked for in the row, without moving anything', async ({ page }, info) => {
@@ -110,7 +150,7 @@ test('folder passwords are asked for in the row, without moving anything', async
   expect((await box(next)).y).toBe(before)
 
   if (info.project.name === 'mobile') {
-    // lock, input, key, Open, ✕: 12px apart to the eye, ✕ at the 14px margin, 40 × 44 to tap
+    // lock under the folder icons; lock, input, key, Open, ✕: 12px apart to the eye, ✕ at the 16px margin, 40 × 44 to tap
     const glyph = (selector: string) => box(locked.locator(`${selector} svg`).first())
     const [lock, field, key, open, cancel, card] = await Promise.all([
       box(locked.locator('svg.fl-unlock-lock')),
@@ -122,7 +162,8 @@ test('folder passwords are asked for in the row, without moving anything', async
     ])
     const gaps = [field.x - (lock.x + lock.width), key.x - (field.x + field.width), open.x - (key.x + key.width), cancel.x - (open.x + open.width)]
     for (const gap of gaps) expect(Math.abs(gap - 12)).toBeLessThanOrEqual(1)
-    expect(Math.abs(card.x + card.width - 1 - (cancel.x + cancel.width) - 14)).toBeLessThanOrEqual(1)
+    expect(Math.abs(card.x + card.width - 1 - (cancel.x + cancel.width) - 16)).toBeLessThanOrEqual(1)
+    expect(Math.abs(lock.x - (await box(next.locator('.fl-folder-icon'))).x)).toBeLessThanOrEqual(1)
     for (const button of ['.fl-unlock-remember', '.fl-unlock-cancel']) {
       const hit = await box(locked.locator(button))
       expect(hit.width).toBeGreaterThanOrEqual(40)
@@ -275,7 +316,7 @@ test('a single download stays on the page and the toast is on screen', async ({ 
   expect((await box(list(page))).y + (await box(list(page))).height).toBeGreaterThan(page.viewportSize()!.height * 3)
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    row(page, 'IMG_0001.jpg').locator('.fl-download').click(),
+    button(row(page, 'IMG_0001.jpg'), '.fl-download').then((b) => b.click()),
   ])
   expect(await download.failure()).toBeNull()
   expect(page.url()).toBe(url)
@@ -368,7 +409,7 @@ test('a failed ZIP explains why in a dialog on screen', async ({ page }, info) =
 test('Markdown shows source first and renders safely in the VitePress style', async ({ page }) => {
   await open(page)
   await opener(row(page, 'docs')).click()
-  await row(page, 'guide.md').locator('.fl-preview-btn').click()
+  await (await button(row(page, 'guide.md'), '.fl-preview-btn')).click()
   const dialog = page.locator('dialog.fl-preview')
   await expect(dialog.locator('.fl-preview-text pre')).toContainText('# 安装指南')
 
@@ -393,7 +434,7 @@ test('Markdown shows source first and renders safely in the VitePress style', as
 test('HTML renders in a script-less sandbox', async ({ page }) => {
   await open(page)
   await opener(row(page, 'docs')).click()
-  await row(page, 'page.html').locator('.fl-preview-btn').click()
+  await (await button(row(page, 'page.html'), '.fl-preview-btn')).click()
   const dialog = page.locator('dialog.fl-preview')
   await expect(dialog.locator('.fl-preview-text pre')).toContainText('<h1 id="title">')
 
@@ -471,7 +512,7 @@ test('demo data: the sample files preview, download and zip for real', async ({ 
   await open(page, '/demo')
   await opener(row(page, '示例文件')).click()
 
-  await row(page, '使用说明.md').locator('.fl-preview-btn').click()
+  await (await button(row(page, '使用说明.md'), '.fl-preview-btn')).click()
   const dialog = page.locator('dialog.fl-preview')
   await expect(dialog.locator('.fl-preview-text pre')).toContainText('# 使用说明')
   await dialog.locator('.fl-preview-view-btn', { hasText: '渲染' }).click()
@@ -481,7 +522,7 @@ test('demo data: the sample files preview, download and zip for real', async ({ 
 
   // Other demo files still only describe what would happen.
   await opener(row(page, 'exams')).click()
-  await row(page, '2024 期中试题.pdf').locator('.fl-download').click()
+  await (await button(row(page, '2024 期中试题.pdf'), '.fl-download')).click()
   await expect(list(page).locator('.fl-toast')).toContainText('演示模式')
 
   await check(page, '示例文件')
@@ -555,7 +596,7 @@ test('no accessibility violations in the main states (axe)', async ({ page }) =>
   await page.keyboard.press('Escape')
 
   await opener(row(page, 'docs')).click()
-  await row(page, 'guide.md').locator('.fl-preview-btn').click()
+  await (await button(row(page, 'guide.md'), '.fl-preview-btn')).click()
   await expect(page.locator('dialog.fl-preview .fl-preview-text pre')).toBeVisible()
   await expectAccessible(page)
 })

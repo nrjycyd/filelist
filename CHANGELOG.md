@@ -4,9 +4,14 @@
 
 ### Changes
 
-- One margin on each side of the list, 16px on wide lists and 14px on phones: the title or search box, the checkboxes and the footer line up at the left; the refresh button, the icons of the row buttons, “Show all” and the sort button at the right. Before, each side mixed three or four distances (8–21px), and the rows sat 7px further in at the left than at the right
-- Wide lists: “Show less” on a pinned folder row keeps its words, with its arrow over the icons of the row buttons below (it sat 10px from the card's edge)
-- Phones, a folder's password row: lock, input, “Remember” key, Open and ✕ are 12px apart to the eye (they were 10–19px), the input 16px wider; the key and ✕ keep a 40 × 44 target
+- One margin on each side of the list, 24px on wide lists and 16px on phones: the title or search box, the checkboxes and the footer line up at the left; the refresh button, the dates, the icons of the row buttons, “Show all” and the sort button at the right. Before, each side mixed three or four distances (8–21px)
+- Wide lists with a mouse: a file's preview and download buttons take the place of its date while the row is pointed at or has keyboard focus, so no column stands empty at the right of folders and of most rows; the name column gains about 70px. Folders keep their date. Touch screens keep both columns
+- A quieter frame: no tinted header or footer band, lighter lines between rows (the header keeps the full line), a 15px title, folder names in medium weight, and no “—” in a folder's size
+- Rows are 44px on wide lists (was 40) and 60px on phones (was 56); the toolbar is 60px
+- Wide lists: the folder chevron sits 4px from its icon (was 8), and the size and date headings line up with the numbers under them, their sort arrow on the outer side
+- Phones: the checkbox is 16px from the edge and 12px from the icons (was 14 and 13), its tap area still reaching the edge
+- Phones, a folder's password row: the lock under the folder icons; lock, input, “Remember” key, Open and ✕ 12px apart to the eye (they were 10–19px), ✕ at the margin, the input 16px wider; the key and ✕ keep a 40 × 44 target
+- `style.css` ships without its comments: 6.4 KB gzip (was 7.9). The source keeps them
 
 ## 0.13.1 (2026-11-13)
 

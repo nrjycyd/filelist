@@ -27,7 +27,7 @@
   --fl-c-danger: var(--vp-c-danger-1, #d33);
 
   --fl-indent: 24px;
-  --fl-row-h: 40px;
+  --fl-row-h: 44px;
   --fl-cols: 40px minmax(0, 1fr) 88px 104px 76px;
   --fl-radius: 12px;
   --fl-sticky: var(--fl-sticky-top, var(--fl-sticky-top-auto, 0px));
@@ -111,9 +111,9 @@
   display: flex;
   gap: 8px;
   align-items: center;
-  min-height: 52px;
+  min-height: 60px;
   box-sizing: border-box;
-  padding: 10px 16px;
+  padding: 12px 24px;
   background: var(--fl-c-bg);
   border-bottom: 1px solid var(--fl-c-divider);
   border-radius: var(--fl-radius) var(--fl-radius) 0 0;
@@ -125,6 +125,7 @@
   gap: 8px;
   align-items: center;
   min-width: 0;
+  font-size: 15px;
   font-weight: 600;
 }
 
@@ -321,10 +322,11 @@
   grid-template-columns: var(--fl-cols);
   align-items: center;
   min-height: var(--fl-row-h);
-  /* 16px to the checkbox and the button icons, as the toolbar and footer */
-  padding: 0 10px 0 3px;
+  /* 24px to the checkbox and the last column, as the toolbar and footer */
+  padding: 0 24px 0 12px;
   color: var(--fl-c-text-1);
-  border-bottom: 1px solid var(--fl-c-divider);
+  /* lighter than the header's line: the rows read as one list */
+  border-bottom: 1px solid color-mix(in srgb, var(--fl-c-divider) 55%, transparent);
   scroll-margin-top: calc(var(--fl-sticky) + 64px);
 }
 
@@ -339,11 +341,11 @@
 
 .fl-head {
   position: relative;
-  min-height: 36px;
+  min-height: 34px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--fl-c-text-2);
-  background: var(--fl-c-bg-soft);
+  border-bottom-color: var(--fl-c-divider);
   user-select: none;
 }
 
@@ -352,11 +354,16 @@
   gap: 4px;
   align-items: center;
   padding: 0;
-  font-weight: 600;
+  font-weight: inherit;
   color: inherit;
   cursor: pointer;
   background: transparent;
   border: 0;
+}
+
+/* labels flush with the numbers under them, the arrow on the outer side */
+.fl-head :is(.fl-cell-size, .fl-cell-date) .fl-sort-btn {
+  flex-direction: row-reverse;
 }
 
 .fl-sort-btn:hover {
@@ -366,6 +373,10 @@
 .fl-sort {
   font-size: 9px;
   color: var(--fl-c-brand-1);
+}
+
+.fl-sort:empty {
+  display: none;
 }
 
 .fl-sort-menu {
@@ -420,7 +431,7 @@
 .fl-cell-size,
 .fl-cell-date {
   justify-content: flex-end;
-  font-size: 13px;
+  font-size: 12.5px;
   font-variant-numeric: tabular-nums;
   color: var(--fl-c-text-2);
   white-space: nowrap;
@@ -477,6 +488,13 @@
   width: 18px;
 }
 
+/* 4px to the icon: the chevron belongs to it */
+.fl-arrow,
+.fl-arrow-placeholder,
+.fl-pin-arrow {
+  margin-right: -4px;
+}
+
 .fl-folder-icon {
   flex: none;
   fill: var(--fl-folder-fill);
@@ -527,6 +545,11 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   cursor: pointer;
+}
+
+.fl-name-dir,
+.fl-pin-name {
+  font-weight: 500;
 }
 
 .fl-name:hover {
@@ -767,7 +790,7 @@
   align-items: center;
   min-height: var(--fl-row-h);
   box-sizing: border-box;
-  padding: 10px 16px;
+  padding: 10px 24px;
   color: var(--fl-c-text-1);
   background: var(--fl-lock-bg);
   border-bottom: 1px solid var(--fl-c-divider);
@@ -865,11 +888,11 @@
   flex-wrap: wrap;
   gap: 4px 12px;
   justify-content: space-between;
-  padding: 9px 16px;
+  padding: 11px 24px;
+  margin-top: -1px; /* over the last row's lighter line */
   font-size: 12px;
   color: var(--fl-c-text-2);
-  background: var(--fl-c-bg-soft);
-  border-radius: 0 0 var(--fl-radius) var(--fl-radius);
+  border-top: 1px solid var(--fl-c-divider);
 }
 
 .fl-toast {
@@ -911,7 +934,7 @@
 /* ---------------- long folders ---------------- */
 
 .fl-more {
-  padding-right: 8px;
+  padding-right: 16px;
   color: var(--fl-c-text-2);
 }
 
@@ -998,7 +1021,7 @@
   grid-template-columns: 40px minmax(0, 1fr) auto;
   align-items: center;
   min-height: var(--fl-row-h);
-  padding: 0 10px 0 3px;
+  padding: 0 24px 0 12px;
   background: var(--fl-c-bg);
   border-bottom: 1px solid var(--fl-c-divider);
   box-shadow: 0 6px 12px -8px rgb(0 0 0 / 25%);
@@ -1017,7 +1040,6 @@
 .fl-pin-name {
   min-width: 0;
   overflow: hidden;
-  font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1031,7 +1053,7 @@
 
 .fl-pin-less {
   display: inline-flex;
-  margin-right: 6px; /* arrow over the row buttons' icons */
+  margin-right: 0; /* arrow over the row buttons' icons */
   gap: 4px;
   align-items: center;
   height: 26px;
@@ -1081,7 +1103,7 @@
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  min-height: 40px;
+  min-height: var(--fl-row-h);
   padding: 8px 16px;
   text-align: center;
   background: var(--fl-c-bg-soft);
@@ -1181,6 +1203,42 @@
   margin-top: 16px;
 }
 
+/* ---------------- wide containers with a pointer ---------------- */
+
+/* A file's buttons take the date's place while the row is hovered or has keyboard focus,
+   so the list needs no column that is empty most of the time. */
+@container fl (min-width: 560px) {
+  @media (hover: hover) {
+    .fl-row {
+      --fl-cols: 40px minmax(0, 1fr) 88px 112px;
+    }
+
+    .fl-row > :is(.fl-cell-date, .fl-cell-op) {
+      grid-area: 1 / 4;
+      transition: opacity 0.12s;
+    }
+
+    /* still clickable while hidden: a pointer that reaches them has shown them */
+    .fl-row > .fl-cell-op {
+      margin-right: -6px; /* icons at the 24px margin */
+      opacity: 0;
+    }
+
+    /* the header's sits over the date heading, which it must not cover */
+    .fl-head > .fl-cell-op {
+      pointer-events: none;
+    }
+
+    .fl-row:not(.fl-head, .fl-row-dir):is(:hover, :focus-visible, :has(:focus-visible)) > .fl-cell-op {
+      opacity: 1;
+    }
+
+    .fl-row:not(.fl-head, .fl-row-dir):is(:hover, :focus-visible, :has(:focus-visible)) > .fl-cell-date {
+      opacity: 0;
+    }
+  }
+}
+
 /* ---------------- narrow containers ---------------- */
 
 @container fl (max-width: 559px) {
@@ -1190,7 +1248,7 @@
   }
 
   .fl-bar {
-    padding: 10px 14px;
+    padding: 10px 16px;
   }
 
   .fl-title {
@@ -1341,7 +1399,7 @@
   }
 
   .fl-pin {
-    grid-template-columns: 44px minmax(0, 1fr) auto;
+    grid-template-columns: 41px minmax(0, 1fr) auto;
   }
 
   .fl-pin-count {
@@ -1367,23 +1425,37 @@
     height: 18px;
   }
 
-  /* rows (container queries cannot restyle .fl-root itself) */
+  /* rows (container queries cannot restyle .fl-root itself);
+     16px to the checkbox and the button icons, 12px from the checkbox to the content */
   .fl-row,
   .fl-pin {
     --fl-indent: 16px;
-    --fl-row-h: 56px;
-    --fl-cols: 44px minmax(0, 1fr) auto;
+    --fl-row-h: 60px;
+    --fl-cols: 41px minmax(0, 1fr) auto;
 
-    padding: 0; /* 14px: checkbox and icons centred in 44px */
+    padding: 0 3px 0 4px;
+  }
+
+  /* the checkbox's tap area still reaches the edge */
+  .fl-check-hit {
+    box-sizing: border-box;
+    width: calc(100% + 4px);
+    padding-left: 4px;
+    margin-left: -4px;
+  }
+
+  .fl-cell-name,
+  .fl-more-cell {
+    gap: 10px;
   }
 
   .fl-more {
-    padding-right: 4px;
+    padding-right: 6px;
   }
 
   .fl-head {
     min-height: 40px;
-    padding-right: 14px;
+    padding-right: 16px;
   }
 
   .fl-cell-size,
@@ -1570,8 +1642,18 @@
     display: none;
   }
 
+  /* the guide line under the parent's folder icon */
   .fl-indent {
-    margin-right: 0;
+    margin-right: -10px;
+    background-image: repeating-linear-gradient(
+      to right,
+      transparent 0,
+      transparent 9.5px,
+      var(--fl-c-divider) 9.5px,
+      var(--fl-c-divider) 10.5px,
+      transparent 10.5px,
+      transparent var(--fl-indent)
+    );
   }
 
   .fl-type {
@@ -1617,29 +1699,25 @@
   }
 
   .fl-foot {
-    padding: 10px 14px;
+    padding: 11px 16px;
   }
 
-  /* same-row password: the row keeps its 56px; the name gives way to the input */
+  /* same-row password: the row keeps its 60px; the name gives way to the input */
   .fl-row-prompting .fl-cell-name {
     display: none;
   }
 
-  /* lock, input, key, Open, ✕ 12px apart to the eye; ✕ at the 14px margin */
+  /* lock (under the folder icons), input, key, Open, ✕ 12px apart to the eye; ✕ at the 16px margin */
   .fl-unlock-row {
     grid-column: 2 / -1;
     gap: 0;
     justify-content: flex-start;
-    padding-left: 4px;
+    padding-left: 0;
   }
 
   .fl-unlock-row .fl-unlock-lock {
     display: block;
-    margin: 0 12px 0 4px;
-  }
-
-  .fl-unlock-row .fl-unlock-cancel {
-    padding-right: 2px;
+    margin-right: 12px;
   }
 
   .fl-unlock input {
@@ -1685,7 +1763,7 @@
   }
 
   .fl-unlock-root {
-    padding: 10px 14px;
+    padding: 10px 16px;
   }
 }
 
