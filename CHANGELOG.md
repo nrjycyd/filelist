@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.13.7 (2026-11-13)
+
+### Fixes
+
+- Keep the mobile selection toolbar's shadow while it overlaps the footer.
+
 ## 0.13.6 (2026-11-13)
 
 ### Fixes
