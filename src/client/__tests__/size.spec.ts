@@ -15,7 +15,8 @@ const BUDGET_KB = {
   // 46.1: allow for deep-search retry and partial folder selection state.
   // 46.5: share in-flight directory reads and ignore superseded responses.
   // 46.8: the separate toolbar component adds a small Vue component boundary.
-  'client/browser/index.js': 46.8,
+  // 47: preserve a mounted file's original type alongside its display alias.
+  'client/browser/index.js': 47,
   // the build drops the stylesheet's comments (scripts/strip-css.mjs); the budget is for the rules
   'client/style.css': 8,
   'node/index.js': 1,

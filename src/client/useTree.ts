@@ -7,7 +7,13 @@ import type { SortKey } from './utils'
 import { computed, nextTick, ref, toRaw } from 'vue'
 import { errorText, isPasswordError } from './api'
 import { descendantFiles, expandedPathsOf, loadedPathsOf, newLock, sortTree, sourceName, toNodes } from './tree'
-import { fileKind, isWithin, previewKind } from './utils'
+import { extOf, fileKind, isWithin, previewKind } from './utils'
+
+function fileSourceName(title: string, original: string): string {
+  const extension = extOf(original)
+  if (!extension || extOf(title) === extension) return title
+  return title + original.slice(-extension.length - 1)
+}
 
 /** When OpenList cannot tell us, guess from the name: a known file extension means a file. */
 function looksLikeFile(path: string): boolean {
@@ -152,9 +158,11 @@ export function useTree(
       async (password) => {
         if (node.unresolved) {
           const data = await api.value.get(node.path, password)
-          const name = node.name
-          Object.assign(node, data, { name, unresolved: false })
-          node.zipPath = [node.is_dir ? name : data.name || node.zipPath[0]]
+          const original = data.name || sourceName(node.path)
+          const title = node.name
+          const name = data.is_dir ? title : fileSourceName(title, original)
+          Object.assign(node, data, { name, originalName: data.is_dir ? undefined : original, unresolved: false })
+          node.zipPath = [data.is_dir ? name : original]
         }
         if (node.is_dir) {
           await fetchChildren(node, password)
@@ -279,10 +287,13 @@ export function useTree(
       // Other errors keep the guess; expanding surfaces the real error.
       if (isPasswordError(error)) lock = newLock(expanded, passwords.dropStale(rememberedAt) ? 'stale' : '')
     }
-    const name = source.title || item.name || sourceName(path)
+    const original = item.name || sourceName(path)
+    const title = source.title || original
+    const name = item.is_dir || lock ? title : fileSourceName(title, original)
     return {
       ...item,
       name,
+      originalName: !item.is_dir && source.title ? original : undefined,
       path,
       depth: 0,
       expanded: expanded && !lock,
@@ -294,7 +305,7 @@ export function useTree(
       lock,
       unresolved: !!lock,
       // A file root keeps its real file name (and extension) inside the ZIP.
-      zipPath: [item.is_dir ? name : item.name || sourceName(path)],
+      zipPath: [item.is_dir ? name : original],
     }
   }
 

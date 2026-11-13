@@ -518,7 +518,7 @@ onBeforeUnmount(() => {
         </button>
         <span v-else class="fl-arrow-placeholder" aria-hidden="true"></span>
         <svg v-if="node.is_dir" class="fl-folder-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg>
-        <span v-else class="fl-type" :data-kind="fileKind(node.name)" aria-hidden="true">{{ extOf(node.name) || 'FILE' }}</span>
+        <span v-else class="fl-type" :data-kind="fileKind(node.originalName ?? node.name)" aria-hidden="true">{{ extOf(node.originalName ?? node.name) || 'FILE' }}</span>
         <span class="fl-label">
           <span
             class="fl-name"
