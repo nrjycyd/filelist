@@ -1318,7 +1318,6 @@
     min-height: 61px;
     padding: 8px 8px 8px 4px;
     background: linear-gradient(var(--fl-c-brand-soft), var(--fl-c-brand-soft)), var(--fl-c-bg);
-    box-shadow: 0 2px 8px rgb(0 0 0 / 8%);
   }
 
   .fl-selecting .fl-tools {
