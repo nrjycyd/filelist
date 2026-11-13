@@ -1324,7 +1324,6 @@
   .fl-selecting.fl-toolbar-over-footer .fl-bar {
     /* The sticky bar can reach the bottom edge as the list scrolls away. */
     border-radius: var(--fl-radius);
-    box-shadow: none;
   }
 
   .fl-selecting .fl-tools {
