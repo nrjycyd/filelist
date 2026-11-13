@@ -19,6 +19,7 @@ import { extOf, fileKind, formatDate, formatSize, previewKind } from './utils'
 
 export interface PreviewFile {
   name: string
+  originalName?: string
   size: number
   modified: string
 }
@@ -66,7 +67,8 @@ function t(key: keyof FileListLabels, values?: Record<string, string | number>):
 }
 
 const dialog = ref<HTMLDialogElement>()
-const kind = computed(() => (props.file ? previewKind(props.file.name) : 'none'))
+const fileName = computed(() => props.file?.originalName ?? props.file?.name ?? '')
+const kind = computed(() => previewKind(fileName.value))
 
 const loadingBody = ref(false)
 const bodyFailed = ref(false)
@@ -83,7 +85,7 @@ let loadSeq = 0
 
 /** Text files that can also be rendered. */
 const renderAs = computed<'markdown' | 'html' | null>(() => {
-  const name = props.file?.name ?? ''
+  const name = fileName.value
   if (/\.(?:md|markdown)$/i.test(name)) return 'markdown'
   if (/\.html?$/i.test(name)) return 'html'
   return null
@@ -284,7 +286,7 @@ function markFailed() {
   >
     <div v-if="open && file" class="fl-preview-panel">
       <header class="fl-preview-head">
-        <span class="fl-type" :data-kind="fileKind(file.name)" aria-hidden="true">{{ extOf(file.name) || 'FILE' }}</span>
+        <span class="fl-type" :data-kind="fileKind(fileName)" aria-hidden="true">{{ extOf(fileName) || 'FILE' }}</span>
         <div class="fl-preview-title">
           <span class="fl-preview-name">{{ file.name }}</span>
           <span class="fl-preview-meta">{{ formatSize(file.size) }} · {{ formatDate(file.modified) }}</span>
@@ -372,7 +374,7 @@ function markFailed() {
         </div>
         <iframe v-else-if="mode === 'pdf'" class="fl-preview-frame" :src="viewer || blobUrl" :title="file.name"></iframe>
         <div v-else class="fl-preview-info">
-          <span class="fl-type fl-preview-badge" :data-kind="fileKind(file.name)" aria-hidden="true">{{ extOf(file.name) || 'FILE' }}</span>
+          <span class="fl-type fl-preview-badge" :data-kind="fileKind(fileName)" aria-hidden="true">{{ extOf(fileName) || 'FILE' }}</span>
           <div class="fl-preview-message">{{ infoMessage }}</div>
           <button v-if="!demo" class="fl-btn fl-btn-primary" type="button" @click="emit('download')">
             <Icon name="download" :size="15" />

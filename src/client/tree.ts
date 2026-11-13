@@ -28,6 +28,8 @@ export interface FNode extends OLItem {
   /** Password this item was listed with (site-configured or typed for a parent). */
   password: string
   isRoot?: boolean
+  /** Original file name when a source supplies a display title. */
+  originalName?: string
   /** Path segments of this node inside a batch ZIP. */
   zipPath: string[]
   /** Set while OpenList says this folder needs a password. */

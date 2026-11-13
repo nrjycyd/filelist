@@ -186,7 +186,7 @@ describe('FileList batch ZIP', () => {
     await flushPromises()
 
     await check(wrapper, '文档')
-    await check(wrapper, '说明')
+    await check(wrapper, '说明.pdf')
     const entries = await zipSelected(wrapper)
 
     expect(Object.keys(entries).sort()).toEqual(['文档/readme.txt', '说明.pdf'])
@@ -482,6 +482,19 @@ describe('FileList toolbar and rows', () => {
 })
 
 describe('FileList preview dialog', () => {
+  it.each(['课程报告', '课程报告.pdf'])('keeps PDF preview for the source title %s', async (title) => {
+    mockOpenList({})
+    const wrapper = mountList({ sources: [{ path: '/report.pdf', title }] })
+    await flushPromises()
+
+    const file = row(wrapper, '课程报告.pdf')
+    expect(file.get('.fl-type').text()).toBe('PDF')
+    await file.get('.fl-preview-btn').trigger('click')
+    await flushPromises()
+    expect(wrapper.get('.fl-preview-name').text()).toBe('课程报告.pdf')
+    expect(wrapper.get('.fl-preview-frame').attributes('title')).toBe('课程报告.pdf')
+  })
+
   const dialogOf = (wrapper: VueWrapper) => wrapper.find('dialog.fl-preview')
   const openPreview = async (wrapper: VueWrapper, name: string) => {
     await row(wrapper, name).find(`[aria-label="预览 ${name}"]`).trigger('click')

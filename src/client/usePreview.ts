@@ -8,7 +8,7 @@ import { fillPreviewUrl, iframePreviewsFor, previewKind } from './utils'
 
 /** Only types the dialog can actually render get a preview button. */
 export function canPreview(node: FNode): boolean {
-  return !node.is_dir && previewKind(node.name) !== 'none'
+  return !node.is_dir && previewKind(node.originalName ?? node.name) !== 'none'
 }
 
 /** The preview dialog: which file, its URL (or PDF viewer), and ← / → through the list. */
@@ -48,10 +48,11 @@ export function usePreview(
       const url = await options.fileUrlOf(node)
       if (seq !== previewSeq) return
       previewSrc.value = url
-      const viewer = previewKind(node.name) === 'pdf' ? iframePreviewsFor(node.name, options.iframePreviews.value)[0] : undefined
+      const name = node.originalName ?? node.name
+      const viewer = previewKind(name) === 'pdf' ? iframePreviewsFor(name, options.iframePreviews.value)[0] : undefined
       if (viewer) {
         previewViewer.value = fillPreviewUrl(viewer.scheme, {
-          name: node.name,
+          name,
           rawUrl: url,
           downloadUrl: api.value.directUrl(node),
         })
