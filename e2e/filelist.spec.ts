@@ -57,6 +57,47 @@ test('rows keep one height and the page never scrolls sideways', async ({ page }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
 })
 
+/** Left and right edges of what is inside the card, from its inner edges. */
+async function edges(page: Page) {
+  return list(page).evaluate((root) => {
+    const card = root.getBoundingClientRect()
+    const border = Number.parseFloat(getComputedStyle(root).borderLeftWidth)
+    const rect = (el: Element | null) => {
+      if (!el) return null
+      // text: its glyphs, not its box
+      const range = document.createRange()
+      range.selectNodeContents(el)
+      const r = el.tagName !== 'INPUT' && el.textContent?.trim() ? range.getBoundingClientRect() : el.getBoundingClientRect()
+      return r.width ? { left: Math.round(r.left - card.left - border), right: Math.round(card.right - border - r.right) } : null
+    }
+    const q = (selector: string) => rect(root.querySelector(selector))
+    const file = root.querySelector('.fl-download')?.closest('.fl-row') ?? null
+    return {
+      title: q('.fl-title-text'),
+      search: q('.fl-search'),
+      refresh: q('.fl-refresh'),
+      headCheck: q('.fl-head .fl-cell-check input'),
+      rowCheck: rect(file?.querySelector('.fl-cell-check input') ?? null),
+      download: rect(file?.querySelector('.fl-download svg') ?? null),
+      showAll: q('.fl-more-all'),
+      sort: q('.fl-sort-chevron'),
+      foot: q('.fl-foot > *'),
+    }
+  })
+}
+
+test('one margin on each side: everything at the left and at the right lines up', async ({ page }, info) => {
+  await open(page)
+  await opener(row(page, 'photos')).click()
+  await expect(list(page).locator('.fl-more')).toBeVisible()
+  const phone = info.project.name === 'mobile'
+  const gutter = phone ? 14 : 16
+  const e = await edges(page)
+  const near = (value: number | undefined) => expect(Math.abs((value ?? Number.NaN) - gutter)).toBeLessThanOrEqual(1)
+  for (const left of [phone ? e.search : e.title, e.headCheck, e.rowCheck, e.foot]) near(left?.left)
+  for (const right of [e.refresh, e.download, e.showAll, ...(phone ? [e.sort] : [])]) near(right?.right)
+})
+
 test('folder passwords are asked for in the row, without moving anything', async ({ page }, info) => {
   await open(page)
   const locked = row(page, 'Locked')
@@ -67,6 +108,32 @@ test('folder passwords are asked for in the row, without moving anything', async
   await expect(locked).toHaveClass(/fl-row-prompting/)
   expect((await box(locked)).height).toBe(rowHeight(info))
   expect((await box(next)).y).toBe(before)
+
+  if (info.project.name === 'mobile') {
+    // lock, input, key, Open, ✕: 12px apart to the eye, ✕ at the 14px margin, 40 × 44 to tap
+    const glyph = (selector: string) => box(locked.locator(`${selector} svg`).first())
+    const [lock, field, key, open, cancel, card] = await Promise.all([
+      box(locked.locator('svg.fl-unlock-lock')),
+      box(locked.locator('.fl-unlock-row input')),
+      glyph('.fl-unlock-remember'),
+      box(locked.locator('.fl-unlock-submit')),
+      glyph('.fl-unlock-cancel'),
+      box(list(page)),
+    ])
+    const gaps = [field.x - (lock.x + lock.width), key.x - (field.x + field.width), open.x - (key.x + key.width), cancel.x - (open.x + open.width)]
+    for (const gap of gaps) expect(Math.abs(gap - 12)).toBeLessThanOrEqual(1)
+    expect(Math.abs(card.x + card.width - 1 - (cancel.x + cancel.width) - 14)).toBeLessThanOrEqual(1)
+    for (const button of ['.fl-unlock-remember', '.fl-unlock-cancel']) {
+      const hit = await box(locked.locator(button))
+      expect(hit.width).toBeGreaterThanOrEqual(40)
+      expect(hit.height).toBeGreaterThanOrEqual(44)
+    }
+    // the targets reach into the gaps, not over the input or Open
+    const [keyHit, openBox, cancelHit] = await Promise.all(['.fl-unlock-remember', '.fl-unlock-submit', '.fl-unlock-cancel'].map((s) => box(locked.locator(s))))
+    expect(keyHit.x).toBeGreaterThanOrEqual(field.x + field.width - 0.5)
+    expect(keyHit.x + keyHit.width).toBeLessThanOrEqual(openBox.x + 0.5)
+    expect(cancelHit.x).toBeGreaterThanOrEqual(openBox.x + openBox.width - 0.5)
+  }
 
   const input = locked.locator('.fl-unlock-row input')
   await input.fill('0000')
@@ -173,11 +240,12 @@ test('long folders: a quiet last row, and the folder pinned with “show less”
   expect(pinned.y).toBeLessThan(140)
   expect(Math.abs((await box(pin.locator('.fl-folder-icon'))).x - (await box(row(page, 'photos').locator('.fl-folder-icon'))).x)).toBeLessThan(1)
 
+  // “Show less”: its arrow in the column of the row buttons' icons.
+  const less = await box(pin.locator('.fl-pin-less svg'))
+  const download = await box(row(page, 'IMG_0300.jpg').locator('.fl-download svg'))
+  expect(Math.abs(less.x + less.width / 2 - (download.x + download.width / 2))).toBeLessThan(1)
   if (info.project.name === 'mobile') {
-    // Phones: “Show less” is only its arrow, in the column of the row buttons.
-    const less = await box(pin.locator('.fl-pin-less svg'))
-    const download = await box(row(page, 'IMG_0300.jpg').locator('.fl-download svg'))
-    expect(Math.abs(less.x + less.width / 2 - (download.x + download.width / 2))).toBeLessThan(1)
+    // Phones: only the arrow.
     await expect(pin.locator('.fl-pin-less-text')).toBeHidden()
     expect((await box(pin.locator('.fl-pin-less'))).height).toBeGreaterThanOrEqual(44)
   }

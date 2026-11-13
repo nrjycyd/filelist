@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Changes
+
+- One margin on each side of the list, 16px on wide lists and 14px on phones: the title or search box, the checkboxes and the footer line up at the left; the refresh button, the icons of the row buttons, “Show all” and the sort button at the right. Before, each side mixed three or four distances (8–21px), and the rows sat 7px further in at the left than at the right
+- Wide lists: “Show less” on a pinned folder row keeps its words, with its arrow over the icons of the row buttons below (it sat 10px from the card's edge)
+- Phones, a folder's password row: lock, input, “Remember” key, Open and ✕ are 12px apart to the eye (they were 10–19px), the input 16px wider; the key and ✕ keep a 40 × 44 target
+
 ## 0.13.1 (2026-11-13)
 
 ### Changes
