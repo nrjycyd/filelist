@@ -113,7 +113,7 @@
   align-items: center;
   min-height: 52px;
   box-sizing: border-box;
-  padding: 10px 12px;
+  padding: 10px 16px;
   background: var(--fl-c-bg);
   border-bottom: 1px solid var(--fl-c-divider);
   border-radius: var(--fl-radius) var(--fl-radius) 0 0;
@@ -321,7 +321,9 @@
   grid-template-columns: var(--fl-cols);
   align-items: center;
   min-height: var(--fl-row-h);
-  padding: 0 8px;
+  /* one line on each side for everything (16px): the checkbox centred in its
+     40px column, the icons of the row buttons, the toolbar, the footer */
+  padding: 0 10px 0 3px;
   color: var(--fl-c-text-1);
   border-bottom: 1px solid var(--fl-c-divider);
   scroll-margin-top: calc(var(--fl-sticky) + 64px);
@@ -910,6 +912,7 @@
 /* ---------------- long folders ---------------- */
 
 .fl-more {
+  padding-right: 8px;
   color: var(--fl-c-text-2);
 }
 
@@ -996,7 +999,7 @@
   grid-template-columns: 40px minmax(0, 1fr) auto;
   align-items: center;
   min-height: var(--fl-row-h);
-  padding: 0 8px;
+  padding: 0 10px 0 3px;
   background: var(--fl-c-bg);
   border-bottom: 1px solid var(--fl-c-divider);
   box-shadow: 0 6px 12px -8px rgb(0 0 0 / 25%);
@@ -1029,6 +1032,8 @@
 
 .fl-pin-less {
   display: inline-flex;
+  /* its arrow over the icons of the row buttons below */
+  margin-right: 6px;
   gap: 4px;
   align-items: center;
   height: 26px;
@@ -1187,7 +1192,7 @@
   }
 
   .fl-bar {
-    padding: 10px;
+    padding: 10px 14px;
   }
 
   .fl-title {
@@ -1339,7 +1344,6 @@
 
   .fl-pin {
     grid-template-columns: 44px minmax(0, 1fr) auto;
-    padding: 0 8px 0 0;
   }
 
   .fl-pin-count {
@@ -1352,6 +1356,7 @@
     width: 44px;
     height: 44px;
     padding: 0;
+    margin-right: 0;
     border-radius: 10px;
   }
 
@@ -1371,12 +1376,18 @@
     --fl-row-h: 56px;
     --fl-cols: 44px minmax(0, 1fr) auto;
 
-    padding: 0 4px 0 0;
+    /* 14px on each side: the checkbox centred in its 44px column, the icons of
+       the 44px row buttons */
+    padding: 0;
+  }
+
+  .fl-more {
+    padding-right: 4px;
   }
 
   .fl-head {
     min-height: 40px;
-    padding-right: 8px;
+    padding-right: 14px;
   }
 
   .fl-cell-size,
@@ -1610,7 +1621,7 @@
   }
 
   .fl-foot {
-    padding: 10px 12px;
+    padding: 10px 14px;
   }
 
   /* same-row password: the row keeps its 56px; the name gives way to the input */
@@ -1618,15 +1629,48 @@
     display: none;
   }
 
+  /* lock, input, key, Open, ✕: 12px apart to the eye, ✕ 14px from the edge */
   .fl-unlock-row {
     grid-column: 2 / -1;
+    gap: 0;
     justify-content: flex-start;
-    padding-left: 4px;
+    padding: 0 7px 0 4px;
   }
 
   .fl-unlock-row .fl-unlock-lock {
     display: block;
-    margin: 0 4px;
+    margin: 0 12px 0 4px;
+  }
+
+  .fl-unlock-row .fl-unlock-remember {
+    width: 32px;
+    margin-left: 4px;
+  }
+
+  .fl-unlock-row .fl-unlock-submit {
+    margin-left: 4px;
+  }
+
+  .fl-unlock-row .fl-unlock-cancel {
+    width: 28px;
+    margin-left: 5px;
+  }
+
+  /* 40 × 44 to tap, into the gaps but not over the input or Open */
+  .fl-unlock-row :is(.fl-unlock-remember, .fl-unlock-cancel) {
+    position: relative;
+  }
+
+  .fl-unlock-row .fl-unlock-remember::after {
+    position: absolute;
+    inset: 0 -4px;
+    content: '';
+  }
+
+  .fl-unlock-row .fl-unlock-cancel::after {
+    position: absolute;
+    inset: 0 -7px 0 -5px;
+    content: '';
   }
 
   .fl-unlock input {
@@ -1672,7 +1716,7 @@
   }
 
   .fl-unlock-root {
-    padding: 10px 12px;
+    padding: 10px 14px;
   }
 }
 
