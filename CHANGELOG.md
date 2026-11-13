@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.13.2 (2026-11-13)
 
 ### Changes
 
@@ -12,6 +12,12 @@
 - Phones: the checkbox is 16px from the edge and 12px from the icons (was 14 and 13), its tap area still reaching the edge
 - Phones, a folder's password row: the lock under the folder icons; lock, input, “Remember” key, Open and ✕ 12px apart to the eye (they were 10–19px), ✕ at the margin, the input 16px wider; the key and ✕ keep a 40 × 44 target
 - `style.css` ships without its comments: 6.4 KB gzip (was 7.9). The source keeps them
+
+### Fixes
+
+- Keep desktop preview and download buttons clickable when they replace the date.
+- Widen the inline folder password field by 72px on wide lists with hover support.
+- Move mobile tree guides back to the left of the parent folder icon.
 
 ## 0.13.1 (2026-11-13)
 
