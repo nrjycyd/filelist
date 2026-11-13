@@ -90,6 +90,7 @@ export interface FolderStats {
   files: number
   bytes: number
   selected: number
+  complete: boolean
 }
 
 /** Loaded file count, size and selected count for every folder, in one pass. */
@@ -97,14 +98,15 @@ export function folderStats(roots: FNode[], selected: Set<string>): Map<string, 
   const stats = new Map<string, FolderStats>()
   const walk = (node: FNode): FolderStats => {
     if (!node.is_dir) {
-      return { files: 1, bytes: totalSize([node]), selected: selected.has(node.path) ? 1 : 0 }
+      return { files: 1, bytes: totalSize([node]), selected: selected.has(node.path) ? 1 : 0, complete: true }
     }
-    const total: FolderStats = { files: 0, bytes: 0, selected: 0 }
+    const total: FolderStats = { files: 0, bytes: 0, selected: 0, complete: node.loaded && !node.lock }
     for (const child of node.children) {
       const part = walk(child)
       total.files += part.files
       total.bytes += part.bytes
       total.selected += part.selected
+      total.complete &&= part.complete
     }
     stats.set(node.path, total)
     return total

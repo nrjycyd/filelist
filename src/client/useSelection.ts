@@ -14,7 +14,7 @@ export function useSelection(options: {
   const { roots, selected } = options
 
   const stats = computed(() => folderStats(roots.value, selected.value))
-  const noStats: FolderStats = { files: 0, bytes: 0, selected: 0 }
+  const noStats: FolderStats = { files: 0, bytes: 0, selected: 0, complete: false }
 
   function statsOf(node: FNode): FolderStats {
     return stats.value.get(node.path) ?? noStats
@@ -22,14 +22,14 @@ export function useSelection(options: {
 
   function isChecked(node: FNode): boolean {
     if (!node.is_dir) return selected.value.has(node.path)
-    const { files, selected: hit } = statsOf(node)
-    return files > 0 && hit === files
+    const { files, selected: hit, complete } = statsOf(node)
+    return complete && files > 0 && hit === files
   }
 
   function isIndeterminate(node: FNode): boolean {
     if (!node.is_dir) return false
-    const { files, selected: hit } = statsOf(node)
-    return hit > 0 && hit < files
+    const { files, selected: hit, complete } = statsOf(node)
+    return hit > 0 && (!complete || hit < files)
   }
 
   /**
@@ -53,12 +53,16 @@ export function useSelection(options: {
 
   async function toggleCheck(node: FNode, event?: Event) {
     const input = event?.target as HTMLInputElement | null
+    const adding = !isChecked(node)
     // Selecting a folder includes every nested file, so load the whole subtree first.
-    if (node.is_dir && !isChecked(node)) {
+    if (node.is_dir && adding) {
       const result = await loadTree(node)
       if (!result.ok) {
         if (result.locked) options.startPrompt(result.locked, true)
-        if (input) input.checked = isChecked(node)
+        if (input) {
+          input.checked = isChecked(node)
+          input.indeterminate = isIndeterminate(node)
+        }
         return
       }
       node.expanded = true
@@ -69,7 +73,6 @@ export function useSelection(options: {
       return
     }
     const next = new Set(selected.value)
-    const adding = files.some((file) => !next.has(file.path))
     for (const file of files) {
       if (adding) next.add(file.path)
       else next.delete(file.path)
