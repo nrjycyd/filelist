@@ -1213,6 +1213,10 @@
       --fl-cols: 40px minmax(0, 1fr) 88px 112px;
     }
 
+    .fl-row-prompting {
+      --fl-cols: 40px minmax(0, 1fr) 88px 184px;
+    }
+
     .fl-row > :is(.fl-cell-date, .fl-cell-op) {
       grid-area: 1 / 4;
       transition: opacity 0.12s;
