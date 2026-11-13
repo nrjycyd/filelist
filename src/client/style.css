@@ -895,6 +895,7 @@
   color: var(--fl-c-text-2);
   background: var(--fl-c-bg-soft);
   border-top: 1px solid var(--fl-c-divider);
+  border-radius: 0 0 var(--fl-radius) var(--fl-radius);
 }
 
 .fl-toast {
