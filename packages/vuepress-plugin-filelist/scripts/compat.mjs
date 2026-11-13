@@ -149,6 +149,8 @@ async function smoke(browser, url, theme) {
 
     if (colorScheme === 'light') {
       await row('使用说明.md').waitFor()
+      // wide lists show a file's buttons in place of its date while the row is pointed at
+      await row('使用说明.md').hover()
       await row('使用说明.md').locator('.fl-preview-btn').click()
       const dialog = page.locator('dialog.fl-preview')
       await dialog.locator('.fl-preview-view-btn', { hasText: '渲染' }).click()

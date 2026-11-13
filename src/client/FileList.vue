@@ -634,7 +634,7 @@ onBeforeUnmount(() => {
         </button>
       </div>
       <template v-else>
-        <span class="fl-cell fl-cell-size" role="gridcell">{{ node.is_dir ? '—' : formatSize(node.size) }}</span>
+        <span class="fl-cell fl-cell-size" role="gridcell">{{ node.is_dir ? '' : formatSize(node.size) }}</span>
         <span class="fl-cell fl-cell-date" role="gridcell">{{ formatDate(node.modified) }}</span>
         <span class="fl-cell fl-cell-op" role="gridcell">
           <button

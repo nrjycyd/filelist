@@ -41,7 +41,7 @@
   ],
   "scripts": {
     "dev": "tsdown --watch",
-    "build": "tsdown && node scripts/fix-dts.mjs && pnpm --filter ./packages/* run build",
+    "build": "tsdown && node scripts/fix-dts.mjs && node scripts/strip-css.mjs && pnpm --filter ./packages/* run build",
     "typecheck": "vue-tsc --noEmit && pnpm --filter ./packages/* run typecheck",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
