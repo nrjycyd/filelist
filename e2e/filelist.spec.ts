@@ -124,14 +124,15 @@ test('folder passwords are asked for in the row, without moving anything', async
     for (const gap of gaps) expect(Math.abs(gap - 12)).toBeLessThanOrEqual(1)
     expect(Math.abs(card.x + card.width - 1 - (cancel.x + cancel.width) - 14)).toBeLessThanOrEqual(1)
     for (const button of ['.fl-unlock-remember', '.fl-unlock-cancel']) {
-      const hit = await locked.locator(button).evaluate((el) => {
-        const r = el.getBoundingClientRect()
-        const after = getComputedStyle(el, '::after')
-        return { width: r.width - Number.parseFloat(after.left) - Number.parseFloat(after.right), height: r.height }
-      })
+      const hit = await box(locked.locator(button))
       expect(hit.width).toBeGreaterThanOrEqual(40)
       expect(hit.height).toBeGreaterThanOrEqual(44)
     }
+    // the targets reach into the gaps, not over the input or Open
+    const [keyHit, openBox, cancelHit] = await Promise.all(['.fl-unlock-remember', '.fl-unlock-submit', '.fl-unlock-cancel'].map((s) => box(locked.locator(s))))
+    expect(keyHit.x).toBeGreaterThanOrEqual(field.x + field.width - 0.5)
+    expect(keyHit.x + keyHit.width).toBeLessThanOrEqual(openBox.x + 0.5)
+    expect(cancelHit.x).toBeGreaterThanOrEqual(openBox.x + openBox.width - 0.5)
   }
 
   const input = locked.locator('.fl-unlock-row input')
