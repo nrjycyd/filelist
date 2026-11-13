@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.13.5 (2026-11-13)
+
+### Changes
+
+- Restore the original theme tint on the file list's column header and footer.
+
 ## 0.13.3 (2026-11-13)
 
 ### Fixes
