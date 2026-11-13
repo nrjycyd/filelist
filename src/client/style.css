@@ -1647,18 +1647,9 @@
     display: none;
   }
 
-  /* the guide line under the parent's folder icon */
   .fl-indent {
     margin-right: -10px;
-    background-image: repeating-linear-gradient(
-      to right,
-      transparent 0,
-      transparent 9.5px,
-      var(--fl-c-divider) 9.5px,
-      var(--fl-c-divider) 10.5px,
-      transparent 10.5px,
-      transparent var(--fl-indent)
-    );
+    background-position-x: -8px;
   }
 
   .fl-type {
