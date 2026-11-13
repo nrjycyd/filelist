@@ -1315,6 +1315,40 @@ describe('FileList deep search', () => {
     expect(calls.filter((call) => call.path === '/api/fs/list')).toHaveLength(listed)
   })
 
+  it('finishes with partial results and retries a failed folder only on request', async () => {
+    const { calls } = mockOpenList(tree)
+    const original = globalThis.fetch
+    let attempts = 0
+    let recovered = false
+    vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      if (String(input).endsWith('/api/fs/list') && JSON.parse(String(init?.body)).path === '/Locked') {
+        attempts += 1
+        // Let a regression terminate instead of flooding the test runner.
+        if (!recovered && attempts < 3) return new Response(null, { status: 503 })
+      }
+      return original(input, init)
+    }))
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+    await filter(wrapper, 'target')
+    await status(wrapper).find('.fl-deep-link').trigger('click')
+    await flushPromises()
+
+    expect(attempts).toBe(1)
+    expect(names(wrapper)).toContain('target-1.pdf')
+    expect(status(wrapper).text()).toContain('1 个文件夹读取失败')
+    expect(status(wrapper).find('.fl-deep-link').text()).toBe('重试')
+    const successfulReads = calls.filter((call) => call.path === '/api/fs/list' && call.body?.path === '/A').length
+
+    recovered = true
+    await status(wrapper).find('.fl-deep-link').trigger('click')
+    await flushPromises()
+    expect(attempts).toBe(2)
+    expect(names(wrapper)).toContain('target-2.pdf')
+    expect(status(wrapper).text()).toBe('已搜索全部 4 个文件夹')
+    expect(calls.filter((call) => call.path === '/api/fs/list' && call.body?.path === '/A')).toHaveLength(successfulReads)
+  })
+
   it('unlocking a folder in the results searches it at once', async () => {
     mockOpenList(tree, { '/Locked': 'pw' })
     const wrapper = mountList({ path: '/' })

@@ -128,6 +128,7 @@ const {
   deepMode,
   deepRow,
   deepSearch,
+  retryDeepSearch,
   stopDeepSearch,
   pauseDeepSearch,
   clearFilter,
@@ -738,6 +739,10 @@ onBeforeUnmount(() => {
         <template v-else-if="deepRow === 'capped'">
           {{ deepSummary }} ·
           <button class="fl-deep-link" type="button" @click="deepSearch">{{ t('deepContinue') }}</button>
+        </template>
+        <template v-else-if="deepRow === 'failed'">
+          {{ deepSummary }} ·
+          <button class="fl-deep-link" type="button" @click="retryDeepSearch">{{ t('retry') }}</button>
         </template>
         <template v-else>{{ deepSummary }}</template>
       </div>

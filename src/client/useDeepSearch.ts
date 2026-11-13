@@ -22,7 +22,9 @@ export function useDeepSearch(
   const { roots } = options
 
   const keyword = ref('')
-  const deep = reactive({ running: false, searched: 0, failed: 0, capped: false, done: false })
+  const deep = reactive({ running: false, searched: 0, capped: false, done: false })
+  // Failed folders wait for an explicit retry or a new search context.
+  const failed = reactive(new Set<FNode>())
   /**
    * Deep search mode: entered by “Try deep search” (or at once with
    * `deep-search="auto"`), left by clearing the filter. While on, new keywords,
@@ -45,12 +47,14 @@ export function useDeepSearch(
     return out
   }
 
-  const hasUnloaded = computed(() => unloadedFolders().length > 0)
+  const pending = computed(() => unloadedFolders().filter((node) => !failed.has(node)))
+  const failedCount = computed(() => unloadedFolders().filter((node) => failed.has(node)).length)
   const deepRow = computed(() => {
     if (!keyword.value.trim()) return null
     if (deep.running) return 'running'
     if (deep.capped) return 'capped'
-    if (!deepMode.value) return hasUnloaded.value ? 'idle' : null
+    if (!deepMode.value) return pending.value.length ? 'idle' : null
+    if (deep.done && failedCount.value) return 'failed'
     return deep.done ? 'done' : null
   })
 
@@ -61,7 +65,7 @@ export function useDeepSearch(
     const limit = Math.max(1, Math.floor(props.deepSearchLimit ?? 500))
     const runStart = deep.searched
     Object.assign(deep, { running: true, capped: false, done: false })
-    let wave = unloadedFolders()
+    let wave = pending.value
     // `deepSeq` changes in stopDeepSearch() while the awaits below run.
     // eslint-disable-next-line no-unmodified-loop-condition
     while (wave.length && seq === deepSeq) {
@@ -72,11 +76,13 @@ export function useDeepSearch(
         for (let node = queue.shift(); node && seq === deepSeq; node = queue.shift()) {
           if (deep.searched - runStart >= limit) return
           deep.searched += 1
-          if (!(await options.loadChildren(node, false, true))) {
-            if (!node.lock) deep.failed += 1
+          const loaded = await options.loadChildren(node, false, true)
+          if (seq !== deepSeq) return
+          if (!loaded) {
+            if (!node.lock) failed.add(node)
             continue
           }
-          for (const child of node.children) if (child.is_dir && !child.loaded && !child.lock) next.push(child)
+          for (const child of node.children) if (child.is_dir && !child.loaded && !child.lock && !failed.has(child)) next.push(child)
         }
       }
       await Promise.all(Array.from({ length: Math.min(4, queue.length) }, worker))
@@ -85,7 +91,7 @@ export function useDeepSearch(
     }
     if (seq !== deepSeq) return
     deep.running = false
-    deep.capped = hasUnloaded.value && deep.searched - runStart >= limit
+    deep.capped = pending.value.length > 0 && deep.searched - runStart >= limit
     deep.done = !deep.capped
   }
 
@@ -99,7 +105,12 @@ export function useDeepSearch(
   function pauseDeepSearch() {
     const wasRunning = deep.running
     stopDeepSearch()
-    if (wasRunning && hasUnloaded.value) deep.capped = true
+    if (wasRunning && pending.value.length) deep.capped = true
+  }
+
+  function retryDeepSearch() {
+    failed.clear()
+    return deepSearch()
   }
 
   function clearFilter() {
@@ -107,21 +118,24 @@ export function useDeepSearch(
   }
 
   // Clearing the filter leaves deep search mode; loaded folders stay loaded.
-  watch(keyword, (value) => {
+  watch(keyword, (value, previous) => {
+    if (value.trim() !== previous.trim()) failed.clear()
     if (value.trim()) {
       if (props.deepSearch === 'auto') deepMode.value = true
       return
     }
     stopDeepSearch()
     deepMode.value = false
-    Object.assign(deep, { searched: 0, failed: 0, capped: false, done: false })
+    Object.assign(deep, { searched: 0, capped: false, done: false })
   })
+
+  watch(roots, () => failed.clear())
 
   // In deep search mode, folders that become readable (a new keyword, a refresh,
   // an unlocked folder) are searched at once, unless the user stopped or the
   // limit was reached ("Continue" then).
   watch(
-    () => deepMode.value && hasUnloaded.value && !deep.running && !deep.capped && !options.refreshing.value,
+    () => deepMode.value && pending.value.length > 0 && !deep.running && !deep.capped && !options.refreshing.value,
     (ready) => {
       if (ready) void deepSearch()
     },
@@ -156,9 +170,9 @@ export function useDeepSearch(
 
   const deepSummary = computed(() =>
     [
-      t(deepRow.value === 'capped' ? 'deepCapped' : 'deepDone', { count: folderCounts.value.checked }),
+      t(deepRow.value === 'capped' || deepRow.value === 'failed' ? 'deepCapped' : 'deepDone', { count: folderCounts.value.checked }),
       lockedFolders.value ? t('deepSkipped', { count: lockedFolders.value }) : '',
-      deep.failed ? t('deepFailed', { count: deep.failed }) : '',
+      failedCount.value ? t('deepFailed', { count: failedCount.value }) : '',
     ]
       .filter(Boolean)
       .join(' · '),
@@ -186,6 +200,7 @@ export function useDeepSearch(
     deepMode,
     deepRow,
     deepSearch,
+    retryDeepSearch,
     stopDeepSearch,
     pauseDeepSearch,
     clearFilter,
