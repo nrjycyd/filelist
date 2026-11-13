@@ -345,6 +345,7 @@
   font-size: 12px;
   font-weight: 500;
   color: var(--fl-c-text-2);
+  background: var(--fl-c-bg-soft);
   border-bottom-color: var(--fl-c-divider);
   user-select: none;
 }
@@ -892,6 +893,7 @@
   margin-top: -1px; /* over the last row's lighter line */
   font-size: 12px;
   color: var(--fl-c-text-2);
+  background: var(--fl-c-bg-soft);
   border-top: 1px solid var(--fl-c-divider);
 }
 
