@@ -208,5 +208,5 @@ export function useKeyboard(options: {
     keyboardInside.value = false
   }
 
-  return { rowTabIndex, onKeydown, onFocusin, onFocusout, onPointerdown, keyboardInside }
+  return { rowTabIndex, onKeydown, onFocusin, onFocusout, onPointerdown, keyboardInside, focusRow }
 }

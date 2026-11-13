@@ -23,11 +23,13 @@ export function useSelection(options: {
   function isChecked(node: FNode): boolean {
     if (!node.is_dir) return selected.value.has(node.path)
     const { files, selected: hit, complete } = statsOf(node)
-    return complete && hit > 0 && hit === files
+    return complete && files > 0 && hit === files
   }
 
   function isIndeterminate(node: FNode): boolean {
-    return node.is_dir && statsOf(node).selected > 0 && !isChecked(node)
+    if (!node.is_dir) return false
+    const { files, selected: hit, complete } = statsOf(node)
+    return hit > 0 && (!complete || hit < files)
   }
 
   /**
