@@ -118,6 +118,10 @@ test('wide lists: a file\'s buttons take the place of its date while it is point
   await file.hover()
   await expect.poll(() => opacity(file.locator('.fl-cell-op'))).toBe('1')
   await expect.poll(() => opacity(file.locator('.fl-cell-date'))).toBe('0')
+  // the date heading under the header's (empty) actions cell still sorts
+  await list(page).locator('.fl-head .fl-cell-date .fl-sort-btn').click()
+  await expect(list(page).locator('.fl-head .fl-cell-date')).toHaveAttribute('aria-sort', /ascending|descending/)
+  await file.hover()
   // folders keep their date
   await folder.hover()
   await expect.poll(() => opacity(folder.locator('.fl-cell-date'))).toBe('1')

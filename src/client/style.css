@@ -1218,14 +1218,18 @@
       transition: opacity 0.12s;
     }
 
+    /* still clickable while hidden: a pointer that reaches them has shown them */
     .fl-row > .fl-cell-op {
       margin-right: -6px; /* icons at the 24px margin */
-      pointer-events: none;
       opacity: 0;
     }
 
+    /* the header's sits over the date heading, which it must not cover */
+    .fl-head > .fl-cell-op {
+      pointer-events: none;
+    }
+
     .fl-row:not(.fl-head, .fl-row-dir):is(:hover, :focus-visible, :has(:focus-visible)) > .fl-cell-op {
-      pointer-events: auto;
       opacity: 1;
     }
 
