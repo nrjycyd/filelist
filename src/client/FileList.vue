@@ -457,8 +457,8 @@ onBeforeUnmount(() => {
           </span>
         </span>
         <span class="fl-pin-cell" role="gridcell">
-          <button class="fl-pin-less" type="button" @click="showLess(pinned.key)">
-            {{ t('showLess') }}<Icon name="up" :size="12" />
+          <button class="fl-pin-less" type="button" :aria-label="t('showLess')" @click="showLess(pinned.key)">
+            <span class="fl-pin-less-text">{{ t('showLess') }}</span><Icon name="up" :size="12" />
           </button>
         </span>
       </div>

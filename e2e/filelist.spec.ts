@@ -173,6 +173,15 @@ test('long folders: a quiet last row, and the folder pinned with “show less”
   expect(pinned.y).toBeLessThan(140)
   expect(Math.abs((await box(pin.locator('.fl-folder-icon'))).x - (await box(row(page, 'photos').locator('.fl-folder-icon'))).x)).toBeLessThan(1)
 
+  if (info.project.name === 'mobile') {
+    // Phones: “Show less” is only its arrow, in the column of the row buttons.
+    const less = await box(pin.locator('.fl-pin-less svg'))
+    const download = await box(row(page, 'IMG_0300.jpg').locator('.fl-download svg'))
+    expect(Math.abs(less.x + less.width / 2 - (download.x + download.width / 2))).toBeLessThan(1)
+    await expect(pin.locator('.fl-pin-less-text')).toBeHidden()
+    expect((await box(pin.locator('.fl-pin-less'))).height).toBeGreaterThanOrEqual(44)
+  }
+
   // “Show less” from the middle: back to the first page, the folder's row on screen.
   await row(page, 'IMG_0200.jpg').scrollIntoViewIfNeeded()
   await pin.locator('.fl-pin-less').click()
