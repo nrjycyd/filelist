@@ -1318,6 +1318,9 @@
     min-height: 61px;
     padding: 8px 8px 8px 4px;
     background: linear-gradient(var(--fl-c-brand-soft), var(--fl-c-brand-soft)), var(--fl-c-bg);
+  }
+
+  .fl-selecting.fl-toolbar-over-footer .fl-bar {
     /* The sticky bar can reach the bottom edge as the list scrolls away. */
     border-radius: var(--fl-radius);
   }

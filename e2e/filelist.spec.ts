@@ -381,6 +381,8 @@ test('the mobile selection bar follows the bottom corners when the list scrolls 
 
   const card = list(page)
   const bar = card.locator('.fl-bar')
+  await expect(bar).toHaveCSS('border-bottom-left-radius', '0px')
+  await expect(bar).toHaveCSS('border-bottom-right-radius', '0px')
   // Leave room to scroll the entire card past the sticky position.
   await card.evaluate((el) => {
     const spacer = document.createElement('div')
@@ -397,6 +399,10 @@ test('the mobile selection bar follows the bottom corners when the list scrolls 
   const radius = await card.evaluate((el) => getComputedStyle(el).borderBottomLeftRadius)
   await expect(bar).toHaveCSS('border-bottom-left-radius', radius)
   await expect(bar).toHaveCSS('border-bottom-right-radius', radius)
+
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await expect(bar).toHaveCSS('border-bottom-left-radius', '0px')
+  await expect(bar).toHaveCSS('border-bottom-right-radius', '0px')
 })
 
 test('streaming ZIP shows progress, locks the selection and writes the file', async ({ page }, info) => {
