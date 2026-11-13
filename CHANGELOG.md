@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.13.6 (2026-11-13)
+
+### Fixes
+
+- Match the tinted footer's bottom corners to the file list border.
+- Round the mobile selection toolbar's bottom corners and hide its shadow while it overlaps the footer.
+
 ## 0.13.5 (2026-11-13)
 
 ### Changes
