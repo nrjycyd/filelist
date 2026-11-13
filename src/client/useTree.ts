@@ -1,10 +1,10 @@
 import type { Ref } from 'vue'
-import type { OLItem } from './api'
+import type { OLItem, OpenListApi } from './api'
 import type { ListContext } from './context'
 import type { FNode, LockState, UnlockError } from './tree'
 import type { FileListLabels, FileListSource } from './types'
 import type { SortKey } from './utils'
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, ref, toRaw } from 'vue'
 import { errorText, isPasswordError } from './api'
 import { descendantFiles, expandedPathsOf, loadedPathsOf, newLock, sortTree, sourceName, toNodes } from './tree'
 import { fileKind, isWithin, previewKind } from './utils'
@@ -40,6 +40,17 @@ class RootLockedError extends Error {
   }
 }
 
+type FolderLoadResult =
+  | { kind: 'loaded' | 'locked' | 'superseded' }
+  | { kind: 'failed'; error: unknown }
+
+interface FolderLoad {
+  api: OpenListApi
+  password: string
+  generation: number
+  promise: Promise<FolderLoadResult>
+}
+
 /**
  * The folder tree: loading it, refreshing it in place, opening folders,
  * folder passwords and sorting.
@@ -65,6 +76,7 @@ export function useTree(
   const errorMsg = ref('')
   const refreshing = ref(false)
   let refreshSeq = 0
+  const folderLoads = new WeakMap<FNode, FolderLoad>()
   /** Single-path mode: the listed folder itself needs a password. */
   const rootLock = ref<LockState | null>(null)
   const sortKey = ref<SortKey>('name')
@@ -175,7 +187,8 @@ export function useTree(
   /** Forget a remembered password: the folder folds up and asks again next time. */
   function forgetPassword(node: FNode) {
     passwords.forget(node.path)
-    Object.assign(node, { expanded: false, loaded: false, children: [], lock: undefined })
+    folderLoads.delete(toRaw(node))
+    Object.assign(node, { expanded: false, loaded: false, loading: false, children: [], lock: undefined })
     selected.value = new Set([...selected.value].filter((path) => !isWithin(path, node.path)))
     api.value.clearCache(node.path)
   }
@@ -184,6 +197,10 @@ export function useTree(
 
   async function fetchChildren(node: FNode, password: string) {
     const items = await api.value.list(node.path, password)
+    setChildren(node, items, password)
+  }
+
+  function setChildren(node: FNode, items: OLItem[], password: string) {
     node.children = toNodes(items, node, password)
     sortNodes(node.children)
     node.loaded = true
@@ -193,6 +210,41 @@ export function useTree(
     const nodes = toNodes(await api.value.list(props.path, password), listedFolder.value, password)
     sortNodes(nodes)
     return nodes
+  }
+
+  function requestChildren(node: FNode): Promise<FolderLoadResult> {
+    const key = toRaw(node)
+    const client = api.value
+    const { password, rememberedAt } = passwords.resolve(node.path, node.password)
+    const seq = refreshSeq
+    const existing = folderLoads.get(key)
+    if (existing?.api === client && existing.password === password && existing.generation === seq) return existing.promise
+
+    node.loading = true
+    const current = (): boolean => folderLoads.get(key) === request && seq === refreshSeq && api.value === client
+    async function run(): Promise<FolderLoadResult> {
+      try {
+        const items = await client.list(node.path, password)
+        if (!current()) return { kind: 'superseded' }
+        setChildren(node, items, password)
+        return { kind: 'loaded' }
+      } catch (error) {
+        if (!current()) return { kind: 'superseded' }
+        if (!isPasswordError(error)) return { kind: 'failed', error }
+        node.expanded = false
+        node.lock = newLock(false, passwords.dropStale(rememberedAt) ? 'stale' : '')
+        return { kind: 'locked' }
+      } finally {
+        if (folderLoads.get(key) === request) {
+          folderLoads.delete(key)
+          node.loading = false
+        }
+      }
+    }
+
+    const request: FolderLoad = { api: client, password, generation: seq, promise: Promise.resolve().then(run) }
+    folderLoads.set(key, request)
+    return request.promise
   }
 
   /**
@@ -209,23 +261,10 @@ export function useTree(
       if (prompt) startPrompt(node, prompt === 'focus')
       return false
     }
-    node.loading = true
-    const { password, rememberedAt } = passwords.resolve(node.path, node.password)
-    try {
-      await fetchChildren(node, password)
-      return true
-    } catch (error) {
-      if (isPasswordError(error)) {
-        node.expanded = false
-        node.lock = newLock(false, passwords.dropStale(rememberedAt) ? 'stale' : '')
-        if (prompt) startPrompt(node, prompt === 'focus')
-      } else if (!quiet) {
-        showToast(failureMessage('folderFailed', error))
-      }
-      return false
-    } finally {
-      node.loading = false
-    }
+    const result = await requestChildren(node)
+    if (result.kind === 'locked' && prompt) startPrompt(node, prompt === 'focus')
+    if (result.kind === 'failed' && !quiet) showToast(failureMessage('folderFailed', result.error))
+    return result.kind === 'loaded'
   }
 
   async function loadSourceRoot(source: FileListSource, expanded: boolean): Promise<FNode> {
@@ -368,7 +407,7 @@ export function useTree(
       options.resetShown(node.path)
       return
     }
-    node.expanded = await loadChildren(node, 'focus')
+    if (await loadChildren(node, 'focus')) node.expanded = true
   }
 
   /* ---------------- sorting ---------------- */
