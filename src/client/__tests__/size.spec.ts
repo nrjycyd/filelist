@@ -14,7 +14,8 @@ const BUDGET_KB = {
   // 46: the sort menu of the narrow layout (SortMenu.vue) replacing the native select, about 1.8 KB unminified.
   // 46.1: allow for deep-search retry and partial folder selection state.
   // 46.5: share in-flight directory reads and ignore superseded responses.
-  'client/browser/index.js': 46.5,
+  // 46.8: the separate toolbar component adds a small Vue component boundary.
+  'client/browser/index.js': 46.8,
   // the build drops the stylesheet's comments (scripts/strip-css.mjs); the budget is for the rules
   'client/style.css': 8,
   'node/index.js': 1,
