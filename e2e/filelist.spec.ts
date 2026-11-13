@@ -373,6 +373,32 @@ test('in-memory ZIP asks above the warning size and produces an archive', async 
   expect(zip.includes('big-b.bin')).toBe(true)
 })
 
+test('the mobile selection bar follows the bottom corners when the list scrolls away', async ({ page }, info) => {
+  test.skip(info.project.name !== 'mobile', 'the selection bar only sticks on narrow lists')
+  await open(page)
+  await opener(row(page, 'photos')).click()
+  await check(page, 'notes.txt')
+
+  const card = list(page)
+  const bar = card.locator('.fl-bar')
+  // Leave room to scroll the entire card past the sticky position.
+  await card.evaluate((el) => {
+    const spacer = document.createElement('div')
+    spacer.style.height = '100vh'
+    el.after(spacer)
+    const stickyTop = Number.parseFloat(getComputedStyle(el.querySelector('.fl-bar')!).top)
+    window.scrollBy(0, el.getBoundingClientRect().bottom - stickyTop - 24)
+  })
+  await expect.poll(async () => {
+    const [outer, inner] = await Promise.all([box(card), box(bar)])
+    return Math.abs(outer.y + outer.height - (inner.y + inner.height) - 1)
+  }).toBeLessThanOrEqual(1)
+
+  const radius = await card.evaluate((el) => getComputedStyle(el).borderBottomLeftRadius)
+  await expect(bar).toHaveCSS('border-bottom-left-radius', radius)
+  await expect(bar).toHaveCSS('border-bottom-right-radius', radius)
+})
+
 test('streaming ZIP shows progress, locks the selection and writes the file', async ({ page }, info) => {
   test.skip(!streams(info), 'Safari cannot stream to disk')
   await fakeSaveDialog(page)
