@@ -1,7 +1,7 @@
 import type { Ref } from 'vue'
 import type { ListContext } from './context'
 import type { FNode } from './tree'
-import { computed, nextTick, reactive, ref, watch } from 'vue'
+import { computed, nextTick, reactive, ref } from 'vue'
 import { isWithin } from './utils'
 
 /** The row closing a long folder while its children are cut at `pageSize`. */
@@ -174,8 +174,6 @@ export function useRows(
       updatePin()
     })
   }
-
-  watch(layout, () => void nextTick(schedulePin))
 
   /* ---------------- the theme's fixed bars ---------------- */
 
