@@ -153,6 +153,34 @@ afterEach(() => {
 })
 
 describe('FileList batch ZIP', () => {
+  it('shares selection and adds one ZIP entry for a file mounted twice', async () => {
+    mockOpenList({ '/docs': [file('report.pdf')] })
+    const wrapper = mountList({
+      sources: [{ path: '/docs', expanded: true }, { path: '/docs/report.pdf', title: 'Report alias' }],
+    })
+    await flushPromises()
+
+    const nested = row(wrapper, 'report.pdf')
+    const alias = row(wrapper, 'Report alias.pdf')
+    expect(nested.attributes('data-key')).not.toBe(alias.attributes('data-key'))
+    await check(wrapper, 'Report alias.pdf')
+    expect(nested.get<HTMLInputElement>('input[type="checkbox"]').element.checked).toBe(true)
+    expect(wrapper.get('.fl-selection-count').text()).toBe('已选 1 项')
+    expect(Object.keys(await zipSelected(wrapper))).toEqual(['docs/report.pdf'])
+  })
+
+  it('preserves separate expansion states for duplicate folder mounts on refresh', async () => {
+    mockOpenList({ '/docs': [file('report.pdf')] })
+    const wrapper = mountList({
+      sources: [{ path: '/docs', title: 'Expanded', expanded: true }, { path: '/docs', title: 'Collapsed' }],
+    })
+    await flushPromises()
+    await wrapper.get('.fl-refresh').trigger('click')
+    await flushPromises()
+    expect(row(wrapper, 'Expanded').attributes('aria-expanded')).toBe('true')
+    expect(row(wrapper, 'Collapsed').attributes('aria-expanded')).toBe('false')
+  })
+
   it('keeps same-named files from different folders as separate entries', async () => {
     mockOpenList({
       '/课程/语文': [file('第1章.pdf')],

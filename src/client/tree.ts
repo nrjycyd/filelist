@@ -20,6 +20,8 @@ export function newLock(prompting = false, error: UnlockError = ''): LockState {
 
 export interface FNode extends OLItem {
   path: string
+  /** Row identity within a mount, independent of the shared OpenList path. */
+  key: string
   depth: number
   expanded: boolean
   loaded: boolean
@@ -38,10 +40,11 @@ export interface FNode extends OLItem {
   unresolved?: boolean
 }
 
-export function toNodes(items: OLItem[], parent: FNode | { path: string; depth: number; zipPath: string[] }, password: string): FNode[] {
+export function toNodes(items: OLItem[], parent: Pick<FNode, 'path' | 'key' | 'depth' | 'zipPath'>, password: string): FNode[] {
   return items.map((item) => ({
     ...item,
     path: joinPath(parent.path, item.name),
+    key: joinPath(parent.key, item.name),
     depth: parent.depth + 1,
     expanded: false,
     loaded: false,
@@ -63,21 +66,21 @@ export function descendantFiles(node: FNode): FNode[] {
 }
 
 /** Every loaded folder (expanded or not), e.g. what a deep search has read. */
-export function loadedPathsOf(nodes: FNode[], out = new Set<string>()): Set<string> {
+export function loadedKeysOf(nodes: FNode[], out = new Set<string>()): Set<string> {
   for (const node of nodes) {
     if (node.is_dir && node.loaded) {
-      out.add(node.path)
-      loadedPathsOf(node.children, out)
+      out.add(node.key)
+      loadedKeysOf(node.children, out)
     }
   }
   return out
 }
 
-export function expandedPathsOf(nodes: FNode[], out = new Set<string>()): Set<string> {
+export function expandedKeysOf(nodes: FNode[], out = new Set<string>()): Set<string> {
   for (const node of nodes) {
     if (node.is_dir && node.expanded) {
-      out.add(node.path)
-      expandedPathsOf(node.children, out)
+      out.add(node.key)
+      expandedKeysOf(node.children, out)
     }
   }
   return out
@@ -110,7 +113,7 @@ export function folderStats(roots: FNode[], selected: Set<string>): Map<string, 
       total.selected += part.selected
       total.complete &&= part.complete
     }
-    stats.set(node.path, total)
+    stats.set(node.key, total)
     return total
   }
   roots.forEach(walk)

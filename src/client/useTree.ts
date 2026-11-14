@@ -6,7 +6,7 @@ import type { FileListLabels, FileListSource } from './types'
 import type { SortKey } from './utils'
 import { computed, nextTick, ref, toRaw } from 'vue'
 import { errorText, isPasswordError } from './api'
-import { descendantFiles, expandedPathsOf, loadedPathsOf, newLock, sortTree, sourceName, toNodes } from './tree'
+import { descendantFiles, expandedKeysOf, loadedKeysOf, newLock, sortTree, sourceName, toNodes } from './tree'
 import { extOf, fileKind, isWithin, previewKind } from './utils'
 
 function fileSourceName(title: string, original: string): string {
@@ -89,7 +89,7 @@ export function useTree(
   const sortAsc = ref(true)
 
   /** The folder listed in single-path mode, as the parent of the top rows. */
-  const listedFolder = computed(() => ({ path: props.path, depth: -1, zipPath: [] as string[] }))
+  const listedFolder = computed(() => ({ path: props.path, key: props.path, depth: -1, zipPath: [] as string[] }))
 
   function sortNodes(nodes: FNode[]) {
     sortTree(nodes, sortKey.value, sortAsc.value, props.locale)
@@ -107,7 +107,7 @@ export function useTree(
   function startPrompt(node: FNode, focus: boolean) {
     node.lock ??= newLock()
     node.lock.prompting = true
-    if (focus) focusUnlock(node.path)
+    if (focus) focusUnlock(node.key)
   }
 
   function cancelUnlock(lock: LockState) {
@@ -129,6 +129,7 @@ export function useTree(
     path: string,
     open: (password: string) => Promise<void>,
     failure: keyof FileListLabels,
+    inputKey = path,
   ): Promise<boolean> {
     const password = lock.input
     if (!password || lock.busy) return false
@@ -140,7 +141,7 @@ export function useTree(
     } catch (error) {
       if (isPasswordError(error)) {
         Object.assign(lock, { error: 'wrong', input: '' })
-        focusUnlock(path)
+        focusUnlock(inputKey)
       } else {
         showToast(failureMessage(failure, error))
       }
@@ -170,6 +171,7 @@ export function useTree(
         }
       },
       'folderFailed',
+      node.key,
     )
     if (ok) node.lock = undefined
   }
@@ -275,7 +277,7 @@ export function useTree(
     return result.kind === 'loaded'
   }
 
-  async function loadSourceRoot(source: FileListSource, expanded: boolean): Promise<FNode> {
+  async function loadSourceRoot(source: FileListSource, key: string, expanded: boolean): Promise<FNode> {
     const path = source.path
     const own = source.password ?? ''
     let item: OLItem = { name: sourceName(path), size: 0, is_dir: !looksLikeFile(path), modified: '' }
@@ -295,6 +297,7 @@ export function useTree(
       name,
       originalName: !item.is_dir && source.title ? original : undefined,
       path,
+      key,
       depth: 0,
       expanded: expanded && !lock,
       loaded: false,
@@ -310,16 +313,17 @@ export function useTree(
   }
 
   /**
-   * Build a fresh tree. `expandedPaths` re-opens those folders (refresh keeps
+   * Build a fresh tree. `expandedKeys` re-opens those folders (refresh keeps
    * what was open); without it the configured `expanded` defaults apply.
    */
-  async function buildTree(expandedPaths?: Set<string>, loadedPaths?: Set<string>): Promise<FNode[]> {
+  async function buildTree(expandedKeys?: Set<string>, loadedKeys?: Set<string>): Promise<FNode[]> {
     let nodes: FNode[]
     if (props.sources.length) {
       nodes = await Promise.all(
-        props.sources.map((source) =>
-          loadSourceRoot(source, expandedPaths ? expandedPaths.has(source.path) : (source.expanded ?? props.expanded)),
-        ),
+        props.sources.map((source, index) => {
+          const key = `source:${index}`
+          return loadSourceRoot(source, key, expandedKeys ? expandedKeys.has(key) : (source.expanded ?? props.expanded))
+        }),
       )
     } else {
       const { password, rememberedAt } = passwords.resolve(props.path)
@@ -335,12 +339,12 @@ export function useTree(
     const open = async (list: FNode[]): Promise<void> => {
       await Promise.all(
         list.map(async (node) => {
-          const wanted = !!(node.expanded || expandedPaths?.has(node.path))
-          const keep = !!loadedPaths?.has(node.path)
+          const wanted = !!(node.expanded || expandedKeys?.has(node.key))
+          const keep = !!loadedKeys?.has(node.key)
           if (!node.is_dir || node.lock || !(wanted || keep)) return
           const ok = await limit(() => loadChildren(node, wanted ? 'show' : false, !wanted))
           node.expanded = wanted && ok
-          if (ok && (expandedPaths || loadedPaths)) await open(node.children)
+          if (ok && (expandedKeys || loadedKeys)) await open(node.children)
         }),
       )
     }
@@ -390,7 +394,7 @@ export function useTree(
     refreshing.value = true
     try {
       // In deep search mode, folders it had read are read again, so results stay.
-      const fresh = await buildTree(expandedPathsOf(roots.value), options.deepMode() ? loadedPathsOf(roots.value) : undefined)
+      const fresh = await buildTree(expandedKeysOf(roots.value), options.deepMode() ? loadedKeysOf(roots.value) : undefined)
       if (seq !== refreshSeq) return
       roots.value = fresh
       const existing = new Set(fresh.flatMap(descendantFiles).map((file) => file.path))
@@ -415,7 +419,7 @@ export function useTree(
     if (node.expanded) {
       node.expanded = false
       // Opened again, a long folder starts from its first page.
-      options.resetShown(node.path)
+      options.resetShown(node.key)
       return
     }
     if (await loadChildren(node, 'focus')) node.expanded = true

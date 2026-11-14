@@ -224,8 +224,8 @@ interface FocusSpot {
   el: HTMLElement
   /** The filter box, the toolbar, a row, a “more” row, the pinned folder row, the deep search line, or elsewhere. */
   spot: 'search' | 'bar' | 'row' | 'more' | 'pin' | 'deep' | 'other'
-  /** The row's path; for a “more” row, the path of the row above it; for the pinned row, the folder. */
-  path?: string
+  /** Key of the row, the row above a “more” row, or the pinned folder. */
+  key?: string
 }
 let lastFocus: FocusSpot | null = null
 
@@ -238,9 +238,9 @@ function onFocusIn(event: FocusEvent) {
   const row = el.closest<HTMLElement>('[data-path]')
   const more = el.closest<HTMLElement>('.fl-more')
   const pin = el.closest<HTMLElement>('[data-pin]')
-  if (row) lastFocus = { el, spot: 'row', path: row.dataset.path }
-  else if (more) lastFocus = { el, spot: 'more', path: (more.previousElementSibling as HTMLElement | null)?.dataset.path }
-  else if (pin) lastFocus = { el, spot: 'pin', path: pin.dataset.pin }
+  if (row) lastFocus = { el, spot: 'row', key: row.dataset.key }
+  else if (more) lastFocus = { el, spot: 'more', key: (more.previousElementSibling as HTMLElement | null)?.dataset.key }
+  else if (pin) lastFocus = { el, spot: 'pin', key: pin.dataset.pin }
   else if (el.closest('.fl-deep')) lastFocus = { el, spot: 'deep' }
   else if (el.closest('.fl-search')) lastFocus = { el, spot: 'search' }
   else if (el.closest('.fl-bar')) lastFocus = { el, spot: 'bar' }
@@ -263,15 +263,15 @@ function restoreFocus() {
   lastFocus = null
   if (active && active !== document.body && active !== document.documentElement) return
   const find = (selector: string) => root.querySelector<HTMLElement>(selector)
-  const rowAt = (path?: string) =>
-    path === undefined ? null : root.querySelector<HTMLElement>(`[data-path="${CSS.escape(path)}"]`)
+  const rowAt = (key?: string) =>
+    key === undefined ? null : root.querySelector<HTMLElement>(`[data-key="${CSS.escape(key)}"]`)
   // Rows take focus themselves (one Tab stop for the list, see useKeyboard.ts).
   const inRow = (row: Element | null | undefined) =>
     row instanceof HTMLElement && row.dataset.key !== undefined ? row : null
   let target: HTMLElement | null = null
-  if (last.spot === 'row' || last.spot === 'pin') target = inRow(rowAt(last.path))
+  if (last.spot === 'row' || last.spot === 'pin') target = inRow(rowAt(last.key))
   // “Show all”: the first row that just appeared.
-  else if (last.spot === 'more') target = inRow(rowAt(last.path)?.nextElementSibling)
+  else if (last.spot === 'more') target = inRow(rowAt(last.key)?.nextElementSibling)
   else if (last.spot === 'deep') target = find('.fl-deep button') ?? find('.fl-search input')
   else if (last.spot === 'search') target = find('.fl-search input')
   else if (last.spot === 'bar') target = find('.fl-zip-cancel') ?? find('.fl-bar .fl-btn-primary')
@@ -566,7 +566,7 @@ onBeforeUnmount(() => {
           v-model="node.lock.input"
           type="password"
           autocomplete="off"
-          :data-unlock="node.path"
+          :data-unlock="node.key"
           :placeholder="node.lock.error ? unlockErrorText(node.lock.error) : t('passwordPlaceholder')"
           :aria-label="t('passwordFor', { name: node.name })"
           :aria-invalid="!!node.lock.error"

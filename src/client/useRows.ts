@@ -7,7 +7,7 @@ import { isWithin } from './utils'
 /** The row closing a long folder while its children are cut at `pageSize`. */
 interface MoreRow {
   more: true
-  /** Folder path (the listed folder's path for top-level rows). */
+  /** Folder key, or the top-level pagination key. */
   key: string
   depth: number
   remaining: number
@@ -25,7 +25,7 @@ interface LongFolder {
   depth: number
   shown: number
   total: number
-  /** Path of the last row in the folder, so we know when we are past it. */
+  /** Key of the last row in the folder, so we know when we are past it. */
   last: string
 }
 
@@ -102,14 +102,14 @@ export function useRows(
       const limit = query ? list.length : Math.min(list.length, limitOf(key))
       for (const node of list.slice(0, limit)) {
         out.push(node)
-        if (node.is_dir && (node.expanded || query) && node.children.length) walk(node.children, node.path, node.depth + 1)
+        if (node.is_dir && (node.expanded || query) && node.children.length) walk(node.children, node.key, node.depth + 1)
       }
       if (limit < list.length) out.push({ more: true, key, depth, remaining: list.length - limit })
       let end = out.length - 1
       while (end >= 0 && isMore(out[end])) end -= 1
       const last = out[end]
       if (!query && size > 0 && limit > size && last && !isMore(last)) {
-        long.push({ key, depth: depth - 1, shown: limit, total: list.length, last: last.path })
+        long.push({ key, depth: depth - 1, shown: limit, total: list.length, last: last.key })
       }
     }
     walk(roots.value, props.sources.length ? '' : props.path, 0)
@@ -126,8 +126,8 @@ export function useRows(
   const pinOffset = ref(0)
   const toolbarOverFooter = ref(false)
 
-  function rowElement(path: string): HTMLElement | undefined {
-    return [...(rootEl.value?.querySelectorAll<HTMLElement>('[data-path]') ?? [])].find((el) => el.dataset.path === path)
+  function rowElement(key: string): HTMLElement | null | undefined {
+    return rootEl.value?.querySelector<HTMLElement>(`[data-key="${CSS.escape(key)}"]`)
   }
 
   /** The pinned folder's name: its own, or for a single path's top level, the list's title. */
@@ -137,8 +137,8 @@ export function useRows(
     if (folder.depth < 0) return props.title || folder.key.split('/').filter(Boolean).pop() || '/'
     const find = (nodes: FNode[]): FNode | undefined => {
       for (const node of nodes) {
-        if (node.path === folder.key) return node
-        const inner = isWithin(folder.key, node.path) ? find(node.children) : undefined
+        if (node.key === folder.key) return node
+        const inner = isWithin(folder.key, node.key) ? find(node.children) : undefined
         if (inner) return inner
       }
     }
