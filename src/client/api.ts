@@ -6,7 +6,7 @@ export interface OLItem extends OpenListEntry {
   raw_url?: string
 }
 
-export interface SiteSettings {
+interface SiteSettings {
   title: string
   /** OpenList's public `iframe_previews` setting (JSON text). */
   iframePreviews: string
@@ -57,7 +57,7 @@ export function isNetworkError(error: unknown): boolean {
 }
 
 /** An API call that has not answered after this long fails (the list offers “retry”). */
-export const REQUEST_TIMEOUT = 30_000
+const REQUEST_TIMEOUT = 30_000
 /**
  * Many storage drivers hand out direct links that expire; reuse a file's link
  * for this long, then ask OpenList again.

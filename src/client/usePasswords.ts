@@ -7,7 +7,7 @@ import {
 } from './passwords'
 import { isWithin } from './utils'
 
-export interface ResolvedPassword {
+interface ResolvedPassword {
   password: string
   /** Set when the password came from this tab's store, so a failure can drop it. */
   rememberedAt?: string

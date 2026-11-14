@@ -4,7 +4,7 @@
 export type Rgb = [number, number, number]
 
 /** WCAG AA for normal-size text. */
-export const MIN_CONTRAST = 4.5
+const MIN_CONTRAST = 4.5
 
 /** Relative luminance (WCAG 2). */
 export function luminance([r, g, b]: Rgb): number {
@@ -36,7 +36,7 @@ export function readableBackground(background: Rgb, text: Rgb, min = MIN_CONTRAS
 }
 
 /** Any CSS colour the browser understands (rgb, hex, oklch…) as sRGB. */
-export function toRgb(color: string): Rgb | null {
+function toRgb(color: string): Rgb | null {
   if (typeof document === 'undefined') return null
   const canvas = document.createElement('canvas')
   canvas.width = canvas.height = 1
