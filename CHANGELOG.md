@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.13.8 (2026-11-14)
+
+### Fixes
+
+- Apply the narrow layout at fractional container widths below 560px.
+- Give overlapping mounts independent row identities while counting and archiving each selected file once.
+
+### Maintenance
+
+- Remove unused internal exports and return fields, correct stale comments, and consolidate sticky layout measurement scheduling.
+
 ## 0.13.7 (2026-11-13)
 
 ### Fixes
