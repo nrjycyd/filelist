@@ -17,7 +17,7 @@ export function useSelection(options: {
   const noStats: FolderStats = { files: 0, bytes: 0, selected: 0, complete: false }
 
   function statsOf(node: FNode): FolderStats {
-    return stats.value.get(node.path) ?? noStats
+    return stats.value.get(node.key) ?? noStats
   }
 
   function isChecked(node: FNode): boolean {
@@ -80,7 +80,14 @@ export function useSelection(options: {
     selected.value = next
   }
 
-  const allFiles = computed(() => roots.value.flatMap(descendantFiles))
+  const allFiles = computed(() => {
+    const byPath = new Map<string, FNode>()
+    for (const file of roots.value.flatMap(descendantFiles)) {
+      const first = byPath.get(file.path)
+      if (!first || (first.lock && !file.lock)) byPath.set(file.path, file)
+    }
+    return [...byPath.values()]
+  })
   const selectedFiles = computed(() => allFiles.value.filter((file) => selected.value.has(file.path)))
   const allChecked = computed(() => allFiles.value.length > 0 && selectedFiles.value.length === allFiles.value.length)
   const someChecked = computed(() => !allChecked.value && selectedFiles.value.length > 0)

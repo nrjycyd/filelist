@@ -6,7 +6,7 @@ import { isMore } from './useRows'
 
 /** A row's key: its path, or `more:<folder>` for a folder's “more” row. */
 export function rowKey(row: Row): string {
-  return isMore(row) ? `more:${row.key}` : row.path
+  return isMore(row) ? `more:${row.key}` : row.key
 }
 
 const TYPEAHEAD_MS = 600
