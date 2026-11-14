@@ -844,6 +844,25 @@ test('“Download ZIP” follows themes that switch on <body> or only by the sys
   expect(await primaryContrast(page)).toBeGreaterThanOrEqual(4.5)
 })
 
+test('fractional container widths below 560px use the narrow layout', async ({ page }, info) => {
+  test.skip(info.project.name === 'mobile', 'the test needs room to set both container widths')
+  await open(page)
+  const card = list(page)
+  const menu = card.locator('.fl-sort-menu')
+  const dateHeader = card.locator('.fl-head .fl-cell-date')
+
+  await card.evaluate((el) => {
+    el.style.boxSizing = 'content-box'
+    el.style.width = '559.5px'
+  })
+  await expect(menu).toBeVisible()
+  await expect(dateHeader).toBeHidden()
+
+  await card.evaluate((el) => { el.style.width = '560px' })
+  await expect(menu).toBeHidden()
+  await expect(dateHeader).toBeVisible()
+})
+
 test('narrow lists sort from the sort menu', async ({ page }, info) => {
   await open(page)
   const trigger = list(page).locator('.fl-sort-trigger')

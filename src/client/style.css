@@ -1249,7 +1249,7 @@
 
 /* ---------------- narrow containers ---------------- */
 
-@container fl (max-width: 559px) {
+@container fl (width < 560px) {
   /* Phones have no arrow keys; the key hint would only crowd the footer. */
   .fl-keys {
     display: none;
