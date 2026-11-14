@@ -19,7 +19,7 @@ export default defineConfig({
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } } },
-    // Touch + narrow container: 56px rows, phone ZIP limits, bottom-sheet dialogs.
+    // Touch + narrow container: 60px rows, phone ZIP limits, bottom-sheet dialogs.
     { name: 'mobile', use: { ...devices['Pixel 7'] } },
     // Safari's engine: no file streaming, so ZIPs are built in memory.
     { name: 'webkit', use: { ...devices['Desktop Safari'], viewport: { width: 1280, height: 800 } } },

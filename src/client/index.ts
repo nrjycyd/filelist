@@ -26,7 +26,7 @@ export type { FileListLabels, FileListLocale, FileListProps, FileListSource } fr
  * ```
  *
  * Takes VitePress' `enhanceApp` context, or anything with the Vue `app`
- * (VuePress uses `fileListPlugin()` from `vitepress-plugin-filelist/vuepress`).
+ * (VuePress uses `fileListPlugin()` from `vuepress-plugin-filelist`).
  */
 export function enhanceAppWithFileList({ app }: { app: App }): void {
   if (!app._context.components.FileList)
