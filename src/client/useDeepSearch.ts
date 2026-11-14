@@ -196,7 +196,6 @@ export function useDeepSearch(
 
   return {
     keyword,
-    deep,
     deepMode,
     deepRow,
     deepSearch,
@@ -205,7 +204,6 @@ export function useDeepSearch(
     pauseDeepSearch,
     clearFilter,
     folderCounts,
-    lockedFolders,
     lockedInSearch,
     deepSummary,
     nameParts,
