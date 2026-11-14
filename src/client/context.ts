@@ -4,7 +4,7 @@ import type { FileListLabels, FileListProps } from './types'
 import type { usePasswords } from './usePasswords'
 
 /** Props after `withDefaults`: the ones with a default are always set. */
-export type ResolvedProps = Readonly<
+type ResolvedProps = Readonly<
   FileListProps &
   Required<
     Pick<

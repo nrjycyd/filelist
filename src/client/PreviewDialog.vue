@@ -17,7 +17,7 @@ import { formatLabel } from './locales'
 import { renderMarkdown } from './markdown'
 import { extOf, fileKind, formatDate, formatSize, previewKind } from './utils'
 
-export interface PreviewFile {
+interface PreviewFile {
   name: string
   originalName?: string
   size: number

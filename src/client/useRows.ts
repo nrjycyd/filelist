@@ -5,7 +5,7 @@ import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { isWithin } from './utils'
 
 /** The row closing a long folder while its children are cut at `pageSize`. */
-export interface MoreRow {
+interface MoreRow {
   more: true
   /** Folder path (the listed folder's path for top-level rows). */
   key: string
@@ -19,7 +19,7 @@ export type Row = FNode | MoreRow
  * A folder showing more than its first page: while the reader scrolls through
  * it, its row is pinned at the top with “show less”.
  */
-export interface LongFolder {
+interface LongFolder {
   key: string
   /** Depth of the folder's own row (-1 for the top level of a single path). */
   depth: number

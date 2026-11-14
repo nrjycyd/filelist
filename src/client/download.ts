@@ -37,7 +37,7 @@ export function zipFileName(title: string): string {
   return `${title.replace(/[\\/:*?"<>|]/g, '_')}.zip`
 }
 
-export interface ZipFile {
+interface ZipFile {
   name: string
   /** Entry path segments inside the ZIP. */
   zipPath: string[]
@@ -52,7 +52,7 @@ export interface ZipProgress {
   totalFiles: number
 }
 
-export interface ZipOptions<T extends ZipFile> {
+interface ZipOptions<T extends ZipFile> {
   urlOf: (file: T) => Promise<string>
   signal: AbortSignal
   onProgress: (progress: ZipProgress) => void

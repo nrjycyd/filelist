@@ -17,7 +17,7 @@ export function publicSecrets(props: Pick<FileListProps, 'token' | 'password' | 
  * dependencies too (`DEV` is true under `vitepress dev`, false in a build);
  * without a bundler there is no `env` and this is not a development build.
  */
-export function isDevBuild(): boolean {
+function isDevBuild(): boolean {
   return (import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV === true
 }
 
