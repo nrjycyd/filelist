@@ -3,7 +3,10 @@
 # merging it redeploys the docs site with the new version.
 version: 2
 updates:
-  # Docs site (demo/): VitePress, vitepress-tuck and Vue, checked daily.
+  # Docs site (demo/): VitePress, vitepress-tuck, Vue and the tuck plugins,
+  # checked daily. `vitepress-plugin-filelist` is left out on purpose: the demo
+  # takes it from this repository (`file:..`), so it has no version to compare,
+  # and Dependabot fails the whole job when it tries to update it.
   - package-ecosystem: npm
     directory: /demo
     schedule:
@@ -12,10 +15,18 @@ updates:
       - dependency-name: vitepress
       - dependency-name: vitepress-tuck
       - dependency-name: vue
-      - dependency-name: vitepress-plugin-*
+      - dependency-name: vitepress-plugin-field
+      - dependency-name: vitepress-plugin-npm-to
+      - dependency-name: vitepress-plugin-steps
     groups:
       vitepress:
-        patterns: [vitepress, vitepress-tuck, vue, vitepress-plugin-*]
+        patterns:
+          - vitepress
+          - vitepress-tuck
+          - vue
+          - vitepress-plugin-field
+          - vitepress-plugin-npm-to
+          - vitepress-plugin-steps
     commit-message:
       prefix: "chore(demo)"
     labels: [dependencies]
