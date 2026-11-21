@@ -1,0 +1,370 @@
+/* ---------------- states & footer ---------------- */
+
+.fl-status {
+  padding: 26px 12px;
+  color: var(--fl-c-text-2);
+  text-align: center;
+  border-bottom: 1px solid var(--fl-c-divider);
+}
+
+.fl-error {
+  color: var(--fl-c-danger);
+}
+
+.fl-hint {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--fl-c-text-2);
+}
+
+.fl-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  align-items: center;
+}
+
+.fl-keys kbd {
+  display: inline-block;
+  min-width: 10px;
+  margin-right: 3px;
+  padding: 0 5px;
+  font-family: var(--vp-font-family-mono, ui-monospace, monospace);
+  font-size: 11px;
+  line-height: 17px;
+  color: var(--fl-c-text-1);
+  text-align: center;
+  background: var(--fl-c-bg);
+  border: 1px solid var(--fl-c-divider);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+}
+
+.fl-pin-cell {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.fl-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  justify-content: space-between;
+  padding: 11px 24px;
+  margin-top: -1px; /* over the last row's lighter line */
+  font-size: 12px;
+  color: var(--fl-c-text-2);
+  background: var(--fl-c-bg-soft);
+  border-top: 1px solid var(--fl-c-divider);
+  border-radius: 0 0 var(--fl-radius) var(--fl-radius);
+}
+
+.fl-toast {
+  /* the viewport, not the card: a long list would push the card's bottom off screen */
+  position: fixed;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  left: 50%;
+  z-index: 100;
+  box-sizing: border-box;
+  max-width: min(560px, calc(100vw - 32px));
+  padding: 7px 14px;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--fl-c-bg);
+  text-align: center;
+  background: var(--fl-c-text-1);
+  border-radius: 14px;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 18%);
+  transform: translateX(-50%);
+}
+
+/* ---------------- batch ZIP progress ---------------- */
+
+.fl-zip-bar {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  height: 3px;
+  background: var(--fl-c-brand-1);
+  transition: width 0.2s ease;
+}
+
+.fl-zip-cancel {
+  margin-left: auto;
+  color: var(--fl-c-brand-1);
+}
+
+/* ---------------- long folders ---------------- */
+
+.fl-more {
+  padding-right: 16px;
+  color: var(--fl-c-text-2);
+}
+
+.fl-more-cell {
+  grid-column: 2 / -1;
+  /* the same gaps as a file's name cell, so the tag and count line up with its type and name */
+  gap: 8px;
+  align-self: stretch;
+}
+
+/* “⋯” in the file-type column: the size of .fl-type */
+.fl-more-tag {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--fl-c-text-3);
+  letter-spacing: 1px;
+  background: var(--fl-c-default-soft);
+  border-radius: 4px;
+}
+
+.fl-more-count {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* the short forms are for narrow lists */
+.fl-more-short {
+  display: none;
+}
+
+.fl-more-actions {
+  display: flex;
+  flex: none;
+  gap: 2px;
+  align-items: center;
+  margin-left: auto;
+}
+
+.fl-more-link {
+  height: 28px;
+  padding: 0 8px;
+  font-size: 13px;
+  color: var(--fl-c-brand-1);
+  white-space: nowrap;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+}
+
+.fl-more-all {
+  font-weight: 600;
+}
+
+/* hover only where there is a pointer, so a tap does not leave a mark behind */
+@media (hover: hover) {
+  .fl-more-link:hover {
+    background: var(--fl-c-default-soft);
+  }
+}
+
+/* the folder row pinned at the top while scrolling through a long folder */
+.fl-pin-anchor {
+  position: sticky;
+  top: calc(var(--fl-sticky) + var(--fl-pin-offset, 0px));
+  z-index: 5;
+  height: 0;
+}
+
+.fl-pin {
+  position: absolute;
+  inset: 0 0 auto;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: var(--fl-row-h);
+  padding: 0 24px 0 12px;
+  background: var(--fl-c-bg);
+  border-bottom: 1px solid var(--fl-c-divider);
+  box-shadow: 0 6px 12px -8px rgb(0 0 0 / 25%);
+}
+
+.fl-pin-arrow {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  color: var(--fl-c-text-2);
+  transform: rotate(90deg);
+}
+
+.fl-pin-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fl-pin-count {
+  flex: none;
+  font-size: 12px;
+  color: var(--fl-c-text-2);
+  white-space: nowrap;
+}
+
+.fl-pin-less {
+  display: inline-flex;
+  margin-right: 0; /* arrow over the row buttons' icons */
+  gap: 4px;
+  align-items: center;
+  height: 26px;
+  padding: 0 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fl-c-brand-1);
+  white-space: nowrap;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  border-radius: 6px;
+}
+
+/* ---------------- filter and deep search ---------------- */
+
+.fl-hit {
+  padding: 0 1px;
+  color: inherit;
+  background: var(--fl-hit-bg, rgb(250 204 21 / 32%));
+  border-radius: 3px;
+}
+
+.fl-search-clear {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  color: var(--fl-c-text-2);
+  cursor: pointer;
+  background: var(--fl-c-default-soft);
+  border: 0;
+  border-radius: 50%;
+}
+
+.fl-search-clear:hover {
+  color: var(--fl-c-text-1);
+}
+
+/* the status line closing a filtered list: centred, wraps, never overflows */
+.fl-deep {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: var(--fl-row-h);
+  padding: 8px 16px;
+  overflow: hidden;
+  text-align: center;
+  background: var(--fl-c-bg-soft);
+  border-bottom: 1px solid var(--fl-c-divider);
+}
+
+.fl-deep-text {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--fl-c-text-2);
+}
+
+.fl-deep-link {
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--fl-c-brand-1);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  background: none;
+  border: 0;
+}
+
+.fl-deep-link:hover {
+  color: var(--fl-c-brand-2);
+}
+
+.fl-locked-note {
+  font-size: 12px;
+  color: var(--fl-lock-fg);
+  white-space: nowrap;
+}
+
+.fl-locked-hint {
+  margin-left: 8px;
+}
+
+.fl-deep-bar {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 30%;
+  height: 2px;
+  background: var(--fl-c-brand-1);
+  animation: fl-progress 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fl-deep-bar {
+    width: 100%;
+    animation: none;
+    opacity: 0.6;
+  }
+}
+
+/* ---------------- confirm dialog ---------------- */
+
+.fl-confirm {
+  position: fixed;
+  inset: 0;
+  box-sizing: border-box;
+  width: min(440px, calc(100vw - 32px));
+  max-width: none;
+  height: fit-content;
+  padding: 20px 22px;
+  margin: auto;
+  color: var(--fl-c-text-1);
+  background: var(--fl-c-bg);
+  border: 1px solid var(--fl-c-divider);
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgb(0 0 0 / 28%);
+}
+
+.fl-confirm::backdrop {
+  background: rgb(0 0 0 / 45%);
+}
+
+.fl-confirm-title {
+  margin: 0 0 10px;
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 600;
+}
+
+.fl-confirm-text {
+  margin: 0 0 10px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--fl-c-text-2);
+}
+
+.fl-confirm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}

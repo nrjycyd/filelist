@@ -5,6 +5,7 @@
  * what to sort by, keeping the order; a two-part switch picks ascending or
  * descending.
  */
+import type { Translate } from './context'
 import type { IconName } from './icons'
 import type { FileListLabels } from './types'
 import type { SortKey } from './utils'
@@ -16,7 +17,7 @@ const props = defineProps<{
   sortAsc: boolean
   /** Prefix for element ids. */
   uid: string
-  t: (key: keyof FileListLabels, values?: Record<string, string | number>) => string
+  t: Translate
 }>()
 const emit = defineEmits<{ sort: [key: SortKey, ascending: boolean] }>()
 

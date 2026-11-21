@@ -11,25 +11,25 @@
 // warning), then started with `vitepress dev` (the public-token warning shows).
 // Needs network access for npm and a Playwright Chromium.
 import { execFileSync, spawn } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import process from 'node:process'
 import { chromium } from '@playwright/test'
+import { check, npm, npx, pnpm, run, smokePreviewAndZip, write } from './compat-shared.mjs'
 
 const root = resolve(import.meta.dirname, '..')
 const versions = (process.env.COMPAT_VITEPRESS || '1.6.4,2.0.0-alpha.21').split(',').map(v => v.trim()).filter(Boolean)
 const work = mkdtempSync(join(tmpdir(), 'filelist-compat-'))
-const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm'
-const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx'
 
-function run(cmd, args, cwd) {
-  execFileSync(cmd, args, { cwd, stdio: ['ignore', 'inherit', 'inherit'], shell: process.platform === 'win32' })
-}
-
-function write(file, text) {
-  mkdirSync(resolve(file, '..'), { recursive: true })
-  writeFileSync(file, text)
+function stopServer(child) {
+  try {
+    if (process.platform === 'win32')
+      execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' })
+    else
+      process.kill(-child.pid)
+  }
+  catch {}
 }
 
 async function serve(cwd, args, port) {
@@ -52,21 +52,6 @@ async function serve(cwd, args, port) {
   throw new Error(`vitepress ${args[0]} did not start on ${url}`)
 }
 
-function stopServer(child) {
-  try {
-    if (process.platform === 'win32')
-      execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' })
-    else
-      process.kill(-child.pid)
-  }
-  catch {}
-}
-
-function check(ok, message) {
-  if (!ok)
-    throw new Error(message)
-}
-
 /** Messages the plugin logged on a page. */
 function pluginWarnings(page) {
   const seen = []
@@ -86,27 +71,7 @@ async function smoke(browser, url) {
   await page.addInitScript(() => delete window.showSaveFilePicker)
   await page.goto(url)
   const list = page.locator('.fl-root').first()
-  const row = name => list.locator('.fl-row').filter({ has: page.locator('.fl-name', { hasText: new RegExp(`^${name}$`) }) })
-
-  await row('示例文件').locator('.fl-arrow').first().click()
-  await row('使用说明.md').waitFor()
-
-  // wide lists show a file's buttons in place of its date while the row is pointed at
-  await row('使用说明.md').hover()
-  await row('使用说明.md').locator('.fl-preview-btn').click()
-  const dialog = page.locator('dialog.fl-preview')
-  await dialog.locator('.fl-preview-view-btn', { hasText: '渲染' }).click()
-  await dialog.locator('.fl-md.vp-doc h1').waitFor()
-  await page.keyboard.press('Escape')
-
-  await row('示例文件').locator('.fl-cell-check input').check()
-  const [download] = await Promise.all([
-    page.waitForEvent('download'),
-    list.locator('.fl-bar .fl-btn-primary').click(),
-  ])
-  const chunks = []
-  for await (const chunk of await download.createReadStream()) chunks.push(chunk)
-  check(Buffer.concat(chunks).subarray(0, 2).toString() === 'PK', 'the ZIP is not a ZIP file')
+  await smokePreviewAndZip(page, list, '.fl-md.vp-doc h1')
 
   // The production build stays silent, even on a page that sets a token.
   await page.goto(`${url}secret`)
@@ -131,7 +96,7 @@ console.log(`Packing the plugin (${work})`)
 // COMPAT_SKIP_BUILD=1 packs the existing dist/: CI builds with the dev Node,
 // then runs the sites on an older one.
 if (!process.env.COMPAT_SKIP_BUILD)
-  run('pnpm', ['run', 'build'], root)
+  run(pnpm, ['run', 'build'], root)
 run(npm, ['pack', '--silent', '--pack-destination', work], root)
 const tarball = join(work, readdirSync(work).find(f => f.endsWith('.tgz')))
 

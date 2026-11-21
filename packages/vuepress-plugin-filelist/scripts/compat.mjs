@@ -12,20 +12,17 @@
 // Without COMPAT_VUEPRESS each site gets the VuePress version its theme asks
 // for (themes pin an exact release candidate). Needs network access for npm
 // and a Playwright Chromium.
-import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { extname, join, resolve } from 'node:path'
 import process from 'node:process'
 import { chromium } from '@playwright/test'
+import { check, npm, npx, pnpm, rowOf, run, smokePreviewAndZip, write } from '../../../scripts/compat-shared.mjs'
 
 const pkgDir = resolve(import.meta.dirname, '..')
 const root = resolve(pkgDir, '../..')
 const work = mkdtempSync(join(tmpdir(), 'filelist-vuepress-'))
-const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm'
-const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx'
-const pnpm = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm'
 
 const THEMES = {
   default: {
@@ -62,25 +59,6 @@ for (const pin of (process.env.COMPAT_THEME_VERSIONS || '').split(',').filter(Bo
 }
 const themes = (process.env.COMPAT_THEMES || Object.keys(THEMES).join(',')).split(',').map(t => t.trim()).filter(Boolean)
 
-function run(cmd, args, cwd, quiet = false) {
-  return execFileSync(cmd, args, {
-    cwd,
-    encoding: 'utf8',
-    stdio: ['ignore', quiet ? 'pipe' : 'inherit', 'inherit'],
-    shell: process.platform === 'win32',
-  })
-}
-
-function write(file, text) {
-  mkdirSync(resolve(file, '..'), { recursive: true })
-  writeFileSync(file, text)
-}
-
-function check(ok, message) {
-  if (!ok)
-    throw new Error(message)
-}
-
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.json': 'application/json', '.woff2': 'font/woff2' }
 
 /** VuePress has no preview command: serve the built site. */
@@ -107,7 +85,7 @@ async function smoke(browser, url, theme) {
     await page.addInitScript(() => delete window.showSaveFilePicker)
     await page.goto(`${url}demo/`)
     const list = page.locator('.fl-root').first()
-    const row = name => list.locator('.fl-row').filter({ has: page.locator('.fl-name', { hasText: new RegExp(`^${name}$`) }) })
+    const row = name => rowOf(page, list, name)
     await row('示例文件').waitFor()
 
     // Colours come from the theme: its brand colour, light text on dark.
@@ -147,25 +125,8 @@ async function smoke(browser, url, theme) {
     console.log(`  ${colorScheme}: “Download ZIP” contrast ${ratio.toFixed(2)}`)
     await list.locator('.fl-clear').click()
 
-    if (colorScheme === 'light') {
-      await row('使用说明.md').waitFor()
-      // wide lists show a file's buttons in place of its date while the row is pointed at
-      await row('使用说明.md').hover()
-      await row('使用说明.md').locator('.fl-preview-btn').click()
-      const dialog = page.locator('dialog.fl-preview')
-      await dialog.locator('.fl-preview-view-btn', { hasText: '渲染' }).click()
-      await dialog.locator('.fl-md h1').waitFor()
-      await page.keyboard.press('Escape')
-
-      await row('示例文件').locator('.fl-cell-check input').check()
-      const [download] = await Promise.all([
-        page.waitForEvent('download'),
-        list.locator('.fl-bar .fl-btn-primary').click(),
-      ])
-      const chunks = []
-      for await (const chunk of await download.createReadStream()) chunks.push(chunk)
-      check(Buffer.concat(chunks).subarray(0, 2).toString() === 'PK', 'the ZIP is not a ZIP file')
-    }
+    if (colorScheme === 'light')
+      await smokePreviewAndZip(page, list, '.fl-md h1')
     check(errors.length === 0, `page errors: ${errors.join(' | ')}`)
     await page.close()
   }

@@ -53,6 +53,12 @@ export function useRows(
 
   /** Rows shown per folder, beyond the first page; kept across refreshes. */
   const shown = reactive(new Map<string, number>())
+  const pinned = ref<LongFolder | null>(null)
+  const stickyTop = ref(0)
+
+  function rowElement(key: string): HTMLElement | null | undefined {
+    return rootEl.value?.querySelector<HTMLElement>(`[data-key="${CSS.escape(key)}"]`)
+  }
 
   function pageSizeOf(): number {
     return Math.max(0, Math.floor(props.pageSize ?? 15))
@@ -121,14 +127,9 @@ export function useRows(
 
   /* ---------------- pinned folder row ---------------- */
 
-  const pinned = ref<LongFolder | null>(null)
   /** Height of the sticky selection bar above the pinned row (narrow lists only). */
   const pinOffset = ref(0)
   const toolbarOverFooter = ref(false)
-
-  function rowElement(key: string): HTMLElement | null | undefined {
-    return rootEl.value?.querySelector<HTMLElement>(`[data-key="${CSS.escape(key)}"]`)
-  }
 
   /** The pinned folder's name: its own, or for a single path's top level, the list's title. */
   const pinnedName = computed(() => {
@@ -184,7 +185,6 @@ export function useRows(
    * so measure them.
    * `--fl-sticky-top` on the component overrides the measured value.
    */
-  const stickyTop = ref(0)
 
   function measureStickyTop() {
     let top = 0

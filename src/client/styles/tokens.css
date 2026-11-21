@@ -1,0 +1,104 @@
+/*
+ * vitepress-plugin-filelist
+ *
+ * Built on the site theme's colour variables, so light / dark follow the site:
+ * VitePress names first (also used by vuepress-theme-plume), then the VuePress
+ * default theme / vuepress-theme-hope names, then plain fallbacks.
+ * Wide containers: compact table. Narrow containers (< 560px, container
+ * query, not viewport): two-line rows, 44px touch targets and a selection
+ * bar that sticks below the theme's fixed bars.
+ *
+ * Overridable:
+ *   --fl-sticky-top   offset of the sticky selection bar in narrow layout
+ *                     (measured from .VPNav / .VPLocalNav when unset)
+ */
+.fl-root {
+  --fl-c-brand-1: var(--vp-c-brand-1, var(--vp-c-accent, #3451b2));
+  --fl-c-brand-2: var(--vp-c-brand-2, var(--vp-c-accent-hover, var(--fl-c-brand-1)));
+  --fl-c-brand-3: var(--vp-c-brand-3, var(--vp-c-accent-bg, var(--fl-c-brand-1)));
+  --fl-c-brand-soft: var(--vp-c-brand-soft, var(--vp-c-accent-soft, rgb(100 108 255 / 14%)));
+  --fl-c-text-1: var(--vp-c-text-1, var(--vp-c-text, #3c3c43));
+  --fl-c-text-2: var(--vp-c-text-2, var(--vp-c-text-mute, rgb(60 60 67 / 78%)));
+  --fl-c-text-3: var(--vp-c-text-3, var(--vp-c-text-subtle, rgb(60 60 67 / 56%)));
+  --fl-c-bg: var(--vp-c-bg, #fff);
+  --fl-c-bg-soft: var(--vp-c-bg-soft, var(--vp-c-bg-alt, #f6f6f7));
+  --fl-c-divider: var(--vp-c-divider, #e2e2e3);
+  --fl-c-default-soft: var(--vp-c-default-soft, rgb(142 150 170 / 14%));
+  --fl-c-danger: var(--vp-c-danger-1, #d33);
+
+  --fl-indent: 24px;
+  --fl-row-h: 44px;
+  --fl-cols: 40px minmax(0, 1fr) 88px 104px 76px;
+  --fl-radius: 12px;
+  --fl-sticky: var(--fl-sticky-top, var(--fl-sticky-top-auto, 0px));
+  --fl-folder-fill: #f5c451;
+  --fl-folder-stroke: #d9a22b;
+  --fl-lock-bg: #fbf7ec;
+  --fl-lock-fg: #8a5a08;
+  --fl-error-bg: #fdf0ef;
+  --fl-error-fg: #b42318;
+
+  --fl-k-doc-bg: #e8f0fc;
+  --fl-k-doc-fg: #1f5fbf;
+  --fl-k-sheet-bg: #e6f4ea;
+  --fl-k-sheet-fg: #17773a;
+  --fl-k-slide-bg: #fdf0e3;
+  --fl-k-slide-fg: #a8490a;
+  --fl-k-pdf-bg: #fce9ea;
+  --fl-k-pdf-fg: #b8232a;
+  --fl-k-image-bg: #f3eafd;
+  --fl-k-image-fg: #7139b0;
+  --fl-k-media-bg: #e3f4f7;
+  --fl-k-media-fg: #0c6672;
+  --fl-k-archive-bg: #f3eee2;
+  --fl-k-archive-fg: #6b5420;
+  --fl-k-code-bg: #ececf1;
+  --fl-k-code-fg: #45454f;
+
+  container: fl / inline-size;
+  position: relative;
+  margin: 16px 0;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--fl-c-text-1);
+  background: var(--fl-c-bg);
+  border: 1px solid var(--fl-c-divider);
+  border-radius: var(--fl-radius);
+}
+
+/* VitePress and plume set `.dark`; the VuePress default theme and hope set `data-theme`. */
+:is(.dark, [data-theme='dark']) .fl-root {
+  --fl-folder-fill: #d8a634;
+  --fl-folder-stroke: #b4851c;
+  --fl-lock-bg: rgb(216 166 52 / 12%);
+  --fl-lock-fg: #e3b45a;
+  --fl-error-bg: rgb(240 84 96 / 12%);
+  --fl-error-fg: #ff9aa0;
+
+  --fl-k-doc-bg: rgb(88 142 240 / 18%);
+  --fl-k-doc-fg: #9cc0ff;
+  --fl-k-sheet-bg: rgb(64 182 104 / 18%);
+  --fl-k-sheet-fg: #86dba1;
+  --fl-k-slide-bg: rgb(240 146 64 / 18%);
+  --fl-k-slide-fg: #f6b985;
+  --fl-k-pdf-bg: rgb(240 84 96 / 18%);
+  --fl-k-pdf-fg: #ffa3a9;
+  --fl-k-image-bg: rgb(172 112 240 / 20%);
+  --fl-k-image-fg: #d4b0ff;
+  --fl-k-media-bg: rgb(44 182 204 / 18%);
+  --fl-k-media-fg: #86dce8;
+  --fl-k-archive-bg: rgb(204 172 100 / 18%);
+  --fl-k-archive-fg: #e3cd96;
+  --fl-k-code-bg: rgb(152 152 172 / 20%);
+  --fl-k-code-fg: #c9c9d4;
+}
+
+.fl-root button {
+  font: inherit;
+}
+
+.fl-root button:focus-visible,
+.fl-root input:focus-visible {
+  outline: 2px solid var(--fl-c-brand-1);
+  outline-offset: 1px;
+}

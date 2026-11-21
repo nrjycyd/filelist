@@ -73,3 +73,19 @@ export function fitPrimaryButton(root: HTMLElement) {
   set('--fl-btn-primary-bg', bg && text ? readableBackground(bg, text) : null)
   set('--fl-btn-primary-hover-bg', hoverBg && hoverText ? readableBackground(hoverBg, hoverText) : null)
 }
+
+/** Keep “Download ZIP” readable across light / dark theme switches. */
+export function watchPrimaryButton(root: HTMLElement): () => void {
+  const fit = () => fitPrimaryButton(root)
+  fit()
+  const observer = new MutationObserver(fit)
+  for (const el of [document.documentElement, document.body]) {
+    observer.observe(el, { attributes: true, attributeFilter: ['class', 'data-theme', 'style'] })
+  }
+  const scheme = window.matchMedia?.('(prefers-color-scheme: dark)')
+  scheme?.addEventListener('change', fit)
+  return () => {
+    observer.disconnect()
+    scheme?.removeEventListener('change', fit)
+  }
+}

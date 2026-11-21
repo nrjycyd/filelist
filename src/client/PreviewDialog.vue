@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { FileListLabels } from './types'
+import type { Translate } from './context'
 import type { PreviewKind } from './utils'
 /**
  * File preview in a native <dialog>, without leaving the page.
@@ -13,8 +13,8 @@ import type { PreviewKind } from './utils'
  */
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import Icon from './Icon.vue'
-import { formatLabel } from './locales'
 import { renderMarkdown } from './markdown'
+import { useDialog } from './useDialog'
 import { extOf, fileKind, formatDate, formatSize, previewKind } from './utils'
 
 interface PreviewFile {
@@ -28,7 +28,7 @@ const props = withDefaults(
   defineProps<{
     open: boolean
     file: PreviewFile | null
-    labels: FileListLabels
+    t: Translate
     /** Resolved file URL; empty while resolving or in demo mode. */
     src?: string
     /** Filled `iframe_previews` viewer URL for PDFs, if OpenList has one. */
@@ -61,10 +61,6 @@ const emit = defineEmits<{
   next: []
   download: []
 }>()
-
-function t(key: keyof FileListLabels, values?: Record<string, string | number>): string {
-  return formatLabel(props.labels[key], values)
-}
 
 const dialog = ref<HTMLDialogElement>()
 const fileName = computed(() => props.file?.originalName ?? props.file?.name ?? '')
@@ -120,10 +116,10 @@ const canRender = computed(() => !!renderAs.value && mode.value === 'text' && !b
 const infoMessage = computed(() => {
   const file = props.file
   if (!file) return ''
-  if (mode.value === 'demo') return t('demoPreview', { name: file.name })
-  if (mode.value === 'tooLarge') return t('previewTooLarge', { size: formatSize(file.size) })
-  if (mode.value === 'failed') return t('previewUnavailable')
-  return t('previewUnsupported')
+  if (mode.value === 'demo') return props.t('demoPreview', { name: file.name })
+  if (mode.value === 'tooLarge') return props.t('previewTooLarge', { size: formatSize(file.size) })
+  if (mode.value === 'failed') return props.t('previewUnavailable')
+  return props.t('previewUnsupported')
 })
 
 function revokeBlob() {
@@ -226,7 +222,7 @@ watch(
     const seq = loadSeq
     rendering.value = true
     try {
-      const html = await renderMarkdown(text, (alt) => t('imageOmitted', { alt }))
+      const html = await renderMarkdown(text, (alt) => props.t('imageOmitted', { alt }))
       if (seq === loadSeq) renderedHtml.value = html
     } catch {
       if (seq === loadSeq) view.value = 'source'
@@ -236,32 +232,9 @@ watch(
   },
 )
 
-watch(
-  () => props.open,
-  (open) => {
-    const el = dialog.value
-    if (!el) return
-    if (open && !el.open) {
-      if (typeof el.showModal === 'function') el.showModal()
-      else el.setAttribute('open', '')
-    } else if (!open && el.open) {
-      if (typeof el.close === 'function') el.close()
-      else el.removeAttribute('open')
-    }
-  },
-  { flush: 'post' },
-)
+const { onNativeClose, onBackdrop } = useDialog(dialog, () => props.open, () => emit('close'))
 
 onBeforeUnmount(resetBody)
-
-function onNativeClose() {
-  // Esc or form close: keep the parent in sync.
-  if (props.open) emit('close')
-}
-
-function onBackdrop(event: MouseEvent) {
-  if (event.target === dialog.value) emit('close')
-}
 
 function onKeydown(event: KeyboardEvent) {
   if (props.total < 2) return
