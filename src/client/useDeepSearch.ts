@@ -18,8 +18,8 @@ export function useDeepSearch(
     refreshing: Ref<boolean>
     /** Increments whenever the tree reloads or refreshes; stops any running search. */
     generation: Ref<number>
-    /** Load a folder's children quietly; false when locked or failed. */
-    loadChildren: (node: FNode, prompt: false, quiet: true) => Promise<boolean>
+    /** Load a folder's children quietly; false when locked, cancelled or failed. */
+    loadChildren: (node: FNode, prompt: false, quiet: true, signal?: AbortSignal) => Promise<boolean>
   },
 ) {
   const { props, t } = ctx
@@ -29,6 +29,7 @@ export function useDeepSearch(
   // Failed folders wait for an explicit retry or a new search context.
   const failed = reactive(new Set<FNode>())
   let deepSeq = 0
+  let searchAbort: AbortController | null = null
 
   /** Folders that are known but not loaded yet (locked ones excluded). */
   function unloadedFolders(): FNode[] {
@@ -58,6 +59,9 @@ export function useDeepSearch(
   /** “Try deep search”, “Continue”, and the automatic runs of deep search mode. */
   async function deepSearch() {
     deepMode.value = true
+    searchAbort?.abort()
+    const controller = new AbortController()
+    searchAbort = controller
     const seq = ++deepSeq
     const limit = Math.max(1, Math.floor(props.deepSearchLimit ?? 500))
     const runStart = deep.searched
@@ -73,7 +77,7 @@ export function useDeepSearch(
         for (let node = queue.shift(); node && seq === deepSeq; node = queue.shift()) {
           if (deep.searched - runStart >= limit) return
           deep.searched += 1
-          const loaded = await options.loadChildren(node, false, true)
+          const loaded = await options.loadChildren(node, false, true, controller.signal)
           if (seq !== deepSeq) return
           if (!loaded) {
             if (!node.lock) failed.add(node)
@@ -87,6 +91,7 @@ export function useDeepSearch(
       wave = next
     }
     if (seq !== deepSeq) return
+    searchAbort = null
     deep.running = false
     deep.capped = pending.value.length > 0 && deep.searched - runStart >= limit
     deep.done = !deep.capped
@@ -95,6 +100,8 @@ export function useDeepSearch(
   /** Pause a run (internal: refresh, reload). */
   function stopDeepSearch() {
     deepSeq += 1
+    searchAbort?.abort()
+    searchAbort = null
     deep.running = false
   }
 

@@ -14,9 +14,9 @@ interface SiteSettings {
 
 /** What the component needs from OpenList; the demo provides the same shape. */
 export interface OpenListApi {
-  list: (path: string, password: string) => Promise<OLItem[]>
-  get: (path: string, password: string) => Promise<OLItem>
-  settings: () => Promise<SiteSettings>
+  list: (path: string, password: string, signal?: AbortSignal) => Promise<OLItem[]>
+  get: (path: string, password: string, signal?: AbortSignal) => Promise<OLItem>
+  settings: (signal?: AbortSignal) => Promise<SiteSettings>
   /** Absolute URL to fetch or download a file; `''` when there is none (demo). */
   fileUrl: (file: { path: string; raw_url?: string; sign?: string }, password: string) => Promise<string>
   /** OpenList's signed `/d/` link, used by `$durl` preview schemes. */
@@ -85,9 +85,18 @@ export function createOpenListApi(
   const urls = new Map<string, { url: string; at: number }>()
   const pendingUrls = new Map<string, { id: symbol; promise: Promise<string> }>()
 
-  async function request<T>(apiPath: string, body?: unknown): Promise<T> {
+  async function request<T>(apiPath: string, body?: unknown, signal?: AbortSignal): Promise<T> {
     const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), timeout)
+    let timedOut = false
+    const onAbort = () => controller.abort(signal?.reason)
+    if (signal) {
+      if (signal.aborted) onAbort()
+      else signal.addEventListener('abort', onAbort, { once: true })
+    }
+    const timer = setTimeout(() => {
+      timedOut = true
+      controller.abort()
+    }, timeout)
     let response: Response
     try {
       response = await fetch(`${root}${apiPath}`, {
@@ -101,13 +110,14 @@ export function createOpenListApi(
         signal: controller.signal,
       })
     } catch (error) {
-      if (controller.signal.aborted) {
+      if (timedOut) {
         const seconds = timeout / 1000
         throw new ApiError(`No answer from OpenList after ${seconds} s`, 408, seconds)
       }
       throw error
     } finally {
       clearTimeout(timer)
+      signal?.removeEventListener('abort', onAbort)
     }
     const payload = (await response.json().catch(() => null)) as
       | { code?: number; message?: string; data?: T }
@@ -137,21 +147,23 @@ export function createOpenListApi(
     `${root}/d${encodePath(file.path)}${file.sign ? `?sign=${encodeURIComponent(file.sign)}` : ''}`
 
   return {
-    async list(path, password) {
+    async list(path, password, signal) {
       const data = await request<{ content?: OLItem[] }>('/api/fs/list', {
         path,
         password,
         page: 1,
         per_page: 0,
         refresh: false,
-      })
+      }, signal)
       return data?.content ?? []
     },
-    get: (path, password) => request<OLItem>('/api/fs/get', { path, password }),
-    async settings() {
+    get: (path, password, signal) => request<OLItem>('/api/fs/get', { path, password }, signal),
+    async settings(signal) {
       try {
         const data = await request<{ site_title?: string; title?: string; iframe_previews?: string }>(
           '/api/public/settings',
+          undefined,
+          signal,
         )
         return { title: data?.site_title || data?.title || '', iframePreviews: data?.iframe_previews || '' }
       } catch {
@@ -229,8 +241,8 @@ export function createLazyDemoApi(delay = 220, locale: FileListLocale = 'zh-CN')
     return pending
   }
   return {
-    list: (path, password) => load().then((client) => client.list(path, password)),
-    get: (path, password) => load().then((client) => client.get(path, password)),
+    list: (path, password, signal) => load().then((client) => client.list(path, password, signal)),
+    get: (path, password, signal) => load().then((client) => client.get(path, password, signal)),
     settings: async () => ({ title: '', iframePreviews: '' }),
     fileUrl: (file, password) => load().then((client) => client.fileUrl(file, password)),
     directUrl: () => '',

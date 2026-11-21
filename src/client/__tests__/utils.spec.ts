@@ -187,11 +187,18 @@ describe('iframePreviewsFor', () => {
 describe('fillPreviewUrl', () => {
   const args = { name: '说明.pdf', rawUrl: 'https://pan/p/说明.pdf?sign=a', downloadUrl: 'https://pan/d/x.pdf?sign=b' }
 
-  it('fills OpenList placeholders', () => {
+  it('fills OpenList placeholders and encodes $name safely in a single pass', () => {
     expect(fillPreviewUrl('v?file=$e_url', args)).toBe(`v?file=${encodeURIComponent(args.rawUrl)}`)
     expect(fillPreviewUrl('v?file=$url', args)).toBe(`v?file=${args.rawUrl}`)
-    expect(fillPreviewUrl('v?d=$e_durl&n=$name', args)).toBe(`v?d=${encodeURIComponent(args.downloadUrl)}&n=${args.name}`)
+    expect(fillPreviewUrl('v?d=$e_durl&n=$name', args)).toBe(
+      `v?d=${encodeURIComponent(args.downloadUrl)}&n=${encodeURIComponent(args.name)}`,
+    )
     expect(fillPreviewUrl('v?b=$b_url', { ...args, rawUrl: 'https://pan/p/a.pdf' })).toBe(`v?b=${btoa('https://pan/p/a.pdf')}`)
+    // Special characters, replacement patterns ($&) and placeholder-like text ($url) in a filename stay inert.
+    const tricky = { ...args, name: 'a&file=evil$url$$$&.pdf' }
+    expect(fillPreviewUrl('v?n=$name&file=$e_url', tricky)).toBe(
+      `v?n=${encodeURIComponent(tricky.name)}&file=${encodeURIComponent(args.rawUrl)}`,
+    )
   })
 })
 

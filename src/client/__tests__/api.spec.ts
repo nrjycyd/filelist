@@ -85,4 +85,35 @@ describe('OpenList client', () => {
     release(new Response(JSON.stringify({ code: 200, data: { raw_url: 'https://cdn.example.com/a.pdf?v=fresh' } })))
     expect(await fresh).toBe('https://cdn.example.com/a.pdf?v=fresh')
   })
+
+  it('propagates external AbortSignal without misreporting a 408 timeout', async () => {
+    vi.stubGlobal('fetch', vi.fn((_url: string, init?: RequestInit) => new Promise((_resolve, reject) => {
+      init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')))
+    })))
+    const api = createOpenListApi('https://pan.example.com', '', { timeout: 5000 })
+    const controller = new AbortController()
+    const promise = api.list('/', '', controller.signal)
+    controller.abort()
+    const error = await promise.catch((e: unknown) => e)
+    expect(error).not.toBeInstanceOf(ApiError)
+    expect((error as DOMException).name).toBe('AbortError')
+  })
+
+  it('prunes expired and oldest entries once the fileUrl cache reaches its cap', async () => {
+    let clock = 0
+    const calls = answer((body) => ({ raw_url: `https://cdn.example.com${body.path}?t=${clock}` }))
+    const api = createOpenListApi('https://pan.example.com', '', { now: () => clock })
+    for (let i = 0; i < 501; i++) {
+      await api.fileUrl({ path: `/f${i}.txt` }, '')
+    }
+    expect(calls).toHaveLength(501)
+    // Entry 0 was evicted when entry 500 inserted; entry 500 is still cached.
+    await api.fileUrl({ path: '/f500.txt' }, '')
+    expect(calls).toHaveLength(501)
+    await api.fileUrl({ path: '/f0.txt' }, '')
+    expect(calls).toHaveLength(502)
+    clock = FILE_URL_TTL + 1
+    await api.fileUrl({ path: '/f500.txt' }, '')
+    expect(calls).toHaveLength(503)
+  })
 })

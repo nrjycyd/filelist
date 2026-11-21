@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import {
   findRememberedPassword,
   forgetFolderPassword,
+  normalisePath,
   rememberedFolders,
   rememberFolderPassword,
 } from './passwords'
@@ -38,20 +39,22 @@ export function usePasswords(options: {
   }
 
   function typedAbove(path: string): { path: string; password: string } | null {
+    const target = normalisePath(path)
     let best: { path: string; password: string } | null = null
     for (const [folder, password] of typed) {
-      if (isWithin(path, folder) && (!best || folder.length > best.path.length)) best = { path: folder, password }
+      if (isWithin(target, folder) && (!best || folder.length > best.path.length)) best = { path: folder, password }
     }
     return best
   }
 
   function resolve(path: string, own = '', ownAt = path): ResolvedPassword {
-    const exact = typed.get(path)
+    const target = normalisePath(path)
+    const exact = typed.get(target)
     if (exact) return { password: exact }
-    const above = typedAbove(path)
-    const stored = options.enabled() ? findRememberedPassword(options.scope(), path) : null
+    const above = typedAbove(target)
+    const stored = options.enabled() ? findRememberedPassword(options.scope(), target) : null
     let best: ResolvedPassword = own ? { password: own } : { password: options.fallback() }
-    let len = own ? ownAt.length : -1
+    let len = own ? normalisePath(ownAt).length : -1
     if (above && above.path.length > len) {
       best = { password: above.password }
       len = above.path.length
@@ -62,17 +65,23 @@ export function usePasswords(options: {
 
   /** A password worked: keep it for this page, and in this tab when asked. */
   function accept(path: string, password: string, remember: boolean) {
-    typed.set(path, password)
+    const target = normalisePath(path)
+    typed.set(target, password)
     if (remember && options.enabled()) {
-      rememberFolderPassword(options.scope(), path, password)
+      rememberFolderPassword(options.scope(), target, password)
       sync()
     }
   }
 
   function forget(path: string) {
-    typed.delete(path)
-    forgetFolderPassword(options.scope(), path)
+    const target = normalisePath(path)
+    typed.delete(target)
+    forgetFolderPassword(options.scope(), target)
     sync()
+  }
+
+  function isRemembered(path: string): boolean {
+    return remembered.value.has(normalisePath(path))
   }
 
   function clearTyped() {
@@ -87,5 +96,5 @@ export function usePasswords(options: {
     return true
   }
 
-  return { remembered, sync, resolve, accept, forget, clearTyped, dropStale }
+  return { remembered, isRemembered, sync, resolve, accept, forget, clearTyped, dropStale }
 }

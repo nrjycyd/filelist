@@ -31,20 +31,25 @@ updates:
       prefix: "chore(demo)"
     labels: [dependencies]
 
-  # Plugin dev dependencies used by typecheck and tests, checked weekly.
+  # Plugin runtime + dev dependencies used by consumers, typecheck and tests, checked weekly.
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly
     allow:
+      - dependency-name: client-zip
+      - dependency-name: dompurify
+      - dependency-name: markdown-it
       - dependency-name: vitepress
       - dependency-name: vitepress-tuck
       - dependency-name: vue
     groups:
+      runtime:
+        patterns: [client-zip, dompurify, markdown-it]
       vitepress:
         patterns: [vitepress, vitepress-tuck, vue]
     commit-message:
-      prefix: "chore(deps-dev)"
+      prefix: "chore(deps)"
     labels: [dependencies]
 
   # GitHub Actions used by the workflows, checked monthly.
