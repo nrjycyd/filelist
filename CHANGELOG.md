@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.13.9 (2026-11-21)
+
+### Fixes
+
+- Resolve nested folder passwords by path specificity so deeper remembered or typed passwords override ancestor source passwords and stale remembered entries are cleared.
+- React to dynamic prop changes (`base`, `token`, `path`, `sources`, `password`, `expanded`, `rememberPassword`, `locale`) and guard root loads and settings reads against stale responses.
+- Exclude locked single-file source roots from select-all and footer file counts.
+- Replace the keyboard child-focus polling loop with a synchronous check so empty expanded folders do not poll or throw if a row disappears.
+- Stop empty Markdown files from hanging in the loading state when switched to rendered preview, and abort remaining prefetched ZIP downloads when a file fails.
+- Apply primary button contrast overrides and hover styles to `.fl-unlock-submit`, and clip `.fl-deep-bar` inside `.fl-deep`.
+
+### Maintenance
+
+- Clean up dead CSS rules, unused class/export/comment leftovers, auto-discover all `.vue` templates in `templates.spec.ts`, make the `formatDate` test timezone-safe, and keep the local demo package out of Dependabot updates.
+
 ## 0.13.8 (2026-11-14)
 
 ### Fixes
