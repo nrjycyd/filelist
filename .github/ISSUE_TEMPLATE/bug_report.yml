@@ -1,0 +1,51 @@
+name: Bug report
+description: Report a bug in vitepress-plugin-filelist or vuepress-plugin-filelist
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. For security vulnerabilities, please use [GitHub Security Advisories](https://github.com/nrjycyd/filelist/security/advisories/new) instead of a public issue.
+  - type: dropdown
+    id: package
+    attributes:
+      label: Package / Framework
+      options:
+        - vitepress-plugin-filelist (VitePress 2)
+        - vitepress-plugin-filelist (VitePress 1.6)
+        - vuepress-plugin-filelist (VuePress 2)
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Plugin version
+      placeholder: e.g. 0.15.2
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Framework version, theme (if VuePress), Node version, browser, and OpenList / OpenList-Worker version
+      placeholder: e.g. VitePress 2.0.0-alpha.21, Node 22, Chrome 131, OpenList-Worker
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Clear description of the bug and what you expected to happen instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Share the `<FileList ... />` snippet (redact any real token/password) and steps to reproduce.
+      render: markdown
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console / network logs or screenshots
+      description: Optional browser console errors, failed network responses, or screenshots.

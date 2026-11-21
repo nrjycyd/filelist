@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security vulnerability (private)
+    url: https://github.com/nrjycyd/filelist/security/advisories/new
+    about: Privately disclose a security vulnerability instead of opening a public issue.
+  - name: Documentation & live demo
+    url: https://nrjycyd.github.io/filelist/
+    about: Setup guides, all component props, OpenList CORS setup, and interactive examples.
