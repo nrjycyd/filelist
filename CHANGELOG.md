@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.15.3 (2026-11-21)
+
+### Security & Fixes
+
+- Add `referrerpolicy="no-referrer"` to the PDF preview `<iframe>` and apply `sandbox="allow-scripts allow-same-origin allow-downloads allow-forms"` only for external `viewer` URLs (omitting `sandbox` for `blob:` fallback so Chromium's built-in PDF viewer continues to render).
+- Upgrade `markdown-it` from `14.3.3` to `15.0.3` (incorporating ReDoS fixes from `15.0.1`–`15.0.3` and `linkify-it` v6).
+
+### Maintenance
+
+- Add `SECURITY.md` and structured GitHub Issue templates (`.github/ISSUE_TEMPLATE/`).
+- Pin all GitHub Actions across `.github/workflows/*.yml` to full 40-character commit SHAs.
+- Restrict the Dependabot `runtime` group to `minor`/`patch` updates so `semver-major` runtime upgrades open standalone PRs for manual changelog review.
+
 ## 0.15.2 (2026-11-21)
 
 ### Fixes
