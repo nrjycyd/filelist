@@ -13,9 +13,9 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
@@ -69,7 +69,7 @@ jobs:
           grep -q '"vitepress-plugin-filelist": "'"$version"'"' package.json
           npm publish --provenance --access public --tag ${{ steps.version.outputs.tag }}
       - name: Create GitHub release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3
         with:
           generate_release_notes: true
           prerelease: ${{ steps.version.outputs.tag == 'next' }}
