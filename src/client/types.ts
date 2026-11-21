@@ -16,6 +16,10 @@ export interface FileListLabels {
   loading: string
   loadFailed: string
   guestHint: string
+  /** OpenList did not answer before the request timeout, `{seconds}`. */
+  requestTimeout: string
+  /** A single file returned a non-OK HTTP status while building a ZIP, `{name}` `{status}`. */
+  fileHttpError: string
   /** Shown (and appended to toasts) for browser network errors, usually CORS. */
   corsHint: string
   retry: string

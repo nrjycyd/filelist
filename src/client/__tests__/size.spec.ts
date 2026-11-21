@@ -18,7 +18,8 @@ const BUDGET_KB = {
   // 47: preserve a mounted file's original type alongside its display alias.
   // 47.1: detect when the sticky mobile toolbar overlaps the footer.
   // 47.2: track each mount independently and deduplicate shared file selections.
-  'client/browser/index.js': 47.2,
+  // 48: localise timeout / ZIP HTTP errors and extract UnlockControls.vue.
+  'client/browser/index.js': 48,
   // the build drops the stylesheet's comments (scripts/strip-css.mjs); the budget is for the rules
   'client/style.css': 8,
   'node/index.js': 1,

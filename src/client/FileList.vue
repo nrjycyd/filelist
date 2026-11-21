@@ -20,7 +20,7 @@ import type { FNode } from './tree'
 import type { FileListLabels, FileListProps } from './types'
 import type { SortKey } from './utils'
 import { computed, onBeforeUnmount, onMounted, onUpdated, ref, useId, watch } from 'vue'
-import { createOpenListApi, errorText, isNetworkError } from './api'
+import { ApiError, createOpenListApi, errorText, isNetworkError } from './api'
 import ConfirmDialog from './ConfirmDialog.vue'
 import { DEFAULT_PROPS } from './context'
 import { watchPrimaryButton } from './contrast'
@@ -31,6 +31,7 @@ import Icon from './Icon.vue'
 import { formatLabel, resolveLabels } from './locales'
 import PreviewDialog from './PreviewDialog.vue'
 import SortMenu from './SortMenu.vue'
+import UnlockControls from './UnlockControls.vue'
 import { useDeepSearch } from './useDeepSearch'
 import { useDownloads } from './useDownloads'
 import { useFocusRestore } from './useFocusRestore'
@@ -73,13 +74,20 @@ function showToast(message: string) {
   toastTimer = setTimeout(() => (toast.value = ''), 3200)
 }
 
+function errorMessage(error: unknown): string {
+  if (error instanceof ApiError && error.code === 408 && error.seconds !== undefined) {
+    return t('requestTimeout', { seconds: error.seconds })
+  }
+  return errorText(error)
+}
+
 /** A failure toast; browser network errors are usually CORS, so say where to look. */
 function failureMessage(key: keyof FileListLabels, error: unknown): string {
-  const message = t(key, { message: errorText(error) })
+  const message = t(key, { message: errorMessage(error) })
   return isNetworkError(error) ? `${message} ${t('corsHint')}` : message
 }
 
-const ctx: ListContext = { props, t, showToast, failureMessage, api, demo, passwords, rootEl }
+const ctx: ListContext = { props, t, showToast, errorMessage, failureMessage, api, demo, passwords, rootEl }
 
 /** Shared reactive state lifted above the composables so dependencies stay acyclic. */
 const roots = ref<FNode[]>([])
@@ -482,31 +490,21 @@ onBeforeUnmount(() => {
         role="gridcell"
         @keydown.esc.prevent="cancelUnlock(node.lock)"
       >
-        <Icon class="fl-unlock-lock" name="lock" :size="18" />
-        <input
-          v-model="node.lock.input"
-          type="password"
-          autocomplete="off"
-          :data-unlock="node.key"
+        <UnlockControls
+          v-model:input="node.lock.input"
+          v-model:remember="node.lock.remember"
+          :t="t"
+          :unlock-key="node.key"
           :placeholder="node.lock.error ? unlockErrorText(node.lock.error) : t('passwordPlaceholder')"
-          :aria-label="t('passwordFor', { name: node.name })"
-          :aria-invalid="!!node.lock.error"
-          :aria-describedby="node.lock.error ? `${uid}-error-${index}` : undefined"
-          @keydown.enter.prevent="node.lock.input && !node.lock.busy && submitUnlock(node)"
+          :can-remember="canRemember"
+          :busy="node.lock.busy"
+          :invalid="!!node.lock.error"
+          :input-label="t('passwordFor', { name: node.name })"
+          :described-by="node.lock.error ? `${uid}-error-${index}` : undefined"
+          inline
+          @submit="submitUnlock(node)"
+          @cancel="cancelUnlock(node.lock)"
         />
-        <button
-          v-if="canRemember"
-          class="fl-unlock-remember"
-          type="button"
-          :aria-pressed="node.lock.remember"
-          :aria-label="t('rememberPassword')"
-          :title="t('rememberPassword')"
-          @click="node.lock.remember = !node.lock.remember"
-        ><Icon name="key" /></button>
-        <button class="fl-unlock-submit" type="button" :disabled="node.lock.busy || !node.lock.input" @click="submitUnlock(node)">{{ t('open') }}</button>
-        <button class="fl-unlock-cancel" type="button" :aria-label="t('cancel')" :title="t('cancel')" @click="cancelUnlock(node.lock)">
-          <Icon name="close" :size="14" />
-        </button>
       </div>
       <template v-else>
         <span class="fl-cell fl-cell-size" role="gridcell">{{ node.is_dir ? '' : formatSize(node.size) }}</span>
@@ -571,26 +569,18 @@ onBeforeUnmount(() => {
       <label class="fl-unlock-label" :for="`${uid}-root`">{{ t('passwordPrompt') }}</label>
       <span v-if="rootLock.error" :id="`${uid}-root-error`" class="fl-unlock-message" role="alert">{{ unlockErrorText(rootLock.error) }}</span>
       <span class="fl-unlock">
-        <input
-          :id="`${uid}-root`"
-          v-model="rootLock.input"
-          type="password"
-          autocomplete="off"
-          :data-unlock="path"
+        <UnlockControls
+          v-model:input="rootLock.input"
+          v-model:remember="rootLock.remember"
+          :t="t"
+          :unlock-key="path"
           :placeholder="t('passwordPlaceholder')"
-          :aria-invalid="!!rootLock.error"
-          :aria-describedby="rootLock.error ? `${uid}-root-error` : undefined"
+          :can-remember="canRemember"
+          :busy="rootLock.busy"
+          :invalid="!!rootLock.error"
+          :input-id="`${uid}-root`"
+          :described-by="rootLock.error ? `${uid}-root-error` : undefined"
         />
-        <button
-          v-if="canRemember"
-          class="fl-unlock-remember"
-          type="button"
-          :aria-pressed="rootLock.remember"
-          :aria-label="t('rememberPassword')"
-          :title="t('rememberPassword')"
-          @click="rootLock.remember = !rootLock.remember"
-        ><Icon name="key" /></button>
-        <button class="fl-unlock-submit" type="submit" :disabled="rootLock.busy || !rootLock.input">{{ t('open') }}</button>
       </span>
     </form>
     <div v-else-if="errorMsg" class="fl-status fl-error">

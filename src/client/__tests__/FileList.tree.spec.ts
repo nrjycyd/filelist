@@ -3,6 +3,7 @@ import type { MockTree } from './fileListHarness'
 import { flushPromises, mount } from '@vue/test-utils'
 import { describe, expect, it, vi } from 'vitest'
 import { defineComponent, h } from 'vue'
+import { ApiError } from '../api'
 import FileList from '../FileList.vue'
 import { BASE, check, dir, file, mockOpenList, mountList, row, setupFileListHooks } from './fileListHarness'
 
@@ -412,5 +413,18 @@ describe('FileList audit regressions', () => {
     await flushPromises()
     expect(dialog.find('.fl-preview-status').exists()).toBe(false)
     expect(dialog.find('.fl-md').exists()).toBe(true)
+  })
+
+  it('localises request timeout errors in zh-CN and en-US', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      throw new ApiError('No answer from OpenList after 30 s', 408, 30)
+    }))
+    const zh = mountList({ path: '/', locale: 'zh-CN' })
+    await flushPromises()
+    expect(zh.find('.fl-error').text()).toContain('请求 OpenList 超时（30 秒无响应）')
+
+    const en = mountList({ path: '/', locale: 'en-US' })
+    await flushPromises()
+    expect(en.find('.fl-error').text()).toContain('No answer from OpenList after 30 s')
   })
 })

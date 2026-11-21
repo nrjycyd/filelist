@@ -2,7 +2,6 @@ import type { ComputedRef, Ref } from 'vue'
 import type { ListContext } from './context'
 import type { FNode } from './tree'
 import { computed, ref } from 'vue'
-import { errorText } from './api'
 import { isDemoFile } from './demo'
 import { fillPreviewUrl, iframePreviewsFor, previewKind } from './utils'
 
@@ -22,7 +21,7 @@ export function usePreview(
     iframePreviews: Ref<string>
   },
 ) {
-  const { api, demo } = ctx
+  const { api, demo, errorMessage } = ctx
 
   const previewNode = ref<FNode | null>(null)
   const previewSrc = ref('')
@@ -58,7 +57,7 @@ export function usePreview(
         })
       }
     } catch (error) {
-      if (seq === previewSeq) previewError.value = errorText(error)
+      if (seq === previewSeq) previewError.value = errorMessage(error)
     } finally {
       if (seq === previewSeq) previewResolving.value = false
     }

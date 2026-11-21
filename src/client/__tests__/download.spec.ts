@@ -53,7 +53,7 @@ describe('zipToBlob', () => {
     ]
     await expect(
       zipToBlob(files, { urlOf: async (f) => `https://example.com/${f.name}`, signal: controller.signal, onProgress: () => {} }),
-    ).rejects.toThrow('bad.bin：HTTP 500')
+    ).rejects.toThrow('bad.bin: HTTP 500')
     expect(signals).toHaveLength(2)
     expect(signals[1].aborted).toBe(true)
     vi.unstubAllGlobals()

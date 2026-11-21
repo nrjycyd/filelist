@@ -3,7 +3,6 @@ import type { ListContext } from './context'
 import type { ZipProgress } from './download'
 import type { FNode } from './tree'
 import { computed, ref } from 'vue'
-import { errorText } from './api'
 import { isDemoFile } from './demo'
 import { canStreamToDisk, openUrl, pickZipFile, saveBlob, zipFileName, zipToBlob, zipToFile } from './download'
 import { formatSize, totalSize } from './utils'
@@ -29,7 +28,7 @@ export function useDownloads(
     fileUrlOf: (node: FNode) => Promise<string>
   },
 ) {
-  const { props, api, demo, t, showToast } = ctx
+  const { props, api, demo, t, showToast, errorMessage } = ctx
   const { selected, selectedFiles, fileUrlOf } = options
 
   const batchBusy = ref(false)
@@ -47,7 +46,7 @@ export function useDownloads(
       openUrl(url, { sameTab: api.value.isAttachmentUrl(url), name: node.name })
       showToast(t('downloadStarted', { name: node.name }))
     } catch (error) {
-      showToast(t('downloadFailed', { message: errorText(error) }))
+      showToast(t('downloadFailed', { message: errorMessage(error) }))
     }
   }
 
@@ -100,7 +99,7 @@ export function useDownloads(
         // First await of the click: the picker needs the user gesture.
         handle = await pickZipFile(zipName())
       } catch (error) {
-        showToast(t('batchFailed', { message: errorText(error) }))
+        showToast(t('batchFailed', { message: errorMessage(error) }))
         return
       }
       if (handle) await runZip(files, (zipOptions) => zipToFile(handle, files, zipOptions), handle.name)
@@ -138,13 +137,18 @@ export function useDownloads(
     batchBusy.value = true
     zipProgress.value = null
     try {
-      await run({ urlOf: fileUrlOf, signal: controller.signal, onProgress: (progress) => (zipProgress.value = progress) })
+      await run({
+        urlOf: fileUrlOf,
+        signal: controller.signal,
+        onProgress: (progress) => (zipProgress.value = progress),
+        formatHttpError: (fileName, status) => t('fileHttpError', { name: fileName, status }),
+      })
       showToast(t('batchDone', { name, count: files.length, size: formatSize(totalSize(files)) }))
       selected.value = new Set()
     } catch (error) {
       // A failure is worth a dialog: a toast is easy to miss after a long wait.
       if (controller.signal.aborted) showToast(t('batchCanceled'))
-      else zipNotice.value = { kind: 'failed', message: errorText(error) }
+      else zipNotice.value = { kind: 'failed', message: errorMessage(error) }
     } finally {
       zipAbort = null
       batchBusy.value = false

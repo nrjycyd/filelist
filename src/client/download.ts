@@ -56,6 +56,7 @@ interface ZipOptions<T extends ZipFile> {
   urlOf: (file: T) => Promise<string>
   signal: AbortSignal
   onProgress: (progress: ZipProgress) => void
+  formatHttpError?: (name: string, status: number) => string
 }
 
 interface SaveFilePickerWindow {
@@ -134,7 +135,9 @@ async function zipStream<T extends ZipFile>(files: T[], options: ZipOptions<T>):
       for (const file of files) {
         const response = await ahead.shift()!
         if (started < files.length) startNext()
-        if (!response.ok || !response.body) throw new Error(`${file.name}：HTTP ${response.status}`)
+        if (!response.ok || !response.body) {
+          throw new Error(options.formatHttpError ? options.formatHttpError(file.name, response.status) : `${file.name}: HTTP ${response.status}`)
+        }
         const counted = response.body.pipeThrough(
           new TransformStream<Uint8Array, Uint8Array>({
             transform(chunk, controller) {

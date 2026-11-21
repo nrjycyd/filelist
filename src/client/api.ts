@@ -32,10 +32,12 @@ export interface OpenListApi {
 
 export class ApiError extends Error {
   code: number
+  seconds?: number
 
-  constructor(message: string, code: number) {
+  constructor(message: string, code: number, seconds?: number) {
     super(message)
     this.code = code
+    this.seconds = seconds
   }
 }
 
@@ -94,7 +96,10 @@ export function createOpenListApi(
         signal: controller.signal,
       })
     } catch (error) {
-      if (controller.signal.aborted) throw new ApiError(`No answer from OpenList after ${timeout / 1000} s`, 408)
+      if (controller.signal.aborted) {
+        const seconds = timeout / 1000
+        throw new ApiError(`No answer from OpenList after ${seconds} s`, 408, seconds)
+      }
       throw error
     } finally {
       clearTimeout(timer)
