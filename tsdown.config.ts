@@ -39,7 +39,7 @@ export function build(): UserConfig[] {
       plugins: [vue({ isProduction: true, ssr: false })],
       external: ['vue', 'vitepress'],
       outputOptions: {
-        banner: 'import "../style.css"',
+        banner: (chunk) => (chunk.isEntry ? 'import "../style.css"' : ''),
       },
     }),
   ]

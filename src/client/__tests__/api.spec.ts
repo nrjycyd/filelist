@@ -51,4 +51,38 @@ describe('OpenList client', () => {
     expect(error).toBeInstanceOf(ApiError)
     expect((error as ApiError).code).toBe(408)
   })
+
+  it('deduplicates concurrent fileUrl lookups and skips caching if cleared mid-flight', async () => {
+    let release!: (res: Response) => void
+    let fetchCount = 0
+    vi.stubGlobal('fetch', vi.fn(() => {
+      fetchCount += 1
+      return new Promise<Response>((resolve) => {
+        release = resolve
+      })
+    }))
+    const api = createOpenListApi('https://pan.example.com', '')
+    const file = { path: '/docs/a.pdf' }
+    const first = api.fileUrl(file, '')
+    const second = api.fileUrl(file, '')
+    expect(fetchCount).toBe(1)
+
+    release(new Response(JSON.stringify({ code: 200, data: { raw_url: 'https://cdn.example.com/a.pdf?v=1' } })))
+    expect(await Promise.all([first, second])).toEqual([
+      'https://cdn.example.com/a.pdf?v=1',
+      'https://cdn.example.com/a.pdf?v=1',
+    ])
+
+    // If clearCache runs while a lookup is in flight, its result must not repopulate the cache.
+    api.clearCache()
+    const stale = api.fileUrl(file, '')
+    api.clearCache('/docs')
+    release(new Response(JSON.stringify({ code: 200, data: { raw_url: 'https://cdn.example.com/a.pdf?v=stale' } })))
+    expect(await stale).toBe('https://cdn.example.com/a.pdf?v=stale')
+
+    const fresh = api.fileUrl(file, '')
+    expect(fetchCount).toBe(3)
+    release(new Response(JSON.stringify({ code: 200, data: { raw_url: 'https://cdn.example.com/a.pdf?v=fresh' } })))
+    expect(await fresh).toBe('https://cdn.example.com/a.pdf?v=fresh')
+  })
 })

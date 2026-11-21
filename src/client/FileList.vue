@@ -20,11 +20,10 @@ import type { FNode } from './tree'
 import type { FileListLabels, FileListProps } from './types'
 import type { SortKey } from './utils'
 import { computed, onBeforeUnmount, onMounted, onUpdated, ref, useId, watch } from 'vue'
-import { ApiError, createOpenListApi, errorText, isNetworkError } from './api'
+import { ApiError, createLazyDemoApi, createOpenListApi, errorText, isNetworkError } from './api'
 import ConfirmDialog from './ConfirmDialog.vue'
 import { DEFAULT_PROPS } from './context'
 import { watchPrimaryButton } from './contrast'
-import { createDemoApi, isDemoFile } from './demo'
 import { warnPublicSecrets } from './devWarnings'
 import FileListToolbar from './FileListToolbar.vue'
 import Icon from './Icon.vue'
@@ -54,7 +53,7 @@ function t(key: keyof FileListLabels, values?: Record<string, string | number>):
 /** Prefix for element ids, unique per component instance. */
 const uid = useId()
 const demo = computed(() => !props.base)
-const api = computed(() => (demo.value ? createDemoApi(220, props.locale) : createOpenListApi(props.base, props.token)))
+const api = computed(() => (demo.value ? createLazyDemoApi(220, props.locale) : createOpenListApi(props.base, props.token)))
 
 const canRemember = computed(() => props.rememberPassword !== false)
 const passwords = usePasswords({
@@ -646,7 +645,7 @@ onBeforeUnmount(() => {
       :viewer="previewViewer"
       :resolving="previewResolving"
       :error="previewError"
-      :demo="demo && !!previewNode && !isDemoFile(previewNode.path)"
+      :demo="demo && !!previewNode && !api.isSampleFile?.(previewNode.path)"
       :position="previewPosition"
       :total="previewPosition ? previewList.length : 0"
       @close="closePreview"

@@ -2,6 +2,7 @@ import type { Ref } from 'vue'
 import type { FNode, FolderStats } from './tree'
 import { computed } from 'vue'
 import { descendantFiles, folderStats } from './tree'
+import { concurrency } from './utils'
 
 /** Check boxes: files, whole folders (loaded on demand) and “select all”. */
 export function useSelection(options: {
@@ -33,22 +34,33 @@ export function useSelection(options: {
   }
 
   /**
-   * Load a directory and all of its sub-directories. Stops at the first folder
-   * that needs a password and returns it, so nothing is silently left out.
+   * Load a directory and all of its sub-directories (up to 4 at a time). Stops
+   * scheduling new folders as soon as one needs a password or fails, and returns
+   * the first locked folder in tree order so nothing is silently left out.
    */
   async function loadTree(node: FNode): Promise<{ ok: boolean; locked?: FNode }> {
-    if (!node.is_dir) return { ok: true }
-    if (!(await options.loadChildren(node))) return node.lock ? { ok: false, locked: node } : { ok: false }
-    for (const child of node.children) {
-      if (!child.is_dir) continue
-      const result = await loadTree(child)
-      if (!result.ok) {
-        // Keep the path to the locked folder open so its input is visible.
-        node.expanded = true
-        return result
+    const limit = concurrency(4)
+    let stopped = false
+    const walk = async (dir: FNode): Promise<{ ok: boolean; locked?: FNode }> => {
+      if (!dir.is_dir) return { ok: true }
+      if (stopped) return { ok: false }
+      const loaded = dir.loaded || (await limit(() => (stopped ? Promise.resolve(false) : options.loadChildren(dir))))
+      if (!loaded) {
+        stopped = true
+        return dir.lock ? { ok: false, locked: dir } : { ok: false }
       }
+      const subdirs = dir.children.filter((child) => child.is_dir)
+      if (!subdirs.length) return { ok: true }
+      const results = await Promise.all(subdirs.map(walk))
+      const failed = results.find((result) => result.locked) ?? results.find((result) => !result.ok)
+      if (failed) {
+        // Keep the path to the locked folder open so its input is visible.
+        if (failed.locked) dir.expanded = true
+        return failed
+      }
+      return { ok: true }
     }
-    return { ok: true }
+    return walk(node)
   }
 
   async function toggleCheck(node: FNode, event?: Event) {

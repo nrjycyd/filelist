@@ -3,7 +3,6 @@ import type { ListContext } from './context'
 import type { ZipProgress } from './download'
 import type { FNode } from './tree'
 import { computed, ref } from 'vue'
-import { isDemoFile } from './demo'
 import { canStreamToDisk, openUrl, pickZipFile, saveBlob, zipFileName, zipToBlob, zipToFile } from './download'
 import { formatSize, totalSize } from './utils'
 
@@ -37,7 +36,7 @@ export function useDownloads(
 
   async function download(node: FNode) {
     if (node.is_dir) return
-    if (demo.value && !isDemoFile(node.path)) {
+    if (demo.value && !api.value.isSampleFile?.(node.path)) {
       showToast(t('demoDownload', { name: node.name }))
       return
     }
@@ -89,7 +88,7 @@ export function useDownloads(
   async function batchDownload() {
     const files = selectedFiles.value
     if (!files.length || batchBusy.value) return
-    if (demo.value && !files.every((file) => isDemoFile(file.path))) {
+    if (demo.value && !files.every((file) => api.value.isSampleFile?.(file.path))) {
       showToast(t('demoBatch', { count: files.length }))
       return
     }

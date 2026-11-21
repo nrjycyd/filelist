@@ -256,3 +256,19 @@ export function fillPreviewUrl(
     .replace(/\$[eb_]*durl/g, (placeholder) => applyUrlOps(placeholder, args.downloadUrl))
     .replace(/\$[eb_]*url/g, (placeholder) => applyUrlOps(placeholder, args.rawUrl))
 }
+
+/** Run at most `size` async tasks at once, preserving FIFO scheduling. */
+export function concurrency(size: number) {
+  let active = 0
+  const waiting: Array<() => void> = []
+  return async <T>(task: () => Promise<T>): Promise<T> => {
+    if (active >= size) await new Promise<void>((resolve) => waiting.push(resolve))
+    active += 1
+    try {
+      return await task()
+    } finally {
+      active -= 1
+      waiting.shift()?.()
+    }
+  }
+}

@@ -7,7 +7,7 @@ import type { SortKey } from './utils'
 import { computed, nextTick, ref, toRaw } from 'vue'
 import { isPasswordError } from './api'
 import { descendantFiles, expandedKeysOf, loadedKeysOf, newLock, sortTree, sourceName, toNodes } from './tree'
-import { extOf, fileKind, isWithin, previewKind } from './utils'
+import { concurrency, extOf, fileKind, isWithin, previewKind } from './utils'
 
 function fileSourceName(title: string, original: string): string {
   const extension = extOf(original)
@@ -19,22 +19,6 @@ function fileSourceName(title: string, original: string): string {
 function looksLikeFile(path: string): boolean {
   const name = sourceName(path)
   return fileKind(name) !== 'other' || previewKind(name) !== 'none'
-}
-
-/** Run at most `size` tasks at once. */
-function concurrency(size: number) {
-  let active = 0
-  const waiting: Array<() => void> = []
-  return async <T>(task: () => Promise<T>): Promise<T> => {
-    if (active >= size) await new Promise<void>((resolve) => waiting.push(resolve))
-    active += 1
-    try {
-      return await task()
-    } finally {
-      active -= 1
-      waiting.shift()?.()
-    }
-  }
 }
 
 class RootLockedError extends Error {

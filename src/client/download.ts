@@ -57,6 +57,8 @@ interface ZipOptions<T extends ZipFile> {
   signal: AbortSignal
   onProgress: (progress: ZipProgress) => void
   formatHttpError?: (name: string, status: number) => string
+  /** Tests only: override transient retry delays (ms). */
+  retryDelays?: readonly number[]
 }
 
 interface SaveFilePickerWindow {
@@ -96,6 +98,47 @@ export async function pickZipFile(name: string): Promise<FileSystemFileHandle | 
 const CONCURRENCY = 4
 /** Progress updates at most this often (ms), so the bar does not re-render per chunk. */
 const PROGRESS_INTERVAL = 100
+/** Retry delays (ms) for transient single-file failures during a batch ZIP. */
+const RETRY_DELAYS = [250, 750]
+const RETRYABLE_STATUS = new Set([408, 429, 502, 503, 504])
+
+function waitForRetry(ms: number, signal: AbortSignal): Promise<void> {
+  if (signal.aborted) return Promise.reject(signal.reason ?? new DOMException('Aborted', 'AbortError'))
+  if (ms <= 0) return Promise.resolve()
+  return new Promise((resolve, reject) => {
+    let timer: ReturnType<typeof setTimeout>
+    const onAbort = () => {
+      clearTimeout(timer)
+      reject(signal.reason ?? new DOMException('Aborted', 'AbortError'))
+    }
+    timer = setTimeout(() => {
+      signal.removeEventListener('abort', onAbort)
+      resolve()
+    }, ms)
+    signal.addEventListener('abort', onAbort, { once: true })
+  })
+}
+
+async function fetchEntry<T extends ZipFile>(
+  file: T,
+  urlOf: (file: T) => Promise<string>,
+  signal: AbortSignal,
+  retryDelays: readonly number[],
+): Promise<Response> {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      const url = await urlOf(file)
+      const response = await fetch(url, { signal })
+      if (response.ok || attempt >= retryDelays.length || !RETRYABLE_STATUS.has(response.status)) {
+        return response
+      }
+      await response.body?.cancel().catch(() => {})
+    } catch (error) {
+      if (signal.aborted || attempt >= retryDelays.length) throw error
+    }
+    await waitForRetry(retryDelays[attempt], signal)
+  }
+}
 
 async function zipStream<T extends ZipFile>(files: T[], options: ZipOptions<T>): Promise<ReadableStream<Uint8Array>> {
   const { makeZip } = await import('client-zip')
@@ -123,9 +166,10 @@ async function zipStream<T extends ZipFile>(files: T[], options: ZipOptions<T>):
     // Up to CONCURRENCY requests run ahead; entries still go into the ZIP in order.
     const ahead: Array<Promise<Response>> = []
     let started = 0
+    const retryDelays = options.retryDelays ?? RETRY_DELAYS
     const startNext = () => {
       const file = files[started++]
-      const response = options.urlOf(file).then((url) => fetch(url, { signal: inner.signal }))
+      const response = fetchEntry(file, options.urlOf, inner.signal, retryDelays)
       response.catch(() => {}) // surfaced when its turn comes
       ahead.push(response)
     }

@@ -19,7 +19,8 @@ const BUDGET_KB = {
   // 47.1: detect when the sticky mobile toolbar overlaps the footer.
   // 47.2: track each mount independently and deduplicate shared file selections.
   // 48: localise timeout / ZIP HTTP errors and extract UnlockControls.vue.
-  'client/browser/index.js': 48,
+  // 45: split demo data and bundled samples into a lazy chunk loaded only without `base`.
+  'client/browser/index.js': 45,
   // the build drops the stylesheet's comments (scripts/strip-css.mjs); the budget is for the rules
   'client/style.css': 8,
   'node/index.js': 1,
@@ -36,12 +37,16 @@ describe.skipIf(!existsSync(new URL('client/browser/index.js', dist)))('package 
     })
   }
 
-  it('loads markdown-it, DOMPurify and client-zip only when needed', () => {
+  it('loads markdown-it, DOMPurify, client-zip and demo data only when needed', () => {
     const code = readFileSync(new URL('client/browser/index.js', dist), 'utf8')
     for (const name of ['markdown-it', 'dompurify', 'client-zip']) {
       // A static import would put them in every page that shows a list.
       expect(code).not.toMatch(new RegExp(`^import[^;]*["']${name}["']`, 'm'))
       expect(code).toContain(`import("${name}")`)
     }
+    // Demo data and embedded sample files stay in a lazy chunk, never in the eager entry.
+    expect(code).not.toContain('%PDF-1.4')
+    expect(code).not.toContain('线代作业参考答案')
+    expect(code).toMatch(/import\(["']\.\/demo-[^"']+\.js["']\)/)
   })
 })
