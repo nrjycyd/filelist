@@ -327,4 +327,16 @@ describe('FileList batch ZIP failure', () => {
     await wrapper.find('.fl-confirm-actions button').trigger('click')
     expect(wrapper.find('.fl-confirm-panel').exists()).toBe(false)
   })
+
+  it('uses locale-appropriate punctuation for ZIP HTTP errors in en-US', async () => {
+    mockOpenList({ '/': [file('b.pdf')] }, {}, { files: { '/b.pdf': { status: 500 } } })
+    const wrapper = mountList({ path: '/', locale: 'en-US' })
+    await flushPromises()
+    await check(wrapper, 'b.pdf')
+    await wrapper.find('.fl-bar .fl-btn-primary').trigger('click')
+    await vi.waitFor(() => expect(wrapper.find('.fl-confirm-title').exists()).toBe(true))
+
+    expect(wrapper.find('.fl-confirm-title').text()).toBe('Could not create the ZIP')
+    expect(wrapper.find('.fl-confirm-text').text()).toBe('b.pdf: HTTP 500')
+  })
 })

@@ -33,6 +33,8 @@ export interface ListContext {
   props: ResolvedProps
   t: Translate
   showToast: (message: string) => void
+  /** Localised message for an error (formats API timeouts via `t`). */
+  errorMessage: (error: unknown) => string
   /** A failure message; network errors (usually CORS) say where to look. */
   failureMessage: (key: keyof FileListLabels, error: unknown) => string
   api: ComputedRef<OpenListApi>

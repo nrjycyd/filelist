@@ -5,7 +5,7 @@ import type { FNode, LockState, UnlockError } from './tree'
 import type { FileListLabels, FileListSource } from './types'
 import type { SortKey } from './utils'
 import { computed, nextTick, ref, toRaw } from 'vue'
-import { errorText, isPasswordError } from './api'
+import { isPasswordError } from './api'
 import { descendantFiles, expandedKeysOf, loadedKeysOf, newLock, sortTree, sourceName, toNodes } from './tree'
 import { extOf, fileKind, isWithin, previewKind } from './utils'
 
@@ -74,7 +74,7 @@ export function useTree(
     resetShown: (folder?: string) => void
   },
 ) {
-  const { props, api, passwords, rootEl, t, showToast, failureMessage } = ctx
+  const { props, api, passwords, rootEl, t, showToast, errorMessage, failureMessage } = ctx
   const { roots, selected, deepMode } = options
 
   const loadingRoot = ref(false)
@@ -377,7 +377,7 @@ export function useTree(
     } catch (error) {
       if (seq !== generation.value) return
       if (error instanceof RootLockedError) lockRoot(error, '')
-      else errorMsg.value = errorText(error)
+      else errorMsg.value = errorMessage(error)
     } finally {
       if (seq === generation.value) loadingRoot.value = false
     }
