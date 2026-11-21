@@ -17,7 +17,6 @@ export interface FileListLabels {
   loadFailed: string
   guestHint: string
   /** Shown (and appended to toasts) for browser network errors, usually CORS. */
-  /** Shown (and appended to toasts) for browser network errors, usually CORS. */
   corsHint: string
   retry: string
   empty: string

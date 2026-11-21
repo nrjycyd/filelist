@@ -1,7 +1,7 @@
 import type { ComputedRef, Ref } from 'vue'
 import type { FNode } from './tree'
 import type { Row } from './useRows'
-import { computed, nextTick, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { isMore } from './useRows'
 
 /** A row's key: its path, or `more:<folder>` for a folder's “more” row. */
@@ -77,19 +77,6 @@ export function useKeyboard(options: {
     row.focus()
   }
 
-  /** After opening a folder, focus its first child once it is on screen. */
-  async function focusFirstChild(row: HTMLElement) {
-    const key = row.dataset.key
-    for (let i = 0; i < 40; i++) {
-      await nextTick()
-      const fresh = rowEls()
-      const at = fresh.findIndex((el) => el.dataset.key === key)
-      const next = fresh[at + 1]
-      if (next && levelOf(next) > levelOf(fresh[at])) return focusRow(next)
-      if (i > 2) await new Promise((resolve) => setTimeout(resolve, 50))
-    }
-  }
-
   /* ---------------- type-ahead ---------------- */
 
   let typed = ''
@@ -150,7 +137,7 @@ export function useKeyboard(options: {
       }
       else if (item && !isMore(item) && item.is_dir) {
         if (item.lock || !item.expanded) void options.toggleExpand(item)
-        else void focusFirstChild(row)
+        else if (all[at + 1] && levelOf(all[at + 1]) > levelOf(row)) focusRow(all[at + 1])
       }
       else cellsOf(row)[0]?.focus()
     }

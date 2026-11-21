@@ -89,7 +89,7 @@ export function useTree(
   const sortAsc = ref(true)
 
   /** The folder listed in single-path mode, as the parent of the top rows. */
-  const listedFolder = computed(() => ({ path: props.path, key: props.path, depth: -1, zipPath: [] as string[] }))
+  const listedFolder = computed(() => ({ path: props.path, key: props.path, depth: -1, zipPath: [] as string[], password: '' }))
 
   function sortNodes(nodes: FNode[]) {
     sortTree(nodes, sortKey.value, sortAsc.value, props.locale)
@@ -207,17 +207,17 @@ export function useTree(
 
   async function fetchChildren(node: FNode, password: string) {
     const items = await api.value.list(node.path, password)
-    setChildren(node, items, password)
+    setChildren(node, items)
   }
 
-  function setChildren(node: FNode, items: OLItem[], password: string) {
-    node.children = toNodes(items, node, password)
+  function setChildren(node: FNode, items: OLItem[]) {
+    node.children = toNodes(items, node)
     sortNodes(node.children)
     node.loaded = true
   }
 
   async function listRoot(password: string): Promise<FNode[]> {
-    const nodes = toNodes(await api.value.list(props.path, password), listedFolder.value, password)
+    const nodes = toNodes(await api.value.list(props.path, password), listedFolder.value)
     sortNodes(nodes)
     return nodes
   }
@@ -225,7 +225,7 @@ export function useTree(
   function requestChildren(node: FNode): Promise<FolderLoadResult> {
     const key = toRaw(node)
     const client = api.value
-    const { password, rememberedAt } = passwords.resolve(node.path, node.password)
+    const { password, rememberedAt } = passwords.resolve(node.path, node.password, node.passwordAt)
     const seq = refreshSeq
     const existing = folderLoads.get(key)
     if (existing?.api === client && existing.password === password && existing.generation === seq) return existing.promise
@@ -236,7 +236,7 @@ export function useTree(
       try {
         const items = await client.list(node.path, password)
         if (!current()) return { kind: 'superseded' }
-        setChildren(node, items, password)
+        setChildren(node, items)
         return { kind: 'loaded' }
       } catch (error) {
         if (!current()) return { kind: 'superseded' }
@@ -304,6 +304,7 @@ export function useTree(
       loading: false,
       children: [],
       password: own,
+      passwordAt: own ? path : undefined,
       isRoot: true,
       lock,
       unresolved: !!lock,
@@ -361,21 +362,24 @@ export function useTree(
   /** First load, or a retry after an error: shows the loading state. */
   async function loadRoot() {
     options.stopDeepSearch()
-    refreshSeq += 1
+    const seq = ++refreshSeq
     refreshing.value = false
     loadingRoot.value = true
     errorMsg.value = ''
     try {
-      roots.value = await buildTree()
+      const fresh = await buildTree()
+      if (seq !== refreshSeq) return
+      roots.value = fresh
       options.resetShown()
       rootLock.value = null
       selected.value = new Set()
       api.value.clearCache()
     } catch (error) {
+      if (seq !== refreshSeq) return
       if (error instanceof RootLockedError) lockRoot(error, '')
       else errorMsg.value = errorText(error)
     } finally {
-      loadingRoot.value = false
+      if (seq === refreshSeq) loadingRoot.value = false
     }
   }
 

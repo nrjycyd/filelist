@@ -83,8 +83,8 @@ export function useSelection(options: {
   const allFiles = computed(() => {
     const byPath = new Map<string, FNode>()
     for (const file of roots.value.flatMap(descendantFiles)) {
-      const first = byPath.get(file.path)
-      if (!first || (first.lock && !file.lock)) byPath.set(file.path, file)
+      if (file.lock) continue
+      if (!byPath.has(file.path)) byPath.set(file.path, file)
     }
     return [...byPath.values()]
   })

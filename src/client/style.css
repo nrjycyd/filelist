@@ -98,7 +98,6 @@
 }
 
 .fl-root button:focus-visible,
-.fl-root select:focus-visible,
 .fl-root input:focus-visible {
   outline: 2px solid var(--fl-c-brand-1);
   outline-offset: 1px;
@@ -297,11 +296,6 @@
   color: var(--vp-button-brand-hover-text, #fff);
   background: var(--fl-btn-primary-hover-bg, var(--vp-button-brand-hover-bg, var(--fl-c-brand-2)));
   border-color: var(--vp-button-brand-hover-border, transparent);
-}
-
-.fl-btn-primary:disabled {
-  cursor: progress;
-  opacity: 0.7;
 }
 
 /* ---------------- table ---------------- */
@@ -530,7 +524,6 @@
 
 /* The grey badge (other types) sits on the selection colour of a selected row:
    full-strength text keeps it at 4.5:1 or more. */
-.fl-row-selected .fl-type:not([data-kind]),
 .fl-row-selected .fl-type[data-kind='other'] {
   color: var(--fl-c-text-1);
 }
@@ -757,9 +750,14 @@
   color: var(--vp-button-brand-text, #fff);
   white-space: nowrap;
   cursor: pointer;
-  background: var(--vp-button-brand-bg, var(--fl-c-brand-3));
+  background: var(--fl-btn-primary-bg, var(--vp-button-brand-bg, var(--fl-c-brand-3)));
   border: 0;
   border-radius: 7px;
+}
+
+.fl-unlock-submit:hover:not(:disabled) {
+  color: var(--vp-button-brand-hover-text, #fff);
+  background: var(--fl-btn-primary-hover-bg, var(--vp-button-brand-hover-bg, var(--fl-c-brand-2)));
 }
 
 .fl-unlock-submit:disabled {
@@ -1108,6 +1106,7 @@
   box-sizing: border-box;
   min-height: var(--fl-row-h);
   padding: 8px 16px;
+  overflow: hidden;
   text-align: center;
   background: var(--fl-c-bg-soft);
   border-bottom: 1px solid var(--fl-c-divider);
@@ -1411,10 +1410,6 @@
     content: '';
   }
 
-  .fl-pin {
-    grid-template-columns: 41px minmax(0, 1fr) auto;
-  }
-
   .fl-pin-count {
     display: none;
   }
@@ -1425,7 +1420,6 @@
     width: 44px;
     height: 44px;
     padding: 0;
-    margin-right: 0;
     border-radius: 10px;
   }
 
@@ -1447,6 +1441,10 @@
     --fl-cols: 41px minmax(0, 1fr) auto;
 
     padding: 0 3px 0 4px;
+  }
+
+  .fl-pin {
+    grid-template-columns: var(--fl-cols);
   }
 
   /* the checkbox's tap area still reaches the edge */

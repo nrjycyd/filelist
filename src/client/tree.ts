@@ -27,8 +27,9 @@ export interface FNode extends OLItem {
   loaded: boolean
   loading: boolean
   children: FNode[]
-  /** Password this item was listed with (site-configured or typed for a parent). */
+  /** Site-configured source password and its root path, if any. */
   password: string
+  passwordAt?: string
   isRoot?: boolean
   /** Original file name when a source supplies a display title. */
   originalName?: string
@@ -40,7 +41,10 @@ export interface FNode extends OLItem {
   unresolved?: boolean
 }
 
-export function toNodes(items: OLItem[], parent: Pick<FNode, 'path' | 'key' | 'depth' | 'zipPath'>, password: string): FNode[] {
+export function toNodes(
+  items: OLItem[],
+  parent: Pick<FNode, 'path' | 'key' | 'depth' | 'zipPath' | 'password' | 'passwordAt'>,
+): FNode[] {
   return items.map((item) => ({
     ...item,
     path: joinPath(parent.path, item.name),
@@ -50,7 +54,8 @@ export function toNodes(items: OLItem[], parent: Pick<FNode, 'path' | 'key' | 'd
     loaded: false,
     loading: false,
     children: [],
-    password,
+    password: parent.password,
+    passwordAt: parent.passwordAt,
     zipPath: [...parent.zipPath, item.name],
   }))
 }
@@ -103,6 +108,7 @@ export function folderStats(roots: FNode[], selected: Set<string>): Map<string, 
   const stats = new Map<string, FolderStats>()
   const walk = (node: FNode): FolderStats => {
     if (!node.is_dir) {
+      if (node.lock) return { files: 0, bytes: 0, selected: 0, complete: false }
       return { files: 1, bytes: totalSize([node]), selected: selected.has(node.path) ? 1 : 0, complete: true }
     }
     const total: FolderStats = { files: 0, bytes: 0, selected: 0, complete: node.loaded && !node.lock }

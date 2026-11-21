@@ -37,27 +37,27 @@ export function usePasswords(options: {
     remembered.value = new Set(options.enabled() ? rememberedFolders(options.scope()) : [])
   }
 
-  function typedAbove(path: string): string {
-    let best = ''
-    let bestFolder = ''
+  function typedAbove(path: string): { path: string; password: string } | null {
+    let best: { path: string; password: string } | null = null
     for (const [folder, password] of typed) {
-      if (isWithin(path, folder) && folder.length > bestFolder.length) {
-        best = password
-        bestFolder = folder
-      }
+      if (isWithin(path, folder) && (!best || folder.length > best.path.length)) best = { path: folder, password }
     }
     return best
   }
 
-  function resolve(path: string, own = ''): ResolvedPassword {
+  function resolve(path: string, own = '', ownAt = path): ResolvedPassword {
     const exact = typed.get(path)
     if (exact) return { password: exact }
-    if (own) return { password: own }
     const above = typedAbove(path)
-    if (above) return { password: above }
     const stored = options.enabled() ? findRememberedPassword(options.scope(), path) : null
-    if (stored) return { password: stored.password, rememberedAt: stored.path }
-    return { password: options.fallback() }
+    let best: ResolvedPassword = own ? { password: own } : { password: options.fallback() }
+    let len = own ? ownAt.length : -1
+    if (above && above.path.length > len) {
+      best = { password: above.password }
+      len = above.path.length
+    }
+    if (stored && stored.path.length > len) best = { password: stored.password, rememberedAt: stored.path }
+    return best
   }
 
   /** A password worked: keep it for this page, and in this tab when asked. */
@@ -75,6 +75,10 @@ export function usePasswords(options: {
     sync()
   }
 
+  function clearTyped() {
+    typed.clear()
+  }
+
   /** A remembered password stopped working: drop it. Returns whether one was dropped. */
   function dropStale(rememberedAt: string | undefined): boolean {
     if (!rememberedAt) return false
@@ -83,5 +87,5 @@ export function usePasswords(options: {
     return true
   }
 
-  return { remembered, sync, resolve, accept, forget, dropStale }
+  return { remembered, sync, resolve, accept, forget, clearTyped, dropStale }
 }
