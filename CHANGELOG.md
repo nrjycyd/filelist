@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.15.1 (2026-11-21)
+
+### Performance
+
+- Lazy-load the built-in demo data and bundled sample files only when `base` is empty, reducing the eager browser bundle (`dist/client/browser/index.js`) from `48.0 KB` to `44.6 KB` gzip.
+- Memoise tree filter matching per layout pass (`useRows`), load nested subdirectories with 4-way bounded concurrency when ticking a folder (`useSelection`), deduplicate concurrent `fileUrl` lookups with a bounded cache, and reuse the initialised `MarkdownIt` / `DOMPurify` engine across Markdown previews.
+
+### Fixes
+
+- Retry transient HTTP (`408`, `429`, `502`, `503`, `504`) and network failures with abort-aware backoff during batch ZIP downloads.
+- Drop incomplete trailing UTF-8 byte sequences when truncating large text previews at `maxTextBytes` instead of rendering a replacement character.
+
 ## 0.15.0 (2026-11-21)
 
 ### Features
