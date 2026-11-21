@@ -46,6 +46,8 @@ updates:
     groups:
       runtime:
         patterns: [client-zip, dompurify, markdown-it]
+        # Keep semver-major upgrades as standalone PRs for manual changelog review.
+        update-types: [minor, patch]
       vitepress:
         patterns: [vitepress, vitepress-tuck, vue]
     commit-message:
