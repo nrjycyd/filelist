@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.15.2 (2026-11-21)
+
+### Fixes
+
+- Encode `$name` in `fillPreviewUrl` using single-pass callback replacement to prevent query/fragment injection, `$url` double-substitution, and JS `replace()` pattern expansion.
+- Re-lock single-file sources and drop cached `raw_url` / `sign` when forgetting a remembered password, and reset folder paging on forget.
+- Normalise trailing slashes in `usePasswords` (`resolve`, `accept`, `forget`, `isRemembered`) so remembered badges and path-specificity precedence work consistently with trailing slashes.
+- Clear stale rows, selection, and root lock state immediately when `loadRoot` starts loading a new path or source.
+- Propagate `AbortSignal` through OpenList API calls (`list`, `get`, `settings`) to cancel in-flight requests on reload, refresh, unmount, and deep-search stop (without interrupting shared manual folder expands or misreporting cancellations as 408 timeouts).
+- Remove `role="status"` from high-frequency ZIP progress and running deep-search status elements to avoid screen-reader announcement spam.
+
+### Maintenance
+
+- Update `dompurify` to `^3.4.18`, monitor runtime dependencies in Dependabot, add explicit `types` conditions to `exports` and root `sideEffects`, tighten CI/release workflow permissions and checks, migrate deprecated `tsdown` options, and sync docs/tests.
+
 ## 0.15.1 (2026-11-21)
 
 ### Performance
