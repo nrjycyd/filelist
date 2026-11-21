@@ -1,8 +1,6 @@
 import type { OLItem, OpenListApi } from './api'
 import type { FileListLocale } from './types'
-import { ApiError } from './api'
 import { isSample, SAMPLE_FOLDER, sampleNames, sampleSize, sampleUrl } from './demoSamples'
-import { isWithin } from './utils'
 
 const dir = (name: string, modified: string): OLItem => ({ name, size: 0, is_dir: true, modified })
 const file = (name: string, size: number, modified: string): OLItem => ({ name, size, is_dir: false, modified })
@@ -115,9 +113,13 @@ const TREE_EN: Record<string, OLItem[]> = {
 /** Demo-only folder passwords, so the demo can show the password flow. */
 const PASSWORDS: Record<string, string> = { '/加密示例（密码 1234）': '1234', '/Locked (password 1234)': '1234' }
 
-function guard(path: string, password: string) {
-  const lock = Object.entries(PASSWORDS).find(([folder]) => isWithin(path, folder))
-  if (lock && lock[1] !== password) throw new ApiError('password is incorrect or you have no permission', 403)
+function within(path: string, folder: string): boolean {
+  return path === folder || path.startsWith(`${folder}/`)
+}
+
+function guard(path: string, password: string, makeError: (message: string, code: number) => Error) {
+  const lock = Object.entries(PASSWORDS).find(([folder]) => within(path, folder))
+  if (lock && lock[1] !== password) throw makeError('password is incorrect or you have no permission', 403)
 }
 
 function parentOf(path: string): string {
@@ -125,19 +127,23 @@ function parentOf(path: string): string {
 }
 
 /** Demo OpenList: same API, no network; only the sample files have a URL. */
-export function createDemoApi(delay = 220, locale: FileListLocale = 'zh-CN'): OpenListApi {
+export function createDemoApi(
+  delay = 220,
+  locale: FileListLocale = 'zh-CN',
+  makeError: (message: string, code: number) => Error = (message, code) => Object.assign(new Error(message), { code }),
+): OpenListApi {
   const TREE = locale === 'en-US' ? TREE_EN : TREE_ZH
   return {
     async list(path, password) {
       await new Promise((resolve) => setTimeout(resolve, delay))
-      guard(path, password)
+      guard(path, password, makeError)
       return TREE[path] ?? []
     },
     async get(path, password) {
-      guard(path, password)
+      guard(path, password, makeError)
       const name = path.split('/').filter(Boolean).pop() ?? ''
       const item = (TREE[parentOf(path)] ?? []).find((entry) => entry.name === name)
-      if (!item) throw new ApiError('object not found', 404)
+      if (!item) throw makeError('object not found', 404)
       return item
     },
     settings: async () => ({ title: '', iframePreviews: '' }),
@@ -145,6 +151,7 @@ export function createDemoApi(delay = 220, locale: FileListLocale = 'zh-CN'): Op
     directUrl: () => '',
     // A blob: link with a file name downloads in place.
     isAttachmentUrl: (url) => url.startsWith('blob:'),
+    isSampleFile: isSample,
     clearCache: () => {},
   }
 }

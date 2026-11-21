@@ -58,6 +58,48 @@ describe('zipToBlob', () => {
     expect(signals[1].aborted).toBe(true)
     vi.unstubAllGlobals()
   })
+
+  it('retries transient HTTP 503 and network errors before succeeding', async () => {
+    let attempts = 0
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      attempts += 1
+      if (attempts === 1) return new Response('busy', { status: 503 })
+      if (attempts === 2) throw new TypeError('Failed to fetch')
+      return new Response('ok', { status: 200 })
+    }))
+    const { zipToBlob } = await import('../download')
+    const blob = await zipToBlob(
+      [{ name: 'flaky.txt', zipPath: ['flaky.txt'], size: 2, modified: '' }],
+      {
+        urlOf: async () => 'https://example.com/flaky.txt',
+        signal: new AbortController().signal,
+        onProgress: () => {},
+        retryDelays: [0, 0],
+      },
+    )
+    expect(attempts).toBe(3)
+    expect(blob.size).toBeGreaterThan(0)
+    vi.unstubAllGlobals()
+  })
+
+  it('aborts promptly while waiting to retry a transient error', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('busy', { status: 503 })))
+    const { zipToBlob } = await import('../download')
+    const controller = new AbortController()
+    const promise = zipToBlob(
+      [{ name: 'flaky.txt', zipPath: ['flaky.txt'], size: 2, modified: '' }],
+      {
+        urlOf: async () => 'https://example.com/flaky.txt',
+        signal: controller.signal,
+        onProgress: () => {},
+        retryDelays: [10_000],
+      },
+    )
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    controller.abort()
+    await expect(promise).rejects.toBeTruthy()
+    vi.unstubAllGlobals()
+  })
 })
 
 describe('openUrl', () => {

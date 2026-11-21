@@ -2,7 +2,6 @@ import type { ComputedRef, Ref } from 'vue'
 import type { ListContext } from './context'
 import type { FNode } from './tree'
 import { computed, ref } from 'vue'
-import { isDemoFile } from './demo'
 import { fillPreviewUrl, iframePreviewsFor, previewKind } from './utils'
 
 /** Only types the dialog can actually render get a preview button. */
@@ -41,7 +40,7 @@ export function usePreview(
     previewViewer.value = ''
     previewError.value = ''
     previewResolving.value = false
-    if ((demo.value && !isDemoFile(node.path)) || !canPreview(node)) return
+    if ((demo.value && !api.value.isSampleFile?.(node.path)) || !canPreview(node)) return
     previewResolving.value = true
     try {
       const url = await options.fileUrlOf(node)

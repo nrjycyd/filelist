@@ -97,11 +97,19 @@ export function useRows(
     const long: LongFolder[] = []
     const query = keyword.value.trim().toLowerCase()
     const size = pageSizeOf()
+    // Memoise per layout pass so deep subtrees are matched once instead of at every ancestor depth.
+    const matched = new Map<FNode, boolean>()
     // In deep search mode a locked folder may hide matches: show it so it can be unlocked.
-    const matches = (node: FNode): boolean =>
-      !query ||
-      node.name.toLowerCase().includes(query) ||
-      (node.is_dir && (node.children.some(matches) || (deepMode.value && !!node.lock)))
+    const matches = (node: FNode): boolean => {
+      if (!query) return true
+      const cached = matched.get(node)
+      if (cached !== undefined) return cached
+      const hit =
+        node.name.toLowerCase().includes(query) ||
+        (node.is_dir && (node.children.some(matches) || (deepMode.value && !!node.lock)))
+      matched.set(node, hit)
+      return hit
+    }
     const walk = (nodes: FNode[], key: string, depth: number) => {
       const list = nodes.filter(matches)
       // A filter shows every match: a cut list could hide the one searched for.

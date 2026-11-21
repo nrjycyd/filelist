@@ -1,4 +1,4 @@
-import type { OpenListEntry } from './types'
+import type { FileListLocale, OpenListEntry } from './types'
 import { encodePath, isWithin } from './utils'
 
 /** An entry from `/api/fs/list` or `/api/fs/get` (the latter adds `raw_url`). */
@@ -26,6 +26,8 @@ export interface OpenListApi {
    * answers as an attachment (so opening it downloads without leaving the page).
    */
   isAttachmentUrl: (url: string) => boolean
+  /** Demo mode only: whether a path is one of the real bundled sample files. */
+  isSampleFile?: (path: string) => boolean
   /** Drop cached file URLs, all of them or those under `path`. */
   clearCache: (path?: string) => void
 }
@@ -65,6 +67,8 @@ const REQUEST_TIMEOUT = 30_000
  * for this long, then ask OpenList again.
  */
 export const FILE_URL_TTL = 10 * 60_000
+/** Cap cached direct links so long-lived sessions do not grow without bound. */
+const FILE_URL_CACHE_MAX = 500
 
 /** Only these may be opened, previewed or zipped; anything else (`javascript:`) is dropped. */
 const SAFE_URL = /^(?:https?:|blob:)/i
@@ -79,6 +83,7 @@ export function createOpenListApi(
   const now = options.now ?? Date.now
   const timeout = options.timeout ?? REQUEST_TIMEOUT
   const urls = new Map<string, { url: string; at: number }>()
+  const pendingUrls = new Map<string, { id: symbol; promise: Promise<string> }>()
 
   async function request<T>(apiPath: string, body?: unknown): Promise<T> {
     const controller = new AbortController()
@@ -158,21 +163,79 @@ export function createOpenListApi(
       if (given) return given
       const cached = urls.get(file.path)
       if (cached && now() - cached.at < FILE_URL_TTL) return cached.url
-      let url = ''
-      try {
-        url = absoluteUrl((await request<{ raw_url?: string }>('/api/fs/get', { path: file.path, password }))?.raw_url ?? '')
-      } catch {
-        // Fall back to the signed download link below.
-      }
-      url ||= directUrl(file)
-      urls.set(file.path, { url, at: now() })
-      return url
+      const inflightKey = `${file.path}\0${password}`
+      const inflight = pendingUrls.get(inflightKey)
+      if (inflight) return inflight.promise
+      const id = Symbol('fileUrl')
+      const promise = (async () => {
+        let url = ''
+        try {
+          url = absoluteUrl((await request<{ raw_url?: string }>('/api/fs/get', { path: file.path, password }))?.raw_url ?? '')
+        } catch {
+          // Fall back to the signed download link below.
+        }
+        url ||= directUrl(file)
+        if (pendingUrls.get(inflightKey)?.id === id) {
+          const timestamp = now()
+          if (urls.size >= FILE_URL_CACHE_MAX) {
+            for (const [key, entry] of urls) {
+              if (timestamp - entry.at >= FILE_URL_TTL) urls.delete(key)
+            }
+            if (urls.size >= FILE_URL_CACHE_MAX) {
+              const oldest = urls.keys().next().value
+              if (oldest !== undefined) urls.delete(oldest)
+            }
+          }
+          urls.set(file.path, { url, at: timestamp })
+        }
+        return url
+      })().finally(() => {
+        if (pendingUrls.get(inflightKey)?.id === id) pendingUrls.delete(inflightKey)
+      })
+      pendingUrls.set(inflightKey, { id, promise })
+      return promise
     },
     directUrl,
     isAttachmentUrl: (url) => !!root && (url.startsWith(`${root}/p/`) || url.startsWith(`${root}/d/`)),
     clearCache(path) {
-      if (!path) urls.clear()
-      else for (const key of [...urls.keys()]) if (isWithin(key, path)) urls.delete(key)
+      if (!path) {
+        urls.clear()
+        pendingUrls.clear()
+      } else {
+        for (const key of [...urls.keys()]) if (isWithin(key, path)) urls.delete(key)
+        for (const key of [...pendingUrls.keys()]) {
+          if (isWithin(key.slice(0, key.indexOf('\0')), path)) pendingUrls.delete(key)
+        }
+      }
     },
+  }
+}
+
+/**
+ * Lazy proxy for the built-in demo data: production sites with `base` set never
+ * download `demo.ts` or its bundled sample files.
+ */
+export function createLazyDemoApi(delay = 220, locale: FileListLocale = 'zh-CN'): OpenListApi {
+  let resolved: OpenListApi | undefined
+  let pending: Promise<OpenListApi> | undefined
+  const load = (): Promise<OpenListApi> => {
+    if (resolved) return Promise.resolve(resolved)
+    pending ??= import('./demo')
+      .then(({ createDemoApi }) => (resolved = createDemoApi(delay, locale, (message, code) => new ApiError(message, code))))
+      .catch((error) => {
+        pending = undefined
+        throw error
+      })
+    return pending
+  }
+  return {
+    list: (path, password) => load().then((client) => client.list(path, password)),
+    get: (path, password) => load().then((client) => client.get(path, password)),
+    settings: async () => ({ title: '', iframePreviews: '' }),
+    fileUrl: (file, password) => load().then((client) => client.fileUrl(file, password)),
+    directUrl: () => '',
+    isAttachmentUrl: (url) => url.startsWith('blob:'),
+    isSampleFile: (path) => resolved?.isSampleFile?.(path) ?? false,
+    clearCache: () => {},
   }
 }

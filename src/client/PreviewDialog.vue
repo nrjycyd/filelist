@@ -192,8 +192,10 @@ async function loadBody() {
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
       const { bytes, more } = await readPrefix(response, limit)
       if (seq !== loadSeq) return
-      textContent.value = new TextDecoder('utf-8').decode(bytes)
-      truncated.value = more || file.size > limit
+      const isTruncated = more || file.size > limit
+      // Drop any incomplete trailing UTF-8 byte sequence when truncated at the byte cap.
+      textContent.value = new TextDecoder('utf-8').decode(bytes, { stream: isTruncated })
+      truncated.value = isTruncated
     } else {
       const response = await fetch(props.src, { signal: controller.signal })
       if (!response.ok) throw new Error(`HTTP ${response.status}`)

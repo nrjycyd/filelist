@@ -3,6 +3,7 @@ import type { VueWrapper } from '@vue/test-utils'
 import { flushPromises, mount } from '@vue/test-utils'
 import { describe, expect, it, vi } from 'vitest'
 import FileList from '../FileList.vue'
+import PreviewDialog from '../PreviewDialog.vue'
 import { BASE, file, mockOpenList, mountList, row, setupFileListHooks } from './fileListHarness'
 
 setupFileListHooks()
@@ -223,5 +224,25 @@ describe('FileList preview: Markdown and HTML rendering', () => {
     // Reopening an HTML file keeps “rendered”.
     dialog = await openText(wrapper, 'page.html')
     expect(dialog.find('iframe.fl-preview-html').exists()).toBe(true)
+  })
+
+  it('drops an incomplete trailing UTF-8 sequence instead of showing U+FFFD when truncated', async () => {
+    // '中文测试' is 12 UTF-8 bytes (3 bytes per char); cutting at 5 bytes splits '文'.
+    const full = new TextEncoder().encode('中文测试')
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(full.slice(0, 5), { status: 206 })))
+    const wrapper = mount(PreviewDialog, {
+      props: {
+        open: true,
+        file: { name: 'zh.txt', size: full.byteLength, modified: '' },
+        t: (key) => key,
+        src: 'https://example.com/zh.txt',
+        maxTextBytes: 5,
+      },
+      attachTo: document.body,
+    })
+    await vi.waitFor(() => expect(wrapper.find('.fl-preview-text pre').exists()).toBe(true))
+    expect(wrapper.find('.fl-preview-text pre').text()).toBe('中')
+    expect(wrapper.find('.fl-preview-text pre').text()).not.toContain('\uFFFD')
+    wrapper.unmount()
   })
 })

@@ -427,4 +427,48 @@ describe('FileList audit regressions', () => {
     await flushPromises()
     expect(en.find('.fl-error').text()).toContain('No answer from OpenList after 30 s')
   })
+
+  it('loads subdirectories concurrently when checking a folder and stops cleanly on a locked child', async () => {
+    const names = Array.from({ length: 6 }, (_, i) => `d${i + 1}`)
+    const tree: MockTree = {
+      '/': [dir('Root')],
+      '/Root': names.map((n) => dir(n)),
+      ...Object.fromEntries(names.map((n) => [`/Root/${n}`, [file(`${n}.txt`)]])),
+    }
+    mockOpenList(tree)
+    const original = globalThis.fetch
+    let inFlight = 0
+    let peak = 0
+    vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input))
+      if (url.pathname === '/api/fs/list' && init?.body && String(init.body).includes('/Root/d')) {
+        inFlight += 1
+        peak = Math.max(peak, inFlight)
+        await new Promise((resolve) => setTimeout(resolve, 15))
+        inFlight -= 1
+      }
+      return original(input, init)
+    }))
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+    await check(wrapper, 'Root')
+    await vi.waitFor(() => expect(wrapper.find('.fl-selection-count').text()).toBe('已选 6 项'))
+    expect(peak).toBe(4)
+
+    // With a nested locked directory, ticking expands the path and prompts for its password.
+    mockOpenList(
+      {
+        '/': [dir('Outer')],
+        '/Outer': [dir('A'), dir('Secret')],
+        '/Outer/A': [file('a.txt')],
+        '/Outer/Secret': [file('s.txt')],
+      },
+      { '/Outer/Secret': '1234' },
+    )
+    const lockedWrapper = mountList({ path: '/' })
+    await flushPromises()
+    await check(lockedWrapper, 'Outer')
+    await vi.waitFor(() => expect(row(lockedWrapper, 'Secret').find('.fl-unlock-row input').exists()).toBe(true))
+    expect(lockedWrapper.find('.fl-selection-count').exists()).toBe(false)
+  })
 })
