@@ -17,12 +17,13 @@
  */
 import type { ListContext } from './context'
 import type { FNode } from './tree'
-import type { FileListLabels, FileListProps, FileListSource } from './types'
+import type { FileListLabels, FileListProps } from './types'
 import type { SortKey } from './utils'
 import { computed, onBeforeUnmount, onMounted, onUpdated, ref, useId, watch } from 'vue'
 import { createOpenListApi, errorText, isNetworkError } from './api'
 import ConfirmDialog from './ConfirmDialog.vue'
-import { fitPrimaryButton } from './contrast'
+import { DEFAULT_PROPS } from './context'
+import { watchPrimaryButton } from './contrast'
 import { createDemoApi, isDemoFile } from './demo'
 import { warnPublicSecrets } from './devWarnings'
 import FileListToolbar from './FileListToolbar.vue'
@@ -32,6 +33,7 @@ import PreviewDialog from './PreviewDialog.vue'
 import SortMenu from './SortMenu.vue'
 import { useDeepSearch } from './useDeepSearch'
 import { useDownloads } from './useDownloads'
+import { useFocusRestore } from './useFocusRestore'
 import { rowKey, useKeyboard } from './useKeyboard'
 import { usePasswords } from './usePasswords'
 import { canPreview, usePreview } from './usePreview'
@@ -40,20 +42,7 @@ import { useSelection } from './useSelection'
 import { useTree } from './useTree'
 import { extOf, fileKind, formatDate, formatSize, totalSize } from './utils'
 
-const props = withDefaults(defineProps<FileListProps>(), {
-  base: '',
-  path: '/',
-  sources: () => [] as FileListSource[],
-  expanded: false,
-  token: '',
-  password: '',
-  title: '',
-  locale: 'zh-CN',
-  rememberPassword: true,
-  pageSize: 15,
-  deepSearchLimit: 500,
-  deepSearch: 'manual',
-})
+const props = withDefaults(defineProps<FileListProps>(), DEFAULT_PROPS)
 
 const text = computed<FileListLabels>(() => resolveLabels(props.locale, props.labels))
 
@@ -92,16 +81,20 @@ function failureMessage(key: keyof FileListLabels, error: unknown): string {
 
 const ctx: ListContext = { props, t, showToast, failureMessage, api, demo, passwords, rootEl }
 
-/** Selected file paths, shared by the tree (which trims them) and the check boxes. */
+/** Shared reactive state lifted above the composables so dependencies stay acyclic. */
+const roots = ref<FNode[]>([])
 const selected = ref<Set<string>>(new Set())
+const keyword = ref('')
+const deepMode = ref(false)
 
-// The parts need each other's state; the arrows below are only called after
-// setup, once every part exists.
+const rowsPart = useRows(ctx, { roots, keyword, deepMode })
+const { showMore, showLess, resetShown, rows, visible, pinned, pinOffset, pinnedName, stickyTop, toolbarOverFooter, schedulePin } = rowsPart
+
 const {
-  roots,
   loadingRoot,
   errorMsg,
   refreshing,
+  generation,
   rootLock,
   sortKey,
   sortAsc,
@@ -117,30 +110,19 @@ const {
   toggleExpand,
   setSort,
   applySort,
-} = useTree(ctx, {
-  selected,
-  stopDeepSearch: () => stopDeepSearch(),
-  deepMode: () => deepMode.value,
-  resetShown: (folder) => resetShown(folder),
-})
+} = useTree(ctx, { roots, selected, deepMode, resetShown })
 
 const {
-  keyword,
-  deepMode,
   deepRow,
   deepSearch,
   retryDeepSearch,
-  stopDeepSearch,
   pauseDeepSearch,
   clearFilter,
   folderCounts,
   lockedInSearch,
   deepSummary,
   nameParts,
-} = useDeepSearch(ctx, { roots, refreshing, loadChildren })
-
-const rowsPart = useRows(ctx, { roots, keyword, deepMode })
-const { showMore, showLess, resetShown, rows, visible, pinned, pinOffset, pinnedName, stickyTop, toolbarOverFooter, schedulePin } = rowsPart
+} = useDeepSearch(ctx, { roots, keyword, deepMode, refreshing, generation, loadChildren })
 
 const {
   statsOf,
@@ -230,96 +212,18 @@ watch(
 watch(() => props.rememberPassword, passwords.sync)
 watch(() => props.locale, () => !demo.value && applySort(sortKey.value, sortAsc.value))
 
-/* ---------------- keyboard focus that would be lost ---------------- */
-
-/**
- * Where focus was in the list. Several controls disappear after their own
- * action (“show all”, “clear”, the password form after unlocking, “Stop”…),
- * which would drop keyboard focus back to the top of the page. When that
- * happens, focus moves to the nearest control that still makes sense.
- */
-interface FocusSpot {
-  el: HTMLElement
-  /** The filter box, the toolbar, a row, a “more” row, the pinned folder row, the deep search line, or elsewhere. */
-  spot: 'search' | 'bar' | 'row' | 'more' | 'pin' | 'deep' | 'other'
-  /** Key of the row, the row above a “more” row, or the pinned folder. */
-  key?: string
-}
-let lastFocus: FocusSpot | null = null
-
-function onFocusIn(event: FocusEvent) {
-  const el = event.target
-  if (!(el instanceof HTMLElement) || el.closest('dialog')) {
-    lastFocus = null
-    return
-  }
-  const row = el.closest<HTMLElement>('[data-path]')
-  const more = el.closest<HTMLElement>('.fl-more')
-  const pin = el.closest<HTMLElement>('[data-pin]')
-  if (row) lastFocus = { el, spot: 'row', key: row.dataset.key }
-  else if (more) lastFocus = { el, spot: 'more', key: (more.previousElementSibling as HTMLElement | null)?.dataset.key }
-  else if (pin) lastFocus = { el, spot: 'pin', key: pin.dataset.pin }
-  else if (el.closest('.fl-deep')) lastFocus = { el, spot: 'deep' }
-  else if (el.closest('.fl-search')) lastFocus = { el, spot: 'search' }
-  else if (el.closest('.fl-bar')) lastFocus = { el, spot: 'bar' }
-  else lastFocus = { el, spot: 'other' }
-}
-
-/** Focus that leaves for somewhere else is not ours to bring back. */
-function onFocusOut(event: FocusEvent) {
-  const el = event.target
-  setTimeout(() => {
-    if (lastFocus?.el === el && (el as HTMLElement).isConnected) lastFocus = null
-  })
-}
-
-function restoreFocus() {
-  const last = lastFocus
-  const root = rootEl.value
-  if (!last || !root || last.el.isConnected) return
-  const active = document.activeElement
-  lastFocus = null
-  if (active && active !== document.body && active !== document.documentElement) return
-  const find = (selector: string) => root.querySelector<HTMLElement>(selector)
-  const rowAt = (key?: string) =>
-    key === undefined ? null : root.querySelector<HTMLElement>(`[data-key="${CSS.escape(key)}"]`)
-  // Rows take focus themselves (one Tab stop for the list, see useKeyboard.ts).
-  const inRow = (row: Element | null | undefined) =>
-    row instanceof HTMLElement && row.dataset.key !== undefined ? row : null
-  let target: HTMLElement | null = null
-  if (last.spot === 'row' || last.spot === 'pin') target = inRow(rowAt(last.key))
-  // “Show all”: the first row that just appeared.
-  else if (last.spot === 'more') target = inRow(rowAt(last.key)?.nextElementSibling)
-  else if (last.spot === 'deep') target = find('.fl-deep button') ?? find('.fl-search input')
-  else if (last.spot === 'search') target = find('.fl-search input')
-  else if (last.spot === 'bar') target = find('.fl-zip-cancel') ?? find('.fl-bar .fl-btn-primary')
-  target ??= find('.fl-head input[type="checkbox"]:not(:disabled)') ?? find('.fl-search input')
-  target?.focus()
-}
+const { onFocusIn, onFocusOut, restoreFocus } = useFocusRestore(rootEl)
 
 onUpdated(() => {
   restoreFocus()
   schedulePin()
 })
 
-/** Keeps “Download ZIP” readable in every theme, light and dark (contrast.ts). */
 let stopThemeWatch: (() => void) | undefined
 
 onMounted(() => {
   if (/Mac|iPhone|iPad/.test(navigator.platform)) selectAllKeys.value = '⌘A'
-  const fit = () => rootEl.value && fitPrimaryButton(rootEl.value)
-  fit()
-  // Light / dark switches: a class or attribute on <html> or <body>, or only
-  // the system setting (themes that follow prefers-color-scheme in CSS).
-  const watch = new MutationObserver(fit)
-  for (const el of [document.documentElement, document.body])
-    watch.observe(el, { attributes: true, attributeFilter: ['class', 'data-theme', 'style'] })
-  const scheme = window.matchMedia?.('(prefers-color-scheme: dark)')
-  scheme?.addEventListener('change', fit)
-  stopThemeWatch = () => {
-    watch.disconnect()
-    scheme?.removeEventListener('change', fit)
-  }
+  if (rootEl.value) stopThemeWatch = watchPrimaryButton(rootEl.value)
   warnPublicSecrets(props, props.locale)
   passwords.sync()
   void loadRoot()
@@ -747,7 +651,7 @@ onBeforeUnmount(() => {
     <PreviewDialog
       :open="!!previewNode"
       :file="previewNode"
-      :labels="text"
+      :t="t"
       :src="previewSrc"
       :viewer="previewViewer"
       :resolving="previewResolving"

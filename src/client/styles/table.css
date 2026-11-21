@@ -1,0 +1,356 @@
+/* ---------------- table ---------------- */
+
+/* Rows take keyboard focus themselves (one Tab stop, arrow keys inside). */
+.fl-row[data-key]:focus {
+  outline: none;
+}
+
+.fl-row[data-key]:focus-visible {
+  outline: 2px solid var(--fl-c-brand-1);
+  outline-offset: -2px;
+  border-radius: 6px;
+}
+
+.fl-row {
+  display: grid;
+  grid-template-columns: var(--fl-cols);
+  align-items: center;
+  min-height: var(--fl-row-h);
+  /* 24px to the checkbox and the last column, as the toolbar and footer */
+  padding: 0 24px 0 12px;
+  color: var(--fl-c-text-1);
+  /* lighter than the header's line: the rows read as one list */
+  border-bottom: 1px solid color-mix(in srgb, var(--fl-c-divider) 55%, transparent);
+  scroll-margin-top: calc(var(--fl-sticky) + 64px);
+}
+
+.fl-row:not(.fl-head):hover {
+  background: var(--fl-c-bg-soft);
+}
+
+.fl-row.fl-row-selected,
+.fl-row.fl-row-selected:hover {
+  background: var(--fl-c-brand-soft);
+}
+
+.fl-head {
+  position: relative;
+  min-height: 34px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--fl-c-text-2);
+  background: var(--fl-c-bg-soft);
+  border-bottom-color: var(--fl-c-divider);
+  user-select: none;
+}
+
+.fl-sort-btn {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  padding: 0;
+  font-weight: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+}
+
+/* labels flush with the numbers under them, the arrow on the outer side */
+.fl-head :is(.fl-cell-size, .fl-cell-date) .fl-sort-btn {
+  flex-direction: row-reverse;
+}
+
+.fl-sort-btn:hover {
+  color: var(--fl-c-text-1);
+}
+
+.fl-sort {
+  font-size: 9px;
+  color: var(--fl-c-brand-1);
+}
+
+.fl-sort:empty {
+  display: none;
+}
+
+.fl-sort-menu {
+  display: none;
+}
+
+.fl-cell {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.fl-cell-check {
+  justify-content: center;
+  align-self: stretch;
+  cursor: pointer;
+}
+
+/* The whole check cell is the click area. */
+.fl-check-hit {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  justify-content: center;
+  width: 100%;
+  cursor: pointer;
+}
+
+/* Read by screen readers, not shown. */
+.fl-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.fl-cell-check input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--fl-c-brand-1);
+}
+
+.fl-cell-name {
+  gap: 8px;
+  align-self: stretch;
+}
+
+.fl-cell-size,
+.fl-cell-date {
+  justify-content: flex-end;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--fl-c-text-2);
+  white-space: nowrap;
+}
+
+.fl-cell-op {
+  gap: 2px;
+  justify-content: flex-end;
+}
+
+/* indentation with one guide line per level, under the parent's chevron */
+.fl-indent {
+  flex: none;
+  align-self: stretch;
+  width: calc(var(--fl-depth, 0) * var(--fl-indent));
+  margin-right: -8px;
+  background-image: repeating-linear-gradient(
+    to right,
+    transparent 0,
+    transparent 8.5px,
+    var(--fl-c-divider) 8.5px,
+    var(--fl-c-divider) 9.5px,
+    transparent 9.5px,
+    transparent var(--fl-indent)
+  );
+}
+
+.fl-arrow {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  color: var(--fl-c-text-2);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  transition: transform 0.15s, color 0.15s;
+}
+
+.fl-arrow:hover {
+  color: var(--fl-c-text-1);
+}
+
+.fl-arrow-open {
+  transform: rotate(90deg);
+}
+
+.fl-arrow-placeholder {
+  flex: none;
+  width: 18px;
+}
+
+/* 4px to the icon: the chevron belongs to it */
+.fl-arrow,
+.fl-arrow-placeholder,
+.fl-pin-arrow {
+  margin-right: -4px;
+}
+
+.fl-folder-icon {
+  flex: none;
+  fill: var(--fl-folder-fill);
+  stroke: var(--fl-folder-stroke);
+  stroke-width: 1.2;
+}
+
+.fl-type {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 20px;
+  overflow: hidden;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--fl-k-fg, var(--fl-c-text-2));
+  background: var(--fl-k-bg, var(--fl-c-default-soft));
+  border-radius: 5px;
+}
+
+.fl-type[data-kind='doc'] { --fl-k-bg: var(--fl-k-doc-bg); --fl-k-fg: var(--fl-k-doc-fg); }
+.fl-type[data-kind='sheet'] { --fl-k-bg: var(--fl-k-sheet-bg); --fl-k-fg: var(--fl-k-sheet-fg); }
+.fl-type[data-kind='slide'] { --fl-k-bg: var(--fl-k-slide-bg); --fl-k-fg: var(--fl-k-slide-fg); }
+.fl-type[data-kind='pdf'] { --fl-k-bg: var(--fl-k-pdf-bg); --fl-k-fg: var(--fl-k-pdf-fg); }
+.fl-type[data-kind='image'] { --fl-k-bg: var(--fl-k-image-bg); --fl-k-fg: var(--fl-k-image-fg); }
+.fl-type[data-kind='media'] { --fl-k-bg: var(--fl-k-media-bg); --fl-k-fg: var(--fl-k-media-fg); }
+.fl-type[data-kind='archive'] { --fl-k-bg: var(--fl-k-archive-bg); --fl-k-fg: var(--fl-k-archive-fg); }
+.fl-type[data-kind='code'] { --fl-k-bg: var(--fl-k-code-bg); --fl-k-fg: var(--fl-k-code-fg); }
+
+/* The grey badge (other types) sits on the selection colour of a selected row:
+   full-strength text keeps it at 4.5:1 or more. */
+.fl-row-selected .fl-type[data-kind='other'] {
+  color: var(--fl-c-text-1);
+}
+
+.fl-label {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.fl-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.fl-name-dir,
+.fl-pin-name {
+  font-weight: 500;
+}
+
+.fl-name:hover {
+  color: var(--fl-c-brand-1);
+}
+
+.fl-meta {
+  display: none;
+}
+
+.fl-count {
+  flex: none;
+  font-size: 12px;
+  color: var(--fl-c-text-2);
+}
+
+.fl-loading {
+  color: var(--fl-c-text-2);
+}
+
+.fl-action {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--fl-c-text-2);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  transition: transform 0.15s, color 0.15s, background-color 0.15s;
+}
+
+.fl-action:hover {
+  color: var(--fl-c-brand-1);
+  background: var(--fl-c-default-soft);
+}
+
+.fl-arrow-end {
+  display: none;
+}
+
+.fl-arrow-end.fl-arrow-open {
+  transform: rotate(90deg);
+}
+
+/* ---------------- refresh ---------------- */
+
+/* indeterminate bar on the header's top edge: overlays the border, takes no space */
+.fl-progress {
+  position: absolute;
+  top: -1px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--fl-c-brand-soft);
+}
+
+.fl-progress::after {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  content: '';
+  background: var(--fl-c-brand-1);
+  animation: fl-progress 1.1s ease-in-out infinite;
+}
+
+@keyframes fl-progress {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(250%); }
+}
+
+.fl-refreshing .fl-row:not(.fl-head) {
+  pointer-events: none;
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+
+.fl-spinning svg {
+  animation: fl-spin 0.8s linear infinite;
+}
+
+.fl-icon-btn.fl-spinning {
+  color: var(--fl-c-brand-1);
+  border-color: var(--fl-c-brand-1);
+}
+
+.fl-icon-btn:disabled {
+  cursor: progress;
+}
+
+@keyframes fl-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fl-progress::after {
+    animation: none;
+    transform: none;
+  }
+
+  .fl-spinning svg {
+    animation: none;
+  }
+}

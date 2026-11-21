@@ -13,9 +13,6 @@ export default antfu(
   },
   {
     rules: {
-      // Composables refer to state that is created later in the same setup;
-      // the callbacks only run after setup.
-      'ts/no-use-before-define': 'off',
       'node/prefer-global/buffer': 'off',
       'node/prefer-global/process': 'off',
       'jsonc/sort-keys': 'off',

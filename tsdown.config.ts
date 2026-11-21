@@ -41,7 +41,6 @@ export function build(): UserConfig[] {
       outputOptions: {
         banner: 'import "../style.css"',
       },
-      copy: [{ from: 'src/client/style.css', to: `${outDir}/client` }],
     }),
   ]
 }

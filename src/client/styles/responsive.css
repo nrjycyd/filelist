@@ -1,0 +1,563 @@
+/* ---------------- wide containers with a pointer ---------------- */
+
+/* A file's buttons take the date's place while the row is hovered or has keyboard focus,
+   so the list needs no column that is empty most of the time. */
+@container fl (min-width: 560px) {
+  @media (hover: hover) {
+    .fl-row {
+      --fl-cols: 40px minmax(0, 1fr) 88px 112px;
+    }
+
+    .fl-row-prompting {
+      --fl-cols: 40px minmax(0, 1fr) 88px 184px;
+    }
+
+    .fl-row > :is(.fl-cell-date, .fl-cell-op) {
+      grid-area: 1 / 4;
+      transition: opacity 0.12s;
+    }
+
+    /* Keep actions above the date throughout the opacity transition. */
+    .fl-row:not(.fl-head, .fl-row-dir) > .fl-cell-op {
+      z-index: 1;
+      margin-right: -6px; /* icons at the 24px margin */
+      opacity: 0;
+    }
+
+    .fl-row:not(.fl-head, .fl-row-dir) > .fl-cell-date,
+    .fl-row:is(.fl-head, .fl-row-dir) > .fl-cell-op {
+      pointer-events: none;
+    }
+
+    .fl-row:not(.fl-head, .fl-row-dir):is(:hover, :focus-visible, :has(:focus-visible)) > .fl-cell-op {
+      opacity: 1;
+    }
+
+    .fl-row:not(.fl-head, .fl-row-dir):is(:hover, :focus-visible, :has(:focus-visible)) > .fl-cell-date {
+      opacity: 0;
+    }
+  }
+}
+
+/* ---------------- narrow containers ---------------- */
+
+@container fl (width < 560px) {
+  /* Phones have no arrow keys; the key hint would only crowd the footer. */
+  .fl-keys {
+    display: none;
+  }
+
+  .fl-bar {
+    padding: 10px 16px;
+  }
+
+  .fl-title {
+    display: none;
+  }
+
+  .fl-tools {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin-left: 0;
+  }
+
+  .fl-search {
+    flex: 1 1 auto;
+    width: auto;
+    height: 40px;
+    padding: 0 4px 0 12px;
+  }
+
+  .fl-search-clear {
+    width: 36px;
+    height: 36px;
+    background: transparent;
+  }
+
+  .fl-deep {
+    min-height: 48px;
+  }
+
+  .fl-deep-text {
+    font-size: 14px;
+  }
+
+  /* a taller tap target without changing the line */
+  .fl-deep-link {
+    padding: 11px 2px;
+    margin: -11px 0;
+  }
+
+  .fl-locked-hint {
+    display: none;
+  }
+
+  /* 16px keeps iOS Safari from zooming in on focus */
+  .fl-search input {
+    font-size: 16px;
+  }
+
+  .fl-icon-btn {
+    width: 44px;
+    height: 40px;
+  }
+
+  /* selecting: the toolbar becomes a sticky action bar */
+  .fl-selecting .fl-bar {
+    position: sticky;
+    top: var(--fl-sticky);
+    z-index: 10;
+    min-height: 61px;
+    padding: 8px 8px 8px 4px;
+    background: linear-gradient(var(--fl-c-brand-soft), var(--fl-c-brand-soft)), var(--fl-c-bg);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 8%);
+  }
+
+  .fl-selecting.fl-toolbar-over-footer .fl-bar {
+    /* The sticky bar can reach the bottom edge as the list scrolls away. */
+    border-radius: var(--fl-radius);
+  }
+
+  .fl-selecting .fl-tools {
+    display: none;
+  }
+
+  .fl-selecting .fl-selection {
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0;
+    align-items: flex-start;
+    min-width: 0;
+  }
+
+  .fl-selecting .fl-selection-count {
+    height: auto;
+    padding: 0;
+    font-size: 15px;
+    line-height: 1.35;
+    background: transparent;
+  }
+
+  .fl-selecting .fl-selection-size {
+    font-size: 12px;
+  }
+
+  .fl-clear {
+    order: -1;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    color: var(--fl-c-brand-1);
+    border-radius: 10px;
+  }
+
+  .fl-clear-icon {
+    display: block;
+  }
+
+  .fl-clear-text {
+    display: none;
+  }
+
+  .fl-bar .fl-btn-primary {
+    height: 44px;
+    padding: 0 14px;
+    font-size: 14px;
+    border-radius: 10px;
+  }
+
+  .fl-zip-cancel {
+    height: 44px;
+    padding: 0 16px;
+    border-radius: 10px;
+  }
+
+  .fl-more-tag {
+    width: 36px;
+    height: 22px;
+  }
+
+  .fl-more-count {
+    flex: 1 1 auto;
+  }
+
+  .fl-more-long {
+    display: none;
+  }
+
+  .fl-more-short {
+    display: inline;
+  }
+
+  /* smaller to look at, still a 44px target */
+  .fl-more-link {
+    position: relative;
+    height: 32px;
+    padding: 0 10px;
+    font-size: 14px;
+  }
+
+  .fl-more-link::after {
+    position: absolute;
+    inset: -6px 0;
+    content: '';
+  }
+
+  .fl-pin-count {
+    display: none;
+  }
+
+  /* only the arrow, in the actions column */
+  .fl-pin-less {
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: 10px;
+  }
+
+  .fl-pin-less-text {
+    display: none;
+  }
+
+  .fl-pin-less svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* rows (container queries cannot restyle .fl-root itself);
+     16px to the checkbox and the button icons, 12px from the checkbox to the content */
+  .fl-row,
+  .fl-pin {
+    --fl-indent: 16px;
+    --fl-row-h: 60px;
+    --fl-cols: 41px minmax(0, 1fr) auto;
+
+    padding: 0 3px 0 4px;
+  }
+
+  .fl-pin {
+    grid-template-columns: var(--fl-cols);
+  }
+
+  /* the checkbox's tap area still reaches the edge */
+  .fl-check-hit {
+    box-sizing: border-box;
+    width: calc(100% + 4px);
+    padding-left: 4px;
+    margin-left: -4px;
+  }
+
+  .fl-cell-name,
+  .fl-more-cell {
+    gap: 10px;
+  }
+
+  .fl-more {
+    padding-right: 6px;
+  }
+
+  .fl-head {
+    min-height: 40px;
+    padding-right: 16px;
+  }
+
+  .fl-cell-size,
+  .fl-cell-date {
+    display: none;
+  }
+
+  /* the sort menu replaces the clickable headers in narrow layout (SortMenu.vue) */
+  .fl-sort-menu {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .fl-sort-trigger {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+    height: 30px;
+    padding: 0;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--fl-c-text-1);
+    cursor: pointer;
+    background: none;
+    border: 0;
+    border-radius: 6px;
+  }
+
+  .fl-sort-current {
+    font-weight: 600;
+    color: var(--fl-c-brand-1);
+  }
+
+  .fl-sort-chevron {
+    color: var(--fl-c-brand-1);
+    transition: transform 0.12s;
+  }
+
+  .fl-open .fl-sort-chevron {
+    transform: rotate(180deg);
+  }
+
+  /* as wide as its longest label; type a step below the file names */
+  .fl-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    z-index: 30;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    width: max-content;
+    padding: 5px;
+    font-size: 15px;
+    font-weight: 400;
+    color: var(--fl-c-text-1);
+    text-align: left;
+    background: var(--vp-c-bg-elv, var(--fl-c-bg));
+    border: 1px solid var(--fl-c-divider);
+    border-radius: 13px;
+    box-shadow:
+      0 1px 2px rgb(0 0 0 / 6%),
+      0 6px 16px -4px rgb(0 0 0 / 14%),
+      0 16px 32px -12px rgb(0 0 0 / 14%);
+    transform-origin: top right;
+    animation: fl-menu-in 0.1s ease-out;
+  }
+
+  .fl-menu.fl-menu-up {
+    top: auto;
+    bottom: calc(100% + 4px);
+    transform-origin: bottom right;
+  }
+
+  :is(.dark, [data-theme='dark']) .fl-menu {
+    box-shadow:
+      0 1px 2px rgb(0 0 0 / 40%),
+      0 8px 20px -4px rgb(0 0 0 / 55%);
+  }
+
+  .fl-menu-item {
+    display: flex;
+    gap: 9px;
+    align-items: center;
+    height: 40px;
+    padding: 0 18px 0 10px;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+    background: none;
+    border: 0;
+    border-radius: 8px;
+  }
+
+  .fl-menu-item svg {
+    flex: none;
+    color: var(--fl-c-text-3);
+  }
+
+  .fl-menu-item.fl-current {
+    font-weight: 600;
+    color: var(--fl-c-brand-1);
+    background: var(--fl-c-brand-soft);
+  }
+
+  .fl-menu-item.fl-current svg {
+    color: var(--fl-c-brand-1);
+  }
+
+  /* edge to edge */
+  .fl-menu-sep {
+    height: 1px;
+    margin: 4px -5px;
+    background: var(--fl-c-divider);
+  }
+
+  .fl-menu-order {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 3px;
+    background: var(--fl-c-default-soft);
+    border-radius: 9px;
+  }
+
+  .fl-menu-order-btn {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    padding: 0 12px;
+    font: inherit;
+    font-size: 14px;
+    color: var(--fl-c-text-2);
+    white-space: nowrap;
+    cursor: pointer;
+    background: none;
+    border: 0;
+    border-radius: 7px;
+  }
+
+  .fl-menu-order-btn.fl-current {
+    font-weight: 600;
+    color: var(--fl-c-text-1);
+    background: var(--fl-c-bg);
+    box-shadow:
+      0 0 0 0.5px rgb(0 0 0 / 6%),
+      0 1px 2px rgb(0 0 0 / 12%);
+  }
+
+  :is(.dark, [data-theme='dark']) .fl-menu-order-btn.fl-current {
+    background: rgb(255 255 255 / 14%);
+    box-shadow: none;
+  }
+
+  .fl-menu :is(.fl-menu-item, .fl-menu-order-btn):focus-visible {
+    outline: 2px solid var(--fl-c-brand-1);
+    outline-offset: -2px;
+  }
+
+  /* the sort menu replaces the clickable header in narrow layout */
+  .fl-head .fl-cell-name .fl-sort {
+    display: none;
+  }
+
+  .fl-head .fl-sort-btn {
+    cursor: default;
+    pointer-events: none;
+  }
+
+  .fl-cell-check input {
+    width: 17px;
+    height: 17px;
+  }
+
+  .fl-arrow,
+  .fl-arrow-placeholder,
+  .fl-pin-arrow,
+  .fl-count {
+    display: none;
+  }
+
+  .fl-indent {
+    margin-right: -10px;
+    background-position-x: -8px;
+  }
+
+  .fl-type {
+    width: 36px;
+    height: 22px;
+  }
+
+  .fl-folder-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .fl-label {
+    gap: 1px;
+  }
+
+  .fl-name {
+    font-size: 15px;
+  }
+
+  .fl-meta {
+    display: block;
+    overflow: hidden;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--fl-c-text-2);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .fl-meta:empty {
+    display: none;
+  }
+
+  .fl-action {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+  }
+
+  .fl-arrow-end {
+    display: inline-flex;
+  }
+
+  .fl-foot {
+    padding: 11px 16px;
+  }
+
+  /* same-row password: the row keeps its 60px; the name gives way to the input */
+  .fl-row-prompting .fl-cell-name {
+    display: none;
+  }
+
+  /* lock (under the folder icons), input, key, Open, ✕ 12px apart to the eye; ✕ at the 16px margin */
+  .fl-unlock-row {
+    grid-column: 2 / -1;
+    gap: 0;
+    justify-content: flex-start;
+    padding-left: 0;
+  }
+
+  .fl-unlock-row .fl-unlock-lock {
+    display: block;
+    margin-right: 12px;
+  }
+
+  .fl-unlock input {
+    height: 40px;
+    padding: 0 10px;
+    font-size: 16px;
+    border-radius: 10px;
+  }
+
+  .fl-unlock-remember,
+  .fl-unlock-cancel {
+    width: 40px;
+    height: 44px;
+    border-color: transparent;
+    background: transparent;
+  }
+
+  .fl-unlock-remember[aria-pressed='true'] {
+    background: transparent;
+    border-color: transparent;
+  }
+
+  .fl-unlock-submit {
+    height: 40px;
+    padding: 0 14px;
+    font-size: 15px;
+    border-radius: 10px;
+  }
+
+  /* The name is hidden while prompting: the error moves into the placeholder,
+     and the message stays for screen readers only. */
+  .fl-row .fl-unlock-message {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .fl-unlock-row input[aria-invalid='true']::placeholder {
+    color: var(--fl-error-fg);
+  }
+
+  .fl-unlock-root {
+    padding: 10px 16px;
+  }
+}

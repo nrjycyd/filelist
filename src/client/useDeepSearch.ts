@@ -1,7 +1,7 @@
 import type { Ref } from 'vue'
 import type { ListContext } from './context'
 import type { FNode } from './tree'
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, reactive, watch } from 'vue'
 
 /**
  * The filter and deep search. The filter only sees loaded folders. Deep search
@@ -13,24 +13,21 @@ export function useDeepSearch(
   ctx: ListContext,
   options: {
     roots: Ref<FNode[]>
+    keyword: Ref<string>
+    deepMode: Ref<boolean>
     refreshing: Ref<boolean>
+    /** Increments whenever the tree reloads or refreshes; stops any running search. */
+    generation: Ref<number>
     /** Load a folder's children quietly; false when locked or failed. */
     loadChildren: (node: FNode, prompt: false, quiet: true) => Promise<boolean>
   },
 ) {
   const { props, t } = ctx
-  const { roots } = options
+  const { roots, keyword, deepMode } = options
 
-  const keyword = ref('')
   const deep = reactive({ running: false, searched: 0, capped: false, done: false })
   // Failed folders wait for an explicit retry or a new search context.
   const failed = reactive(new Set<FNode>())
-  /**
-   * Deep search mode: entered by “Try deep search” (or at once with
-   * `deep-search="auto"`), left by clearing the filter. While on, new keywords,
-   * refreshes and newly unlocked folders are searched without asking again.
-   */
-  const deepMode = ref(false)
   let deepSeq = 0
 
   /** Folders that are known but not loaded yet (locked ones excluded). */
@@ -130,6 +127,7 @@ export function useDeepSearch(
   })
 
   watch(roots, () => failed.clear())
+  watch(options.generation, stopDeepSearch, { flush: 'sync' })
 
   // In deep search mode, folders that become readable (a new keyword, a refresh,
   // an unlocked folder) are searched at once, unless the user stopped or the
@@ -195,12 +193,9 @@ export function useDeepSearch(
   }
 
   return {
-    keyword,
-    deepMode,
     deepRow,
     deepSearch,
     retryDeepSearch,
-    stopDeepSearch,
     pauseDeepSearch,
     clearFilter,
     folderCounts,

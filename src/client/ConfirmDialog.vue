@@ -1,6 +1,7 @@
 <script setup lang="ts">
 /** Small native <dialog> for a yes / no question or a notice (bottom sheet on phones). */
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
+import { useDialog } from './useDialog'
 
 const props = defineProps<{
   open: boolean
@@ -19,31 +20,7 @@ const emit = defineEmits<{
 }>()
 
 const dialog = ref<HTMLDialogElement>()
-
-watch(
-  () => props.open,
-  (open) => {
-    const el = dialog.value
-    if (!el) return
-    if (open && !el.open) {
-      if (typeof el.showModal === 'function') el.showModal()
-      else el.setAttribute('open', '')
-    } else if (!open && el.open) {
-      if (typeof el.close === 'function') el.close()
-      else el.removeAttribute('open')
-    }
-  },
-  { flush: 'post' },
-)
-
-function onNativeClose() {
-  // Esc: keep the parent in sync.
-  if (props.open) emit('close')
-}
-
-function onBackdrop(event: MouseEvent) {
-  if (event.target === dialog.value) emit('close')
-}
+const { onNativeClose, onBackdrop } = useDialog(dialog, () => props.open, () => emit('close'))
 </script>
 
 <template>

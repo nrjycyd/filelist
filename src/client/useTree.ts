@@ -64,24 +64,24 @@ interface FolderLoad {
 export function useTree(
   ctx: ListContext,
   options: {
+    /** Shared tree roots, owned by the component so rows/search stay acyclic. */
+    roots: Ref<FNode[]>
     /** The selected file paths; cleared or trimmed when the tree is rebuilt. */
     selected: Ref<Set<string>>
-    /** Pause a running deep search before the tree is rebuilt. */
-    stopDeepSearch: () => void
     /** In deep search mode, a refresh reads again the folders it had read. */
-    deepMode: () => boolean
+    deepMode: Ref<boolean>
     /** A folder was closed, or the tree rebuilt: long folders go back to their first page. */
     resetShown: (folder?: string) => void
   },
 ) {
   const { props, api, passwords, rootEl, t, showToast, failureMessage } = ctx
-  const { selected } = options
+  const { roots, selected, deepMode } = options
 
-  const roots = ref<FNode[]>([])
   const loadingRoot = ref(false)
   const errorMsg = ref('')
   const refreshing = ref(false)
-  let refreshSeq = 0
+  /** Incremented on every root load / refresh so deep search stops synchronously. */
+  const generation = ref(0)
   const folderLoads = new WeakMap<FNode, FolderLoad>()
   /** Single-path mode: the listed folder itself needs a password. */
   const rootLock = ref<LockState | null>(null)
@@ -93,6 +93,23 @@ export function useTree(
 
   function sortNodes(nodes: FNode[]) {
     sortTree(nodes, sortKey.value, sortAsc.value, props.locale)
+  }
+
+  function setChildren(node: FNode, items: OLItem[]) {
+    node.children = toNodes(items, node)
+    sortNodes(node.children)
+    node.loaded = true
+  }
+
+  async function fetchChildren(node: FNode, password: string) {
+    const items = await api.value.list(node.path, password)
+    setChildren(node, items)
+  }
+
+  async function listRoot(password: string): Promise<FNode[]> {
+    const nodes = toNodes(await api.value.list(props.path, password), listedFolder.value)
+    sortNodes(nodes)
+    return nodes
   }
 
   /* ---------------- folder passwords ---------------- */
@@ -205,33 +222,17 @@ export function useTree(
 
   /* ---------------- loading the tree ---------------- */
 
-  async function fetchChildren(node: FNode, password: string) {
-    const items = await api.value.list(node.path, password)
-    setChildren(node, items)
-  }
-
-  function setChildren(node: FNode, items: OLItem[]) {
-    node.children = toNodes(items, node)
-    sortNodes(node.children)
-    node.loaded = true
-  }
-
-  async function listRoot(password: string): Promise<FNode[]> {
-    const nodes = toNodes(await api.value.list(props.path, password), listedFolder.value)
-    sortNodes(nodes)
-    return nodes
-  }
-
   function requestChildren(node: FNode): Promise<FolderLoadResult> {
     const key = toRaw(node)
     const client = api.value
     const { password, rememberedAt } = passwords.resolve(node.path, node.password, node.passwordAt)
-    const seq = refreshSeq
+    const seq = generation.value
     const existing = folderLoads.get(key)
     if (existing?.api === client && existing.password === password && existing.generation === seq) return existing.promise
 
     node.loading = true
-    const current = (): boolean => folderLoads.get(key) === request && seq === refreshSeq && api.value === client
+    let request!: FolderLoad
+    const current = (): boolean => folderLoads.get(key) === request && seq === generation.value && api.value === client
     async function run(): Promise<FolderLoadResult> {
       try {
         const items = await client.list(node.path, password)
@@ -252,7 +253,7 @@ export function useTree(
       }
     }
 
-    const request: FolderLoad = { api: client, password, generation: seq, promise: Promise.resolve().then(run) }
+    request = { api: client, password, generation: seq, promise: Promise.resolve().then(run) }
     folderLoads.set(key, request)
     return request.promise
   }
@@ -361,25 +362,24 @@ export function useTree(
 
   /** First load, or a retry after an error: shows the loading state. */
   async function loadRoot() {
-    options.stopDeepSearch()
-    const seq = ++refreshSeq
+    const seq = ++generation.value
     refreshing.value = false
     loadingRoot.value = true
     errorMsg.value = ''
     try {
       const fresh = await buildTree()
-      if (seq !== refreshSeq) return
+      if (seq !== generation.value) return
       roots.value = fresh
       options.resetShown()
       rootLock.value = null
       selected.value = new Set()
       api.value.clearCache()
     } catch (error) {
-      if (seq !== refreshSeq) return
+      if (seq !== generation.value) return
       if (error instanceof RootLockedError) lockRoot(error, '')
       else errorMsg.value = errorText(error)
     } finally {
-      if (seq === refreshSeq) loadingRoot.value = false
+      if (seq === generation.value) loadingRoot.value = false
     }
   }
 
@@ -389,28 +389,27 @@ export function useTree(
    */
   async function refresh() {
     if (refreshing.value || loadingRoot.value) return
-    options.stopDeepSearch()
     if (!roots.value.length || errorMsg.value || rootLock.value) {
       await loadRoot()
       return
     }
-    const seq = ++refreshSeq
+    const seq = ++generation.value
     refreshing.value = true
     try {
       // In deep search mode, folders it had read are read again, so results stay.
-      const fresh = await buildTree(expandedKeysOf(roots.value), options.deepMode() ? loadedKeysOf(roots.value) : undefined)
-      if (seq !== refreshSeq) return
+      const fresh = await buildTree(expandedKeysOf(roots.value), deepMode.value ? loadedKeysOf(roots.value) : undefined)
+      if (seq !== generation.value) return
       roots.value = fresh
       const existing = new Set(fresh.flatMap(descendantFiles).map((file) => file.path))
       selected.value = new Set([...selected.value].filter((path) => existing.has(path)))
       api.value.clearCache()
     } catch (error) {
-      if (seq !== refreshSeq) return
+      if (seq !== generation.value) return
       // The listed folder's password changed: ask again.
       if (error instanceof RootLockedError) lockRoot(error, 'wrong')
       else showToast(failureMessage('refreshFailed', error))
     } finally {
-      if (seq === refreshSeq) refreshing.value = false
+      if (seq === generation.value) refreshing.value = false
     }
   }
 
@@ -444,10 +443,10 @@ export function useTree(
   }
 
   return {
-    roots,
     loadingRoot,
     errorMsg,
     refreshing,
+    generation,
     rootLock,
     sortKey,
     sortAsc,

@@ -1,0 +1,178 @@
+/* ---------------- folder passwords (same-row, no layout shift) ---------------- */
+
+.fl-row.fl-row-locked {
+  background: var(--fl-lock-bg);
+}
+
+.fl-row.fl-row-error {
+  background: var(--fl-error-bg);
+}
+
+.fl-lock {
+  color: var(--fl-lock-fg);
+}
+
+.fl-row-error .fl-lock {
+  color: var(--fl-error-fg);
+}
+
+.fl-row-locked .fl-cell-check input {
+  cursor: not-allowed;
+}
+
+.fl-unlock {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+}
+
+.fl-unlock-row {
+  grid-column: 3 / -1;
+  justify-content: flex-end;
+  padding-left: 8px;
+}
+
+.fl-unlock input {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 60px;
+  height: 28px;
+  box-sizing: border-box;
+  padding: 0 8px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--fl-c-text-1);
+  background: var(--fl-c-bg);
+  border: 1px solid var(--fl-c-brand-1);
+  border-radius: 7px;
+}
+
+.fl-unlock input[aria-invalid='true'] {
+  border-color: var(--fl-error-fg);
+}
+
+/* Wide rows show the error beside the folder name, so the empty input only turns red. */
+.fl-unlock input[aria-invalid='true']::placeholder {
+  color: transparent;
+}
+
+.fl-unlock-remember,
+.fl-unlock-cancel {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--fl-c-text-2);
+  cursor: pointer;
+  background: var(--fl-c-bg);
+  border: 1px solid var(--fl-c-divider);
+  border-radius: 7px;
+}
+
+.fl-unlock-cancel {
+  background: transparent;
+  border-color: transparent;
+}
+
+.fl-unlock-remember[aria-pressed='true'] {
+  color: var(--fl-c-brand-1);
+  background: var(--fl-c-brand-soft);
+  border-color: var(--fl-c-brand-1);
+}
+
+.fl-unlock-submit {
+  flex: none;
+  height: 28px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--vp-button-brand-text, #fff);
+  white-space: nowrap;
+  cursor: pointer;
+  background: var(--fl-btn-primary-bg, var(--vp-button-brand-bg, var(--fl-c-brand-3)));
+  border: 0;
+  border-radius: 7px;
+}
+
+.fl-unlock-submit:hover:not(:disabled) {
+  color: var(--vp-button-brand-hover-text, #fff);
+  background: var(--fl-btn-primary-hover-bg, var(--vp-button-brand-hover-bg, var(--fl-c-brand-2)));
+}
+
+.fl-unlock-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.fl-unlock-lock {
+  display: none;
+  flex: none;
+  color: var(--fl-lock-fg);
+}
+
+.fl-unlock-message {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--fl-error-fg);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* single-path mode: the listed folder itself is locked; sits where "loading" would */
+.fl-unlock-root {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  align-items: center;
+  min-height: var(--fl-row-h);
+  box-sizing: border-box;
+  padding: 10px 24px;
+  color: var(--fl-c-text-1);
+  background: var(--fl-lock-bg);
+  border-bottom: 1px solid var(--fl-c-divider);
+}
+
+.fl-unlock-root.fl-unlock-error {
+  background: var(--fl-error-bg);
+}
+
+.fl-unlock-root .fl-unlock-lock {
+  display: block;
+}
+
+.fl-unlock-root .fl-unlock {
+  flex: 1 1 260px;
+  max-width: 420px;
+}
+
+.fl-unlock-label {
+  font-size: 13px;
+  color: var(--fl-lock-fg);
+}
+
+.fl-remembered {
+  display: inline-flex;
+  flex: none;
+  gap: 3px;
+  align-items: center;
+  height: 22px;
+  padding: 0 7px;
+  font-size: 11px;
+  color: var(--fl-c-text-2);
+  white-space: nowrap;
+  cursor: pointer;
+  background: var(--fl-c-bg);
+  border: 1px solid var(--fl-c-divider);
+  border-radius: 999px;
+}
+
+.fl-remembered:hover {
+  color: var(--fl-c-brand-1);
+  border-color: var(--fl-c-brand-1);
+}

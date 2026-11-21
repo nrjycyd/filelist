@@ -1,29 +1,26 @@
 import type { ComputedRef, Ref } from 'vue'
 import type { OpenListApi } from './api'
-import type { FileListLabels, FileListProps } from './types'
+import type { FileListLabels, FileListProps, FileListSource } from './types'
 import type { usePasswords } from './usePasswords'
 
-/** Props after `withDefaults`: the ones with a default are always set. */
-type ResolvedProps = Readonly<
-  FileListProps &
-  Required<
-    Pick<
-      FileListProps,
-      | 'base'
-      | 'path'
-      | 'sources'
-      | 'expanded'
-      | 'token'
-      | 'password'
-      | 'title'
-      | 'locale'
-      | 'rememberPassword'
-      | 'pageSize'
-      | 'deepSearchLimit'
-      | 'deepSearch'
-    >
-  >
->
+/** Defaults shared between `FileList.vue`'s `withDefaults` and `ResolvedProps`. */
+export const DEFAULT_PROPS = {
+  base: '',
+  path: '/',
+  sources: () => [] as FileListSource[],
+  expanded: false,
+  token: '',
+  password: '',
+  title: '',
+  locale: 'zh-CN' as const,
+  rememberPassword: true,
+  pageSize: 15,
+  deepSearchLimit: 500,
+  deepSearch: 'manual' as const,
+}
+
+/** Props after `withDefaults`: every key in `DEFAULT_PROPS` is always set. */
+type ResolvedProps = Readonly<FileListProps & Required<Pick<FileListProps, keyof typeof DEFAULT_PROPS>>>
 
 export type Translate = (key: keyof FileListLabels, values?: Record<string, string | number>) => string
 
