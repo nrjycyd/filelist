@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.13.10 (2026-11-21)
+
+### Maintenance
+
+- Break circular composable callbacks between `useTree`, `useDeepSearch`, and `useRows`, and re-enable `ts/no-use-before-define` across the repository.
+- Extract `useFocusRestore`, `useDialog` (shared by `ConfirmDialog` and `PreviewDialog` with immediate open sync), and `watchPrimaryButton`; unify `DEFAULT_PROPS` / `ResolvedProps` derivation and `Translate` prop passing.
+- Split `src/client/style.css` into modular partials under `src/client/styles/`, bundled into an identical single `dist/client/style.css`.
+- Split `FileList.spec.ts` into domain-focused test suites and share common helpers across VitePress and VuePress compatibility scripts.
+
 ## 0.13.9 (2026-11-21)
 
 ### Fixes
