@@ -59,4 +59,26 @@ describe('usePasswords', () => {
     fresh.clearTyped()
     expect(fresh.resolve('/a/b/c.txt', 'parent-own', '/a')).toEqual({ password: 'sub-stored', rememberedAt: '/a/b' })
   })
+
+  it('normalises trailing slashes consistently for typed, remembered and own paths', () => {
+    const passwords = setup()
+    passwords.accept('/secret/', 'pw1', true)
+    expect(passwords.isRemembered('/secret/')).toBe(true)
+    expect(passwords.isRemembered('/secret')).toBe(true)
+    expect(passwords.resolve('/secret')).toEqual({ password: 'pw1' })
+
+    const fresh = setup()
+    fresh.sync()
+    expect(fresh.isRemembered('/secret/')).toBe(true)
+    expect(fresh.resolve('/secret/sub/', 'parent-own', '/secret/')).toEqual({ password: 'parent-own' })
+    fresh.accept('/secret/sub/', 'sub-pw', true)
+    const fresh2 = setup()
+    fresh2.sync()
+    expect(fresh2.resolve('/secret/sub/', 'parent-own', '/secret/')).toEqual({
+      password: 'sub-pw',
+      rememberedAt: '/secret/sub',
+    })
+    fresh2.forget('/secret/sub/')
+    expect(fresh2.isRemembered('/secret/sub/')).toBe(false)
+  })
 })

@@ -11,5 +11,5 @@ export default defineConfig({
   platform: 'neutral',
   target: 'node20.19.0',
   dts: true,
-  external: [/^vitepress-plugin-filelist(\/|$)/, /^vuepress(\/|$)/, 'vue', /^node:/],
+  deps: { neverBundle: [/^vitepress-plugin-filelist(\/|$)/, /^vuepress(\/|$)/, 'vue', /^node:/] },
 })

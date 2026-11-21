@@ -42,7 +42,7 @@ function write(base: string, map: PasswordMap): void {
   }
 }
 
-function normalise(path: string): string {
+export function normalisePath(path: string): string {
   return path.replace(/\/+$/, '') || '/'
 }
 
@@ -60,12 +60,12 @@ export function findRememberedPassword(
 }
 
 export function rememberFolderPassword(base: string, path: string, password: string): void {
-  write(base, { ...read(base), [normalise(path)]: password })
+  write(base, { ...read(base), [normalisePath(path)]: password })
 }
 
 export function forgetFolderPassword(base: string, path: string): void {
   const map = read(base)
-  delete map[normalise(path)]
+  delete map[normalisePath(path)]
   write(base, map)
 }
 

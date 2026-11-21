@@ -20,7 +20,8 @@ const BUDGET_KB = {
   // 47.2: track each mount independently and deduplicate shared file selections.
   // 48: localise timeout / ZIP HTTP errors and extract UnlockControls.vue.
   // 45: split demo data and bundled samples into a lazy chunk loaded only without `base`.
-  'client/browser/index.js': 45,
+  // 45.6: add AbortSignal cancellation across OpenList API / tree / deep search and path normalisation.
+  'client/browser/index.js': 45.6,
   // the build drops the stylesheet's comments (scripts/strip-css.mjs); the budget is for the rules
   'client/style.css': 8,
   'node/index.js': 1,

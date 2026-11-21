@@ -40,7 +40,7 @@ COMPAT_SKIP_BUILD=1 node scripts/compat.mjs     # 用现有 dist/，CI 用它在
 
 - 两个包版本号相同、一起发布（`src/__tests__/plugin.spec.ts` 检查版本一致；发布流程也会核对）
 - 根目录的 `build`、`typecheck`、`test` 已包含它；`pnpm test:compat:vuepress` 把两个包打包装进全新的 VuePress 2 站点（默认主题、plume、hope），构建后在 Chromium 中检查渲染、主色与深浅色、Markdown 预览、ZIP，约 2 分钟
-- 组件的配色通过 `style.css` 开头的 `--fl-c-*` 变量读取主题：先读 VitePress / plume 的变量名，再读 VuePress 默认主题 / hope 的变量名；深色同时认 `.dark` 与 `data-theme="dark"`
+- 组件的配色通过 `src/client/styles/tokens.css` 中的 `--fl-c-*` 变量读取主题：先读 VitePress / plume 的变量名，再读 VuePress 默认主题 / hope 的变量名；深色同时认 `.dark` 与 `data-theme="dark"`
 - `VuePress canary` 工作流每天检查 VuePress next 与三个主题的新版本，做法同 VitePress canary
 
 ```bash
@@ -52,7 +52,7 @@ COMPAT_VUEPRESS=2.0.0-rc.31 pnpm test:compat:vuepress          # 指定 VuePress
 
 不再维护时的分离方法：删除 `packages/vuepress-plugin-filelist`、`pnpm-workspace.yaml`、根 `package.json` 里 `--filter ./packages/*` 的部分与 `test:compat:vuepress`、`vitest.config.ts` 里的 `packages/*` 路径、CI 的 `vuepress` 任务、发布流程里 “Publish vuepress-plugin-filelist” 一步和版本核对、`vuepress-canary.yml`、文档的“在 VuePress 中使用”页，再在 npm 上 `npm deprecate vuepress-plugin-filelist "…"`。`--fl-c-*` 配色层可以保留，对 VitePress 无影响。
 
-包体积：`src/client/__tests__/size.spec.ts` 检查构建产物的 gzip 大小（浏览器包 46 KB、样式 8 KB、Node 入口 1 KB），并确认 markdown-it、DOMPurify、client-zip 仍是按需加载。CI 和发布流程先构建再测试，所以超出预算会直接失败；本地先 `pnpm run build`，否则这组测试跳过。确需增大预算时，在同一个改动里调整并写明原因。
+包体积：`src/client/__tests__/size.spec.ts` 检查构建产物的 gzip 大小（浏览器包 45.6 KB、样式 8 KB、Node 入口 1 KB），并确认 `markdown-it`、`DOMPurify`、`client-zip` 与内置演示数据仍是按需懒加载。CI 和发布流程先构建再测试，所以超出预算会直接失败；本地先 `pnpm run build`，否则这组测试跳过。确需增大预算时，在同一个改动里调整并写明原因。
 
 公开接口只有组件、`enhanceAppWithFileList`、文案工具与 `FileList*` 类型（`src/client/__tests__/publicApi.spec.ts` 守着这份清单）。新增导出或文案 key 前先想清楚：1.0 之后删除即是主版本。
 
@@ -60,23 +60,27 @@ COMPAT_VUEPRESS=2.0.0-rc.31 pnpm test:compat:vuepress          # 指定 VuePress
 
 | 文件 | 职责 |
 | --- | --- |
-| `FileList.vue` | 组件：共享的属性、文案、提示、OpenList 客户端与密码，把下列模块接到模板 |
-| `context.ts` | 各模块共享的 `ListContext` 类型 |
-| `useTree.ts` | 目录树的加载与刷新、展开、目录密码、排序 |
+| `FileList.vue` | 主组件：共享的属性、文案、提示、OpenList 客户端与密码，把下列模块接到模板 |
+| `FileListToolbar.vue` / `SortMenu.vue` / `UnlockControls.vue` | 工具栏、窄屏排序菜单、行内与根目录复用的密码输入控件 |
+| `PreviewDialog.vue` / `ConfirmDialog.vue` | 预览弹窗与确认/提示弹窗（共享 `useDialog.ts`） |
+| `context.ts` | 默认属性 `DEFAULT_PROPS` 与各模块共享的 `ListContext` 类型 |
+| `useTree.ts` | 目录树的加载与刷新、展开、目录密码、排序与在途请求中止 |
 | `useDeepSearch.ts` | 筛选与深度搜索 |
-| `useRows.ts` | 屏幕上的行：长目录的末行与吸顶行、吸附偏移 |
-| `useSelection.ts` | 勾选与全选 |
+| `useRows.ts` | 屏幕上的行：筛选记忆化、长目录的末行与吸顶行、吸附偏移 |
+| `useSelection.ts` | 勾选与全选（含 4 并发子目录加载） |
 | `useDownloads.ts` | 单文件下载与批量 ZIP |
-| `usePreview.ts` | 预览弹窗的状态与切换 |
-| `api.ts` | OpenList 接口、文件地址缓存、错误判断 |
-| `demo.ts` / `demoSamples.ts` | 演示数据（与 `api.ts` 同一接口）/ 演示用的真实示例文件 |
+| `usePreview.ts` / `markdown.ts` | 预览弹窗的状态切换 / 按需加载与复用的 Markdown 净化渲染 |
+| `useKeyboard.ts` / `useFocusRestore.ts` | WAI-ARIA treegrid 键盘导航与控件消失后的焦点恢复 |
+| `contrast.ts` | 跟随亮/暗主题计算主按钮 WCAG AA 对比度 |
+| `api.ts` | OpenList 接口、在途去重与有界 URL 缓存、懒加载演示代理、错误判断 |
+| `demo.ts` / `demoSamples.ts` | 按需懒加载的演示数据与内置示例文件 |
 | `tree.ts` | 树节点、排序、目录统计 |
-| `usePasswords.ts` / `passwords.ts` | 目录密码的选择顺序 / 标签页内记住 |
-| `download.ts` | 单文件下载、批量 ZIP |
-| `PreviewDialog.vue` | 预览弹窗 |
+| `usePasswords.ts` / `passwords.ts` | 目录密码的路径规范化与优先级选择 / 标签页内记住 |
+| `download.ts` | 单文件下载、批量 ZIP 流式打包与瞬态重试 |
 | `Icon.vue` / `icons.ts` | 图标 |
-| `utils.ts` | 路径、格式化、文件类型表 |
+| `utils.ts` | 路径、格式化、并发控制、文件类型表与预览模板填充 |
 | `devWarnings.ts` | 开发时提示 `token` / `password` 会公开 |
+| `style.css` / `styles/*.css` | 模块化样式源码，构建期拼接去注释为单一 `dist/client/style.css` |
 
 仓库统一使用 pnpm（`pnpm-lock.yaml`），CI 与发布流程执行 `pnpm install --frozen-lockfile`。
 

@@ -357,4 +357,43 @@ describe('FileList deep search', () => {
     await wrapper.find('.fl-search input').trigger('keydown', { key: 'Escape' })
     expect((wrapper.find('.fl-search input').element as HTMLInputElement).value).toBe('')
   })
+
+  it('aborts in-flight deep-search requests on Stop without cancelling a shared manual expand', async () => {
+    mockOpenList({ '/': [dir('Solo'), dir('Shared')], '/Solo': [file('s.txt')], '/Shared': [file('m.txt')] })
+    const original = globalThis.fetch
+    const signals = new Map<string, AbortSignal>()
+    const releases = new Map<string, () => void>()
+    vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      if (String(input).endsWith('/api/fs/list')) {
+        const target = JSON.parse(String(init?.body)).path as string
+        if (target === '/Solo' || target === '/Shared') {
+          if (init?.signal) signals.set(target, init.signal)
+          await new Promise<void>((resolve, reject) => {
+            releases.set(target, resolve)
+            init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')))
+          })
+        }
+      }
+      return original(input, init)
+    }))
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+    await filter(wrapper, 'S')
+    await status(wrapper).find('.fl-deep-link').trigger('click')
+    await vi.waitFor(() => expect(signals.size).toBe(2))
+    // While running, .fl-deep omits role="status" to avoid spamming screen readers.
+    expect(status(wrapper).attributes('role')).toBeUndefined()
+
+    // User manually expands /Shared while deep search is also reading it.
+    await row(wrapper, 'Shared').find('.fl-arrow').trigger('click')
+    // Stopping deep search aborts /Solo (deep-search only) but preserves /Shared (shared with manual expand).
+    await status(wrapper).find('.fl-deep-link').trigger('click')
+    expect(signals.get('/Solo')?.aborted).toBe(true)
+    expect(signals.get('/Shared')?.aborted).toBe(false)
+    expect(status(wrapper).attributes('role')).toBe('status')
+
+    releases.get('/Shared')?.()
+    await flushPromises()
+    expect(row(wrapper, 'Shared').attributes('aria-expanded')).toBe('true')
+  })
 })

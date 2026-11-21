@@ -38,6 +38,8 @@ interface FolderLoad {
   api: OpenListApi
   password: string
   generation: number
+  controller: AbortController
+  waiters: number
   promise: Promise<FolderLoadResult>
 }
 
@@ -66,7 +68,18 @@ export function useTree(
   const refreshing = ref(false)
   /** Incremented on every root load / refresh so deep search stops synchronously. */
   const generation = ref(0)
+  let treeAbort = new AbortController()
   const folderLoads = new WeakMap<FNode, FolderLoad>()
+
+  function resetTreeAbort(): AbortSignal {
+    treeAbort.abort()
+    treeAbort = new AbortController()
+    return treeAbort.signal
+  }
+
+  function abortPending() {
+    treeAbort.abort()
+  }
   /** Single-path mode: the listed folder itself needs a password. */
   const rootLock = ref<LockState | null>(null)
   const sortKey = ref<SortKey>('name')
@@ -90,8 +103,8 @@ export function useTree(
     setChildren(node, items)
   }
 
-  async function listRoot(password: string): Promise<FNode[]> {
-    const nodes = toNodes(await api.value.list(props.path, password), listedFolder.value)
+  async function listRoot(password: string, signal?: AbortSignal): Promise<FNode[]> {
+    const nodes = toNodes(await api.value.list(props.path, password, signal), listedFolder.value)
     sortNodes(nodes)
     return nodes
   }
@@ -195,82 +208,134 @@ export function useTree(
     api.value.clearCache()
   }
 
-  /** Forget a remembered password: the folder folds up and asks again next time. */
+  /** Forget a remembered password: fold folders (and reset paging) or re-lock single-file sources. */
   function forgetPassword(node: FNode) {
     passwords.forget(node.path)
-    folderLoads.delete(toRaw(node))
-    Object.assign(node, { expanded: false, loaded: false, loading: false, children: [], lock: undefined })
+    const raw = toRaw(node)
+    folderLoads.get(raw)?.controller.abort()
+    folderLoads.delete(raw)
+    options.resetShown(node.key)
+    if (node.is_dir) {
+      Object.assign(node, { expanded: false, loaded: false, loading: false, children: [], lock: undefined })
+    } else {
+      Object.assign(node, { raw_url: undefined, sign: undefined, lock: newLock(), unresolved: true })
+    }
     selected.value = new Set([...selected.value].filter((path) => !isWithin(path, node.path)))
     api.value.clearCache(node.path)
   }
 
   /* ---------------- loading the tree ---------------- */
 
-  function requestChildren(node: FNode): Promise<FolderLoadResult> {
+  function getOrStartFolderLoad(node: FNode): FolderLoad {
     const key = toRaw(node)
     const client = api.value
     const { password, rememberedAt } = passwords.resolve(node.path, node.password, node.passwordAt)
     const seq = generation.value
     const existing = folderLoads.get(key)
-    if (existing?.api === client && existing.password === password && existing.generation === seq) return existing.promise
+    if (
+      existing &&
+      !existing.controller.signal.aborted &&
+      existing.api === client &&
+      existing.password === password &&
+      existing.generation === seq
+    ) {
+      return existing
+    }
 
     node.loading = true
-    let request!: FolderLoad
-    const current = (): boolean => folderLoads.get(key) === request && seq === generation.value && api.value === client
+    const controller = new AbortController()
+    const treeSignal = treeAbort.signal
+    const onTreeAbort = () => controller.abort(treeSignal.reason)
+    if (treeSignal.aborted) onTreeAbort()
+    else treeSignal.addEventListener('abort', onTreeAbort, { once: true })
+
+    const load: FolderLoad = {
+      api: client,
+      password,
+      generation: seq,
+      controller,
+      waiters: 0,
+      promise: null as unknown as Promise<FolderLoadResult>,
+    }
+    const current = (): boolean => folderLoads.get(key) === load && seq === generation.value && api.value === client
     async function run(): Promise<FolderLoadResult> {
       try {
-        const items = await client.list(node.path, password)
-        if (!current()) return { kind: 'superseded' }
+        const items = await client.list(node.path, password, controller.signal)
+        if (!current() || controller.signal.aborted) return { kind: 'superseded' }
         setChildren(node, items)
         return { kind: 'loaded' }
       } catch (error) {
-        if (!current()) return { kind: 'superseded' }
+        if (!current() || controller.signal.aborted) return { kind: 'superseded' }
         if (!isPasswordError(error)) return { kind: 'failed', error }
         node.expanded = false
         node.lock = newLock(false, passwords.dropStale(rememberedAt) ? 'stale' : '')
         return { kind: 'locked' }
       } finally {
-        if (folderLoads.get(key) === request) {
+        treeSignal.removeEventListener('abort', onTreeAbort)
+        if (folderLoads.get(key) === load) {
           folderLoads.delete(key)
           node.loading = false
         }
       }
     }
 
-    request = { api: client, password, generation: seq, promise: Promise.resolve().then(run) }
-    folderLoads.set(key, request)
-    return request.promise
+    load.promise = Promise.resolve().then(run)
+    folderLoads.set(key, load)
+    return load
   }
 
   /**
    * Load a folder's children. A password error locks the folder instead of
    * toasting; `prompt` also shows its same-row input (and focuses it).
+   * An optional caller `signal` cancels the underlying fetch only when no other
+   * waiter (e.g. a manual expand) is sharing the same in-flight load.
    */
   async function loadChildren(
     node: FNode,
     prompt: false | 'show' | 'focus' = false,
     quiet = false,
+    signal?: AbortSignal,
   ): Promise<boolean> {
     if (node.loaded) return true
+    if (signal?.aborted) return false
     if (node.lock) {
       if (prompt) startPrompt(node, prompt === 'focus')
       return false
     }
-    const result = await requestChildren(node)
+    const load = getOrStartFolderLoad(node)
+    load.waiters += 1
+    let released = false
+    const release = (cancel: boolean) => {
+      if (released) return
+      released = true
+      load.waiters -= 1
+      if (cancel && load.waiters === 0) load.controller.abort(signal?.reason)
+    }
+    const onCancel = () => release(true)
+    signal?.addEventListener('abort', onCancel, { once: true })
+    let result: FolderLoadResult
+    try {
+      result = await load.promise
+    } finally {
+      signal?.removeEventListener('abort', onCancel)
+      release(false)
+    }
+    if (signal?.aborted) return false
     if (result.kind === 'locked' && prompt) startPrompt(node, prompt === 'focus')
     if (result.kind === 'failed' && !quiet) showToast(failureMessage('folderFailed', result.error))
     return result.kind === 'loaded'
   }
 
-  async function loadSourceRoot(source: FileListSource, key: string, expanded: boolean): Promise<FNode> {
+  async function loadSourceRoot(source: FileListSource, key: string, expanded: boolean, signal?: AbortSignal): Promise<FNode> {
     const path = source.path
     const own = source.password ?? ''
     let item: OLItem = { name: sourceName(path), size: 0, is_dir: !looksLikeFile(path), modified: '' }
     let lock: LockState | undefined
     const { password, rememberedAt } = passwords.resolve(path, own)
     try {
-      item = { ...item, ...(await api.value.get(path, password)) }
+      item = { ...item, ...(await api.value.get(path, password, signal)) }
     } catch (error) {
+      if (signal?.aborted) throw error
       // Other errors keep the guess; expanding surfaces the real error.
       if (isPasswordError(error)) lock = newLock(expanded, passwords.dropStale(rememberedAt) ? 'stale' : '')
     }
@@ -302,19 +367,19 @@ export function useTree(
    * Build a fresh tree. `expandedKeys` re-opens those folders (refresh keeps
    * what was open); without it the configured `expanded` defaults apply.
    */
-  async function buildTree(expandedKeys?: Set<string>, loadedKeys?: Set<string>): Promise<FNode[]> {
+  async function buildTree(expandedKeys?: Set<string>, loadedKeys?: Set<string>, signal?: AbortSignal): Promise<FNode[]> {
     let nodes: FNode[]
     if (props.sources.length) {
       nodes = await Promise.all(
         props.sources.map((source, index) => {
           const key = `source:${index}`
-          return loadSourceRoot(source, key, expandedKeys ? expandedKeys.has(key) : (source.expanded ?? props.expanded))
+          return loadSourceRoot(source, key, expandedKeys ? expandedKeys.has(key) : (source.expanded ?? props.expanded), signal)
         }),
       )
     } else {
       const { password, rememberedAt } = passwords.resolve(props.path)
       try {
-        nodes = await listRoot(password)
+        nodes = await listRoot(password, signal)
       } catch (error) {
         throw isPasswordError(error) ? new RootLockedError(rememberedAt) : error
       }
@@ -327,10 +392,10 @@ export function useTree(
         list.map(async (node) => {
           const wanted = !!(node.expanded || expandedKeys?.has(node.key))
           const keep = !!loadedKeys?.has(node.key)
-          if (!node.is_dir || node.lock || !(wanted || keep)) return
-          const ok = await limit(() => loadChildren(node, wanted ? 'show' : false, !wanted))
+          if (!node.is_dir || node.lock || !(wanted || keep) || signal?.aborted) return
+          const ok = await limit(() => loadChildren(node, wanted ? 'show' : false, !wanted, signal))
           node.expanded = wanted && ok
-          if (ok && (expandedKeys || loadedKeys)) await open(node.children)
+          if (ok && (expandedKeys || loadedKeys) && !signal?.aborted) await open(node.children)
         }),
       )
     }
@@ -344,22 +409,24 @@ export function useTree(
     rootLock.value = newLock(true, passwords.dropStale(error.rememberedAt) ? 'stale' : fallback)
   }
 
-  /** First load, or a retry after an error: shows the loading state. */
+  /** First load, or a retry / source change: clears stale rows and shows the loading state. */
   async function loadRoot() {
     const seq = ++generation.value
+    const signal = resetTreeAbort()
     refreshing.value = false
     loadingRoot.value = true
     errorMsg.value = ''
+    roots.value = []
+    selected.value = new Set()
+    rootLock.value = null
+    options.resetShown()
     try {
-      const fresh = await buildTree()
+      const fresh = await buildTree(undefined, undefined, signal)
       if (seq !== generation.value) return
       roots.value = fresh
-      options.resetShown()
-      rootLock.value = null
-      selected.value = new Set()
       api.value.clearCache()
     } catch (error) {
-      if (seq !== generation.value) return
+      if (seq !== generation.value || signal.aborted) return
       if (error instanceof RootLockedError) lockRoot(error, '')
       else errorMsg.value = errorMessage(error)
     } finally {
@@ -378,17 +445,18 @@ export function useTree(
       return
     }
     const seq = ++generation.value
+    const signal = resetTreeAbort()
     refreshing.value = true
     try {
       // In deep search mode, folders it had read are read again, so results stay.
-      const fresh = await buildTree(expandedKeysOf(roots.value), deepMode.value ? loadedKeysOf(roots.value) : undefined)
+      const fresh = await buildTree(expandedKeysOf(roots.value), deepMode.value ? loadedKeysOf(roots.value) : undefined, signal)
       if (seq !== generation.value) return
       roots.value = fresh
       const existing = new Set(fresh.flatMap(descendantFiles).map((file) => file.path))
       selected.value = new Set([...selected.value].filter((path) => existing.has(path)))
       api.value.clearCache()
     } catch (error) {
-      if (seq !== generation.value) return
+      if (seq !== generation.value || signal.aborted) return
       // The listed folder's password changed: ask again.
       if (error instanceof RootLockedError) lockRoot(error, 'wrong')
       else showToast(failureMessage('refreshFailed', error))
@@ -446,5 +514,6 @@ export function useTree(
     toggleExpand,
     setSort,
     applySort,
+    abortPending,
   }
 }

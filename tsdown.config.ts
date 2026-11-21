@@ -17,7 +17,7 @@ export function build(): UserConfig[] {
       outDir: `${outDir}/node`,
       dts: true,
       target: 'node20.19.0',
-      external: ['vitepress-tuck'],
+      deps: { neverBundle: ['vitepress-tuck'] },
     }),
     // SSR build for the component
     mergeConfig({}, baseConfig, {
@@ -25,9 +25,9 @@ export function build(): UserConfig[] {
       outDir: `${outDir}/client/ssr`,
       platform: 'node',
       target: 'baseline-widely-available',
-      dts: { vue: true },
+      dts: { tsc: { vue: true } },
       plugins: [vue({ isProduction: true, ssr: true })],
-      external: ['vue', 'vitepress'],
+      deps: { neverBundle: ['vue', 'vitepress'] },
     }),
     // Browser build: injects the shared CSS file
     mergeConfig({}, baseConfig, {
@@ -35,9 +35,9 @@ export function build(): UserConfig[] {
       outDir: `${outDir}/client/browser`,
       platform: 'browser',
       target: 'baseline-widely-available',
-      dts: { vue: true },
+      dts: { tsc: { vue: true } },
       plugins: [vue({ isProduction: true, ssr: false })],
-      external: ['vue', 'vitepress'],
+      deps: { neverBundle: ['vue', 'vitepress'] },
       outputOptions: {
         banner: (chunk) => (chunk.isEntry ? 'import "../style.css"' : ''),
       },

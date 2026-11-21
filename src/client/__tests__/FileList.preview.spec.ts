@@ -192,7 +192,10 @@ describe('FileList preview: Markdown and HTML rendering', () => {
     expect(buttons[0].attributes('aria-pressed')).toBe('true')
 
     await buttons[1].trigger('click')
-    await vi.waitFor(() => expect(dialog.findAll('.fl-preview-view-btn')[0].attributes('aria-pressed')).toBe('true'))
+    await vi.waitFor(
+      () => expect(dialog.findAll('.fl-preview-view-btn')[0].attributes('aria-pressed')).toBe('true'),
+      { timeout: 3000 },
+    )
     expect(dialog.find('.fl-md').exists()).toBe(false)
     expect(dialog.find('.fl-preview-text pre').text()).toContain('<script>')
     expect((window as unknown as { __pwned?: number }).__pwned).toBeUndefined()

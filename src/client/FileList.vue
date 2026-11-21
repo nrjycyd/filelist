@@ -61,7 +61,6 @@ const passwords = usePasswords({
   enabled: () => canRemember.value,
   fallback: () => props.password,
 })
-const remembered = passwords.remembered
 
 const rootEl = ref<HTMLElement>()
 const toast = ref('')
@@ -117,6 +116,7 @@ const {
   toggleExpand,
   setSort,
   applySort,
+  abortPending,
 } = useTree(ctx, { roots, selected, deepMode, resetShown })
 
 const {
@@ -195,10 +195,15 @@ function rowLabel(node: FNode): string {
 /** “⌘A” on Apple keyboards, “Ctrl+A” elsewhere; decided in the browser. */
 const selectAllKeys = ref('Ctrl+A')
 
+let settingsAbort: AbortController | undefined
+
 async function loadSettings() {
+  settingsAbort?.abort()
+  const controller = new AbortController()
+  settingsAbort = controller
   const client = api.value
-  const settings = await client.settings()
-  if (client !== api.value) return
+  const settings = await client.settings(controller.signal)
+  if (controller.signal.aborted || client !== api.value) return
   siteTitle.value = settings.title
   iframePreviews.value = settings.iframePreviews
 }
@@ -240,6 +245,8 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   stopThemeWatch?.()
+  settingsAbort?.abort()
+  abortPending()
   cancelZip()
   rowsPart.unmount()
   clearTimeout(toastTimer)
@@ -471,7 +478,7 @@ onBeforeUnmount(() => {
           role="alert"
         >{{ unlockErrorText(node.lock.error) }}</span>
         <button
-          v-if="!node.lock && remembered.has(node.path)"
+          v-if="!node.lock && passwords.isRemembered(node.path)"
           class="fl-remembered"
           type="button"
           :aria-label="`${t('forgetPassword')} ${node.name}`"
@@ -590,7 +597,7 @@ onBeforeUnmount(() => {
     </div>
     <div v-else-if="visible.length === 0" class="fl-status">{{ t('empty') }}</div>
 
-    <div v-if="deepRow" class="fl-deep" role="status">
+    <div v-if="deepRow" class="fl-deep" :role="deepRow === 'running' ? undefined : 'status'">
       <div class="fl-deep-text">
         <template v-if="deepRow === 'running'">
           {{ t('deepRunning', { count: folderCounts.checked }) }} ·

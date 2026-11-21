@@ -288,13 +288,25 @@ describe('FileList batch ZIP concurrency', () => {
     const original = globalThis.fetch
     let inFlight = 0
     let peak = 0
+    const pending = new Map<number, () => void>()
     vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
       if (!String(input).includes('/p/')) return original(input, init)
       inFlight += 1
       peak = Math.max(peak, inFlight)
-      // Later files answer faster, so order only holds if the ZIP keeps it.
       const index = Number(String(input).match(/f(\d+)/)?.[1] ?? 0)
-      await new Promise((resolve) => setTimeout(resolve, 40 - index * 4))
+      await new Promise<void>((resolve) => {
+        pending.set(index, resolve)
+        // Release the first wave in reverse order once all 4 slots are filled.
+        if (pending.size === 4 && index <= 4) {
+          for (const key of [4, 3, 2, 1]) {
+            pending.get(key)?.()
+            pending.delete(key)
+          }
+        } else if (index > 4) {
+          resolve()
+          pending.delete(index)
+        }
+      })
       inFlight -= 1
       return new Response(new TextEncoder().encode(String(input)))
     }))

@@ -30,7 +30,7 @@ const keyword = defineModel<string>('keyword', { required: true })
 
 <template>
   <div class="fl-bar">
-    <div v-if="batchBusy" class="fl-selection" role="status">
+    <div v-if="batchBusy" class="fl-selection">
       <span class="fl-selection-count">{{ t('batching', { percent: zipPercent }) }}</span>
       <span v-if="zipProgress" class="fl-selection-size">{{
         t('batchProgress', {

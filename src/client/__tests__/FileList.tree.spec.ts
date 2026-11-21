@@ -439,19 +439,30 @@ describe('FileList audit regressions', () => {
     const original = globalThis.fetch
     let inFlight = 0
     let peak = 0
+    const releases: Array<() => void> = []
     vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
       const url = new URL(String(input))
       if (url.pathname === '/api/fs/list' && init?.body && String(init.body).includes('/Root/d')) {
         inFlight += 1
         peak = Math.max(peak, inFlight)
-        await new Promise((resolve) => setTimeout(resolve, 15))
+        await new Promise<void>((resolve) => {
+          releases.push(resolve)
+          if (releases.length === 4) {
+            for (const done of releases.splice(0)) done()
+          }
+        })
         inFlight -= 1
       }
       return original(input, init)
     }))
     const wrapper = mountList({ path: '/' })
     await flushPromises()
-    await check(wrapper, 'Root')
+    const pendingCheck = check(wrapper, 'Root')
+    await vi.waitFor(() => expect(peak).toBe(4))
+    // Release the remaining 2 folders once the first wave completes.
+    await vi.waitFor(() => expect(releases.length).toBeGreaterThanOrEqual(2))
+    for (const done of releases.splice(0)) done()
+    await pendingCheck
     await vi.waitFor(() => expect(wrapper.find('.fl-selection-count').text()).toBe('已选 6 项'))
     expect(peak).toBe(4)
 
@@ -470,5 +481,57 @@ describe('FileList audit regressions', () => {
     await check(lockedWrapper, 'Outer')
     await vi.waitFor(() => expect(row(lockedWrapper, 'Secret').find('.fl-unlock-row input').exists()).toBe(true))
     expect(lockedWrapper.find('.fl-selection-count').exists()).toBe(false)
+  })
+
+  it('re-locks a remembered single-file source and drops its raw_url when forgotten', async () => {
+    mockOpenList({}, { '/secret/doc.pdf': 'pw' })
+    const wrapper = mountList({ sources: [{ path: '/secret/doc.pdf' }] })
+    await flushPromises()
+    expect(row(wrapper, 'doc.pdf').classes()).toContain('fl-row-locked')
+
+    await row(wrapper, 'doc.pdf').find('.fl-lock').trigger('click')
+    await flushPromises()
+    await row(wrapper, 'doc.pdf').find('.fl-unlock-remember').trigger('click')
+    await row(wrapper, 'doc.pdf').find('.fl-unlock-row input').setValue('pw')
+    await row(wrapper, 'doc.pdf').find('.fl-unlock-row input').trigger('keydown', { key: 'Enter' })
+    await flushPromises()
+    expect(row(wrapper, 'doc.pdf').classes()).not.toContain('fl-row-locked')
+    expect(row(wrapper, 'doc.pdf').find('.fl-remembered').exists()).toBe(true)
+
+    await row(wrapper, 'doc.pdf').find('.fl-remembered').trigger('click')
+    await flushPromises()
+    expect(row(wrapper, 'doc.pdf').classes()).toContain('fl-row-locked')
+    expect(row(wrapper, 'doc.pdf').find('.fl-download').exists()).toBe(false)
+    expect(sessionStorage.length).toBe(0)
+  })
+
+  it('clears stale rows and selection immediately when reloading a new path', async () => {
+    let finishSecond!: (res: Response) => void
+    vi.stubGlobal('fetch', vi.fn((input: string | URL, init?: RequestInit) => {
+      const url = new URL(String(input))
+      if (url.pathname === '/api/public/settings') {
+        return Promise.resolve(new Response(JSON.stringify({ code: 200, data: {} })))
+      }
+      const body = init?.body ? JSON.parse(String(init.body)) : {}
+      if (body.path === '/second') {
+        return new Promise<Response>((resolve) => {
+          finishSecond = resolve
+        })
+      }
+      return Promise.resolve(new Response(JSON.stringify({ code: 200, data: { content: [file('old.txt')] } })))
+    }))
+    const wrapper = mountList({ path: '/first' })
+    await flushPromises()
+    await check(wrapper, 'old.txt')
+    expect(wrapper.find('.fl-selection-count').text()).toBe('已选 1 项')
+
+    await wrapper.setProps({ path: '/second' })
+    expect(wrapper.find('.fl-status').text()).toBe('加载中…')
+    expect(wrapper.findAll('.fl-row:not(.fl-head)')).toHaveLength(0)
+    expect(wrapper.find('.fl-selection').exists()).toBe(false)
+
+    finishSecond(new Response(JSON.stringify({ code: 200, data: { content: [file('new.txt')] } })))
+    await flushPromises()
+    expect(row(wrapper, 'new.txt').exists()).toBe(true)
   })
 })

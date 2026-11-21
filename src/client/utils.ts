@@ -251,10 +251,10 @@ export function fillPreviewUrl(
   scheme: string,
   args: { name: string; rawUrl: string; downloadUrl: string },
 ): string {
-  return scheme
-    .replace(/\$name/g, args.name)
-    .replace(/\$[eb_]*durl/g, (placeholder) => applyUrlOps(placeholder, args.downloadUrl))
-    .replace(/\$[eb_]*url/g, (placeholder) => applyUrlOps(placeholder, args.rawUrl))
+  return scheme.replace(/\$(?:name|[eb_]*d?url)/g, (placeholder) => {
+    if (placeholder === '$name') return encodeURIComponent(args.name)
+    return applyUrlOps(placeholder, placeholder.endsWith('durl') ? args.downloadUrl : args.rawUrl)
+  })
 }
 
 /** Run at most `size` async tasks at once, preserving FIFO scheduling. */
