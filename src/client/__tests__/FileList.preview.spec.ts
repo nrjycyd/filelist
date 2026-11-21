@@ -81,9 +81,12 @@ describe('FileList preview dialog', () => {
     await flushPromises()
 
     await openPreview(wrapper, 'a.pdf')
-    expect(dialogOf(wrapper).find('iframe.fl-preview-frame').attributes('src')).toBe(
+    const frame = dialogOf(wrapper).find('iframe.fl-preview-frame')
+    expect(frame.attributes('src')).toBe(
       `https://res.oplist.org/pdf.js/web/viewer.html?file=${encodeURIComponent(`${BASE}/p/a.pdf`)}`,
     )
+    expect(frame.attributes('referrerpolicy')).toBe('no-referrer')
+    expect(frame.attributes('sandbox')).toBe('allow-scripts allow-same-origin allow-downloads allow-forms')
   })
 
   it('falls back to the browser PDF reader through a Blob when no viewer is configured', async () => {
@@ -93,7 +96,11 @@ describe('FileList preview dialog', () => {
 
     await openPreview(wrapper, 'a.pdf')
     await vi.waitFor(() => expect(dialogOf(wrapper).find('iframe.fl-preview-frame').exists()).toBe(true))
-    expect(dialogOf(wrapper).find('iframe.fl-preview-frame').attributes('src')).toBe('blob:zip')
+    const frame = dialogOf(wrapper).find('iframe.fl-preview-frame')
+    expect(frame.attributes('src')).toBe('blob:zip')
+    expect(frame.attributes('referrerpolicy')).toBe('no-referrer')
+    // Built-in Chromium PDF viewer is blocked inside sandboxed iframes, so blob fallback must omit sandbox.
+    expect(frame.attributes('sandbox')).toBeUndefined()
   })
 
   it('shows info and a download button when the preview fails', async () => {
