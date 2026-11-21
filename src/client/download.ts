@@ -115,40 +115,50 @@ async function zipStream<T extends ZipFile>(files: T[], options: ZipOptions<T>):
 
   async function* entries() {
     const used = new Set<string>()
+    const inner = new AbortController()
+    const abort = () => inner.abort(options.signal.reason)
+    options.signal.addEventListener('abort', abort, { once: true })
+    if (options.signal.aborted) abort()
     // Up to CONCURRENCY requests run ahead; entries still go into the ZIP in order.
     const ahead: Array<Promise<Response>> = []
     let started = 0
     const startNext = () => {
       const file = files[started++]
-      const response = options.urlOf(file).then((url) => fetch(url, { signal: options.signal }))
+      const response = options.urlOf(file).then((url) => fetch(url, { signal: inner.signal }))
       response.catch(() => {}) // surfaced when its turn comes
       ahead.push(response)
     }
-    while (started < files.length && ahead.length < CONCURRENCY) startNext()
+    try {
+      while (started < files.length && ahead.length < CONCURRENCY) startNext()
 
-    for (const file of files) {
-      const response = await ahead.shift()!
-      if (started < files.length) startNext()
-      if (!response.ok || !response.body) throw new Error(`${file.name}：HTTP ${response.status}`)
-      const counted = response.body.pipeThrough(
-        new TransformStream<Uint8Array, Uint8Array>({
-          transform(chunk, controller) {
-            progress.bytes += chunk.byteLength
-            report()
-            controller.enqueue(chunk)
-          },
-          flush() {
-            progress.files += 1
-            report(progress.files === progress.totalFiles)
-          },
-        }),
-      )
-      const modified = new Date(file.modified)
-      yield {
-        name: uniqueEntryName(zipEntryName(file.zipPath), used),
-        lastModified: Number.isNaN(modified.getTime()) ? undefined : modified,
-        input: counted,
+      for (const file of files) {
+        const response = await ahead.shift()!
+        if (started < files.length) startNext()
+        if (!response.ok || !response.body) throw new Error(`${file.name}：HTTP ${response.status}`)
+        const counted = response.body.pipeThrough(
+          new TransformStream<Uint8Array, Uint8Array>({
+            transform(chunk, controller) {
+              progress.bytes += chunk.byteLength
+              report()
+              controller.enqueue(chunk)
+            },
+            flush() {
+              progress.files += 1
+              report(progress.files === progress.totalFiles)
+            },
+          }),
+        )
+        const modified = new Date(file.modified)
+        yield {
+          name: uniqueEntryName(zipEntryName(file.zipPath), used),
+          lastModified: Number.isNaN(modified.getTime()) ? undefined : modified,
+          input: counted,
+        }
       }
+    } finally {
+      inner.abort()
+      options.signal.removeEventListener('abort', abort)
+      for (const pending of ahead) pending.then((r) => r.body?.cancel(), () => {})
     }
   }
 

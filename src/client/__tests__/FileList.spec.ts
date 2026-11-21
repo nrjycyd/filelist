@@ -961,6 +961,84 @@ describe('FileList audit regressions', () => {
     await vi.waitFor(() => expect(row(wrapper, '加密示例（密码 1234）').classes()).toContain('fl-row-locked'))
     expect(row(wrapper, 'notes').classes()).not.toContain('fl-row-locked')
   })
+
+  it('uses a sub-folder remembered password even when the parent had its own remembered password', async () => {
+    const tree = { '/': [dir('parent')], '/parent': [dir('child')], '/parent/child': [file('deep.txt')] }
+    mockOpenList(tree, { '/parent/child': 'p2', '/parent': 'p1' })
+    sessionStorage.setItem(
+      `vitepress-plugin-filelist:passwords:${BASE}`,
+      JSON.stringify({ '/parent': 'p1', '/parent/child': 'p2' }),
+    )
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+    await row(wrapper, 'parent').find('.fl-arrow').trigger('click')
+    await flushPromises()
+    await row(wrapper, 'child').find('.fl-arrow').trigger('click')
+    await flushPromises()
+    expect(row(wrapper, 'deep.txt').exists()).toBe(true)
+  })
+
+  it('excludes locked file source roots from select-all and footer counts', async () => {
+    mockOpenList(
+      { '/Locked': [file('secret.pdf')], '/Public': [file('open.txt')] },
+      { '/Locked': 'pw' },
+    )
+    const wrapper = mountList({
+      sources: [{ path: '/Locked/secret.pdf' }, { path: '/Public/open.txt' }],
+    })
+    await flushPromises()
+    expect(row(wrapper, 'secret.pdf').classes()).toContain('fl-row-locked')
+    expect(wrapper.find('.fl-foot').text()).toContain('1 个已加载文件')
+    await wrapper.find('.fl-head .fl-cell-check input').trigger('change')
+    await flushPromises()
+    expect(wrapper.find('.fl-selection-count').text()).toBe('已选 1 项')
+    expect((row(wrapper, 'secret.pdf').find('.fl-cell-check input').element as HTMLInputElement).checked).toBe(false)
+    expect((row(wrapper, 'open.txt').find('.fl-cell-check input').element as HTMLInputElement).checked).toBe(true)
+  })
+
+  it('reloads when path changes dynamically and ignores superseded root loads', async () => {
+    let finishFirst!: (res: Response) => void
+    let listCall = 0
+    vi.stubGlobal('fetch', vi.fn((input: string | URL, init?: RequestInit) => {
+      const url = new URL(String(input))
+      if (url.pathname === '/api/public/settings') {
+        return Promise.resolve(new Response(JSON.stringify({ code: 200, data: {} })))
+      }
+      const body = init?.body ? JSON.parse(String(init.body)) : {}
+      listCall += 1
+      if (listCall === 1) {
+        return new Promise<Response>((resolve) => {
+          finishFirst = resolve
+        })
+      }
+      const items = body.path === '/second' ? [file('new.txt')] : [file('old.txt')]
+      return Promise.resolve(new Response(JSON.stringify({ code: 200, data: { content: items } })))
+    }))
+    const wrapper = mountList({ path: '/first' })
+    await flushPromises()
+    await wrapper.setProps({ path: '/second' })
+    await flushPromises()
+    expect(row(wrapper, 'new.txt').exists()).toBe(true)
+
+    // The slower first load finishes afterwards and must not overwrite `/second`.
+    finishFirst(new Response(JSON.stringify({ code: 200, data: { content: [file('old.txt')] } })))
+    await flushPromises()
+    expect(wrapper.findAll('.fl-name').map((el) => el.text())).toEqual(['new.txt'])
+  })
+
+  it('does not hang on loading when rendering an empty Markdown file', async () => {
+    mockOpenList({ '/': [file('empty.md')] }, {}, { files: { '/empty.md': { body: '' } } })
+    const wrapper = mountList({ path: '/' })
+    await flushPromises()
+    await row(wrapper, 'empty.md').find('.fl-preview-btn').trigger('click')
+    await flushPromises()
+    const dialog = wrapper.find('dialog.fl-preview')
+    await vi.waitFor(() => expect(dialog.find('.fl-preview-text').exists()).toBe(true))
+    await dialog.findAll('.fl-preview-view-btn')[1].trigger('click')
+    await flushPromises()
+    expect(dialog.find('.fl-preview-status').exists()).toBe(false)
+    expect(dialog.find('.fl-md').exists()).toBe(true)
+  })
 })
 
 describe('FileList batch ZIP limits and streaming', () => {

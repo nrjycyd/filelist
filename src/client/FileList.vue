@@ -19,7 +19,7 @@ import type { ListContext } from './context'
 import type { FNode } from './tree'
 import type { FileListLabels, FileListProps, FileListSource } from './types'
 import type { SortKey } from './utils'
-import { computed, onBeforeUnmount, onMounted, onUpdated, ref, useId } from 'vue'
+import { computed, onBeforeUnmount, onMounted, onUpdated, ref, useId, watch } from 'vue'
 import { createOpenListApi, errorText, isNetworkError } from './api'
 import ConfirmDialog from './ConfirmDialog.vue'
 import { fitPrimaryButton } from './contrast'
@@ -156,7 +156,7 @@ const {
 } = useSelection({ roots, selected, loadChildren, startPrompt })
 
 function fileUrlOf(node: FNode): Promise<string> {
-  return api.value.fileUrl(node, passwords.resolve(node.path, node.password).password)
+  return api.value.fileUrl(node, passwords.resolve(node.path, node.password, node.passwordAt).password)
 }
 
 const { download, batchBusy, zipProgress, zipNotice, zipDialog, batchDownload, confirmZip, cancelZip, zipPercent } =
@@ -207,10 +207,28 @@ function rowLabel(node: FNode): string {
 const selectAllKeys = ref('Ctrl+A')
 
 async function loadSettings() {
-  const settings = await api.value.settings()
+  const client = api.value
+  const settings = await client.settings()
+  if (client !== api.value) return
   siteTitle.value = settings.title
   iframePreviews.value = settings.iframePreviews
 }
+
+watch(
+  () => [props.base, props.token, props.path, JSON.stringify(props.sources), props.password, props.expanded, demo.value ? props.locale : ''] as const,
+  ([base, token], [prevBase, prevToken]) => {
+    if (base !== prevBase) {
+      passwords.clearTyped()
+      passwords.sync()
+    }
+    closePreview()
+    cancelZip()
+    void loadRoot()
+    if (base !== prevBase || token !== prevToken) void loadSettings()
+  },
+)
+watch(() => props.rememberPassword, passwords.sync)
+watch(() => props.locale, () => !demo.value && applySort(sortKey.value, sortAsc.value))
 
 /* ---------------- keyboard focus that would be lost ---------------- */
 
@@ -465,7 +483,6 @@ onBeforeUnmount(() => {
       class="fl-row"
       :class="{
         'fl-row-dir': node.is_dir,
-        'fl-row-root': node.isRoot,
         'fl-row-selected': !node.is_dir && selected.has(node.path),
         'fl-row-locked': !!node.lock,
         'fl-row-prompting': node.lock?.prompting,

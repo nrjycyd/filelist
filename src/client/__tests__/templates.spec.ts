@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 // VitePress styles these tags inside `.vp-doc` (margins, colours, borders) and
@@ -6,8 +6,10 @@ import { describe, expect, it } from 'vitest'
 // avoids them. Rendered Markdown is inserted with v-html and is not affected.
 const STYLED_BY_VITEPRESS = /<(p|ul|ol|li|h[1-6]|table|blockquote|a)[\s>]/
 
+const vueFiles = readdirSync(new URL('..', import.meta.url)).filter((file) => file.endsWith('.vue')).sort()
+
 describe('component templates', () => {
-  for (const file of ['FileList.vue', 'PreviewDialog.vue', 'ConfirmDialog.vue']) {
+  for (const file of vueFiles) {
     it(`${file} uses no tags that VitePress' doc styles reach`, () => {
       const source = readFileSync(new URL(`../${file}`, import.meta.url), 'utf8')
       const template = source.slice(source.indexOf('<template'), source.lastIndexOf('</template>'))

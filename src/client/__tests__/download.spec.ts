@@ -35,6 +35,29 @@ describe('zipToBlob', () => {
     await expect(promise).rejects.toBeTruthy()
     vi.doUnmock('client-zip')
   })
+
+  it('aborts in-flight prefetched requests when an earlier file fails', async () => {
+    const signals: AbortSignal[] = []
+    vi.stubGlobal('fetch', vi.fn((url: string, init?: RequestInit) => {
+      if (init?.signal) signals.push(init.signal)
+      if (url.endsWith('/bad.bin')) return Promise.resolve(new Response('err', { status: 500 }))
+      return new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')))
+      })
+    }))
+    const { zipToBlob } = await import('../download')
+    const controller = new AbortController()
+    const files = [
+      { name: 'bad.bin', zipPath: ['bad.bin'], size: 10, modified: '' },
+      { name: 'slow.bin', zipPath: ['slow.bin'], size: 10, modified: '' },
+    ]
+    await expect(
+      zipToBlob(files, { urlOf: async (f) => `https://example.com/${f.name}`, signal: controller.signal, onProgress: () => {} }),
+    ).rejects.toThrow('bad.bin：HTTP 500')
+    expect(signals).toHaveLength(2)
+    expect(signals[1].aborted).toBe(true)
+    vi.unstubAllGlobals()
+  })
 })
 
 describe('openUrl', () => {

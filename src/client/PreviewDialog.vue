@@ -80,6 +80,7 @@ const actualSize = ref(false)
 /** Markdown / HTML: show the source or render it. Kept while the page is open. */
 const view = ref<'source' | 'rendered'>('source')
 const renderedHtml = ref('')
+const rendering = ref(false)
 let controller: AbortController | undefined
 let loadSeq = 0
 
@@ -139,6 +140,7 @@ function resetBody() {
   bodyFailed.value = false
   textContent.value = ''
   renderedHtml.value = ''
+  rendering.value = false
   truncated.value = false
   rotation.value = 0
   actualSize.value = false
@@ -217,15 +219,19 @@ watch(
 )
 
 watch(
-  () => [view.value, renderAs.value, textContent.value] as const,
-  async ([current, as, text]) => {
-    if (current !== 'rendered' || as !== 'markdown' || !text) return
+  () => [view.value, renderAs.value, textContent.value, loadingBody.value] as const,
+  async ([current, as, text, loading]) => {
+    if (current !== 'rendered' || as !== 'markdown' || loading) return
+    if (!text) return void (renderedHtml.value = '')
     const seq = loadSeq
+    rendering.value = true
     try {
       const html = await renderMarkdown(text, (alt) => t('imageOmitted', { alt }))
       if (seq === loadSeq) renderedHtml.value = html
     } catch {
       if (seq === loadSeq) view.value = 'source'
+    } finally {
+      if (seq === loadSeq) rendering.value = false
     }
   },
 )
@@ -362,8 +368,8 @@ function markFailed() {
           <div v-if="truncated" class="fl-preview-note">{{ t('textTruncated', { size: formatSize(maxTextBytes) }) }}</div>
           <template v-if="renderAs === 'markdown' && view === 'rendered'">
             <!-- sanitised by renderMarkdown (DOMPurify) -->
-            <div v-if="renderedHtml" class="vp-doc fl-md" v-html="renderedHtml"></div>
-            <div v-else class="fl-preview-status" role="status">{{ t('loading') }}</div>
+            <div v-if="rendering" class="fl-preview-status" role="status">{{ t('loading') }}</div>
+            <div v-else class="vp-doc fl-md" v-html="renderedHtml"></div>
           </template>
           <template v-else-if="renderAs === 'html' && view === 'rendered'">
             <div class="fl-preview-note">{{ t('htmlSandboxNote') }}</div>

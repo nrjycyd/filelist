@@ -192,7 +192,7 @@ export function compareNodes(
   return ascending ? result : -result
 }
 
-export interface IframePreview {
+interface IframePreview {
   label: string
   scheme: string
 }

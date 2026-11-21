@@ -43,4 +43,20 @@ describe('usePasswords', () => {
     expect(sessionStorage.length).toBe(0)
     expect(setup(false).resolve('/x')).toEqual({ password: 'default' })
   })
+
+  it('prefers a deeper remembered or typed password over an ancestor source password', () => {
+    const writer = setup()
+    writer.accept('/a/b', 'sub-stored', true)
+    const fresh = setup()
+    fresh.sync()
+    // `/a/b` inherited `/a`'s configured password, but has its own deeper remembered one.
+    expect(fresh.resolve('/a/b', 'parent-own', '/a')).toEqual({ password: 'sub-stored', rememberedAt: '/a/b' })
+    // Same-depth `own` still beats a remembered password at the same path.
+    expect(fresh.resolve('/a/b', 'exact-own', '/a/b')).toEqual({ password: 'exact-own' })
+    // Typed password on `/a/b` beats `/a`'s configured password for descendants too.
+    fresh.accept('/a/b', 'sub-typed', false)
+    expect(fresh.resolve('/a/b/c.txt', 'parent-own', '/a')).toEqual({ password: 'sub-typed' })
+    fresh.clearTyped()
+    expect(fresh.resolve('/a/b/c.txt', 'parent-own', '/a')).toEqual({ password: 'sub-stored', rememberedAt: '/a/b' })
+  })
 })

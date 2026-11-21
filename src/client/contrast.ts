@@ -7,7 +7,7 @@ export type Rgb = [number, number, number]
 const MIN_CONTRAST = 4.5
 
 /** Relative luminance (WCAG 2). */
-export function luminance([r, g, b]: Rgb): number {
+function luminance([r, g, b]: Rgb): number {
   const linear = (v: number) => {
     const c = v / 255
     return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4

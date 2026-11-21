@@ -59,7 +59,7 @@ describe('formatDate', () => {
   })
 
   it('formats a valid ISO date', () => {
-    expect(formatDate('2026-11-09T00:00:00Z')).toBe('2026/11/09')
+    expect(formatDate('2026-11-09T12:00:00Z')).toBe('2026/11/09')
   })
 
   it('falls back to the first 10 characters for invalid dates', () => {
