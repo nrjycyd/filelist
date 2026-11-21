@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.15.0 (2026-11-21)
+
+### Features
+
+- Add `requestTimeout` and `fileHttpError` keys to `FileListLabels` (`zh-CN` and `en-US`) so OpenList request timeouts and per-file batch ZIP HTTP errors follow the active locale.
+
+### Maintenance
+
+- Extract shared `UnlockControls.vue` for inline row and root folder password prompts.
+- Split the `Deploy demo` GitHub Pages workflow into separate `build` and `deploy` jobs and wait for the `github-pages` artifact before deploying.
+
 ## 0.13.10 (2026-11-21)
 
 ### Maintenance
