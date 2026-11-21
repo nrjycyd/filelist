@@ -353,7 +353,15 @@ function markFailed() {
           </template>
           <pre v-else>{{ textContent }}</pre>
         </div>
-        <iframe v-else-if="mode === 'pdf'" class="fl-preview-frame" :src="viewer || blobUrl" :title="file.name"></iframe>
+        <!-- External viewers run with no Referer and restricted capabilities; blob: PDFs keep no sandbox so Chromium's built-in reader works. -->
+        <iframe
+          v-else-if="mode === 'pdf'"
+          class="fl-preview-frame"
+          :src="viewer || blobUrl"
+          :sandbox="viewer ? 'allow-scripts allow-same-origin allow-downloads allow-forms' : undefined"
+          referrerpolicy="no-referrer"
+          :title="file.name"
+        ></iframe>
         <div v-else class="fl-preview-info">
           <span class="fl-type fl-preview-badge" :data-kind="fileKind(fileName)" aria-hidden="true">{{ extOf(fileName) || 'FILE' }}</span>
           <div class="fl-preview-message">{{ infoMessage }}</div>
