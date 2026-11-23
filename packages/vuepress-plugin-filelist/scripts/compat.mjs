@@ -28,7 +28,9 @@ const THEMES = {
   default: {
     pkg: '@vuepress/theme-default@next',
     extra: ['sass-embedded'],
-    code: `import { defaultTheme } from '@vuepress/theme-default'`,
+    // rc.141 renamed defaultTheme to themeDefault; keep older pins working.
+    code: `import * as defaultThemeExports from '@vuepress/theme-default'
+const defaultTheme = defaultThemeExports.themeDefault ?? defaultThemeExports.defaultTheme`,
     theme: `defaultTheme()`,
     // The theme's own colour for links and buttons.
     brand: '--vp-c-accent',
