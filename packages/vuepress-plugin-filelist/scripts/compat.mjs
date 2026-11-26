@@ -28,6 +28,8 @@ const THEMES = {
   default: {
     pkg: '@vuepress/theme-default@next',
     extra: ['sass-embedded'],
+    // rc.142's helper imports @temp modules, which only Vite can resolve.
+    ssrNoExternal: ['@vuepress/theme-helper'],
     // rc.141 renamed defaultTheme to themeDefault; keep older pins working.
     code: `import * as defaultThemeExports from '@vuepress/theme-default'
 const defaultTheme = defaultThemeExports.themeDefault ?? defaultThemeExports.defaultTheme`,
@@ -155,6 +157,8 @@ try {
     try {
       const vuepress = process.env.COMPAT_VUEPRESS
         || run(npm, ['view', t.pkg, 'peerDependencies.vuepress'], work, true).trim()
+      // Vue Router's ESM build needs Vite to replace Vue feature flags in SSR.
+      const bundlerOptions = { viteOptions: { ssr: { noExternal: ['vue-router', ...(t.ssrNoExternal ?? [])] } } }
       write(join(site, 'package.json'), JSON.stringify({ name: 'compat-site', private: true, type: 'module' }, null, 2))
       write(join(site, 'docs/.vuepress/config.ts'), [
         `import { viteBundler } from '@vuepress/bundler-vite'`,
@@ -165,7 +169,7 @@ try {
         `export default defineUserConfig({`,
         `  lang: 'zh-CN',`,
         `  title: 'compat',`,
-        `  bundler: viteBundler(),`,
+        `  bundler: viteBundler(${JSON.stringify(bundlerOptions)}),`,
         `  theme: ${t.theme},`,
         `  plugins: [fileListPlugin()],`,
         `})`,
